@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { toast } from "@heroui/react";
 import { venteAPI } from "../apis/vente.api";
 import { useInvalidateVenteQuery } from "./index.query";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -11,6 +12,6 @@ export function useAnnulerTicketMutation() {
 
   return useMutation({
     mutationFn: (ticketId: string) => venteAPI.annuler(token!, ticketId),
-    onSuccess: () => { invalidate(); },
+    onSuccess: () => { invalidate(); toast.success("Ticket annule"); },
   });
 }

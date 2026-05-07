@@ -5,7 +5,7 @@ import { Topbar } from "@/components/layout/topbar";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
 import type { IProduit } from "@/features/catalogue/types/produit.type";
 import { ModalCreerProduit } from "@/features/catalogue/components/modal-creer-produit";
-import { Table, Chip, Button } from "@heroui/react";
+import { Table, Chip, Button, Skeleton } from "@heroui/react";
 import { Package, Plus, Search } from "lucide-react";
 
 function formatPrix(n: number) {
@@ -52,8 +52,18 @@ export default function PageCatalogue() {
 
         {/* Tableau */}
         {isLoading ? (
-          <div className="bg-white rounded-xl border border-neutral-200 py-12 text-center">
-            <p className="text-sm text-neutral-400">Chargement du catalogue...</p>
+          <div className="bg-surface rounded-xl border border-border p-4 space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-4 py-2">
+                <Skeleton className="w-9 h-9 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-48 rounded" />
+                  <Skeleton className="h-3 w-32 rounded" />
+                </div>
+                <Skeleton className="h-5 w-16 rounded-full" />
+                <Skeleton className="h-4 w-20 rounded" />
+              </div>
+            ))}
           </div>
         ) : produits.length === 0 ? (
           <div className="bg-surface rounded-xl border border-border py-16 text-center">

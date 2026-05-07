@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { toast } from "@heroui/react";
 import { catalogueAPI } from "../apis/catalogue.api";
 import { useInvalidateCatalogueQuery } from "./index.query";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -12,6 +13,6 @@ export function useAjouterCategorieMutation() {
   return useMutation({
     mutationFn: (data: { nom: string; parentId?: string }) =>
       catalogueAPI.creerCategorie(token!, data),
-    onSuccess: () => { invalidate(); },
+    onSuccess: () => { invalidate(); toast.success("Categorie creee"); },
   });
 }

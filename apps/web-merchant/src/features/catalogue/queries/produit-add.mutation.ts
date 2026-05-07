@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { toast } from "@heroui/react";
 import { catalogueAPI } from "../apis/catalogue.api";
 import { useInvalidateCatalogueQuery } from "./index.query";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -13,8 +14,12 @@ export function useAjouterProduitMutation() {
 
   return useMutation<IProduit, Error, CreerProduitDTO>({
     mutationFn: (data) => catalogueAPI.creerProduit(token!, data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       invalidate();
+      toast.success(`${data.nom} ajoute au catalogue`);
+    },
+    onError: (err) => {
+      toast.danger(err.message || "Erreur lors de la creation");
     },
   });
 }

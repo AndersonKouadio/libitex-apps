@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Package, ShoppingCart } from "lucide-react";
 import type { IProduit, IVariante } from "@/features/catalogue/types/produit.type";
 
 interface Props {
@@ -69,9 +69,21 @@ export function GrilleProduits({ produits, onAjouter }: Props) {
             )),
           )}
 
-          {filtres.length === 0 && (
+          {filtres.length === 0 && produits.length === 0 && (
+            <div className="col-span-full py-20 text-center">
+              <Package size={36} className="text-muted/20 mx-auto mb-3" />
+              <p className="text-sm font-medium text-foreground">Aucun article disponible</p>
+              <p className="text-sm text-muted mt-1">Ajoutez des produits dans le catalogue et recevez du stock pour commencer a vendre</p>
+              <a href="/catalogue" className="inline-block mt-3 text-sm font-medium text-accent hover:underline">
+                Gerer le catalogue
+              </a>
+            </div>
+          )}
+
+          {filtres.length === 0 && produits.length > 0 && (
             <div className="col-span-full py-16 text-center">
-              <p className="text-sm text-neutral-400">Aucun article ne correspond a la recherche</p>
+              <Search size={28} className="text-muted/20 mx-auto mb-2" />
+              <p className="text-sm text-muted">Aucun article ne correspond a la recherche</p>
             </div>
           )}
         </div>
