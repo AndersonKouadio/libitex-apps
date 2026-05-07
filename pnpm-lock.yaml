@@ -71,6 +71,9 @@ importers:
       rxjs:
         specifier: ^7.8.0
         version: 7.8.2
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
     devDependencies:
       '@nestjs/cli':
         specifier: ^11.0.0
@@ -105,9 +108,6 @@ importers:
       ts-node:
         specifier: ^10.9.0
         version: 10.9.2(@types/node@22.19.17)(typescript@5.9.3)
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
       typescript:
         specifier: ^5.8.0
         version: 5.9.3
