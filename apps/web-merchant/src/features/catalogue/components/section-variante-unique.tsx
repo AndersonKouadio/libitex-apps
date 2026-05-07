@@ -15,6 +15,7 @@ const NOTES: Record<Exclude<TypeProduit, "VARIANT">, string | null> = {
   SIMPLE: null,
   SERIALIZED: "Les numéros de série et IMEI seront saisis à la réception du stock, pas ici.",
   PERISHABLE: "Les lots et dates de péremption seront saisis à la réception du stock, pas ici.",
+  MENU: "Le stock du menu est géré via les ingrédients de la recette ci-dessous, pas par SKU.",
 };
 
 export function SectionVarianteUnique({ type, variante, onChange }: Props) {

@@ -10,7 +10,7 @@ export class ProduitRepository {
   async creerProduit(tenantId: string, data: {
     name: string;
     description?: string;
-    productType: "SIMPLE" | "VARIANT" | "SERIALIZED" | "PERISHABLE";
+    productType: "SIMPLE" | "VARIANT" | "SERIALIZED" | "PERISHABLE" | "MENU";
     categoryId?: string;
     brand?: string;
     barcodeEan13?: string;

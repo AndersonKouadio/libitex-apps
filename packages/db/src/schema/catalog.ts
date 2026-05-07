@@ -11,6 +11,7 @@ export const productTypeEnum = pgEnum("product_type", [
   "VARIANT",
   "SERIALIZED",
   "PERISHABLE",
+  "MENU",
 ]);
 
 export const serialStatusEnum = pgEnum("serial_status", [

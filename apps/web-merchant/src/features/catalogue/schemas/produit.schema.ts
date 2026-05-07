@@ -14,7 +14,7 @@ export const creerVarianteSchema = z.object({
 export const creerProduitSchema = z.object({
   nom: z.string().min(2, "Nom du produit requis (2 caractères min.)"),
   description: z.string().optional(),
-  typeProduit: z.enum(["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE"]),
+  typeProduit: z.enum(["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE", "MENU"]),
   categorieId: z.string().optional(),
   marque: z.string().optional(),
   codeBarresEan13: z.string().optional(),

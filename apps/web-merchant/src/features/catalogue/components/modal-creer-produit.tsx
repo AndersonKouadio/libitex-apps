@@ -1,14 +1,18 @@
 "use client";
 
-import { Modal, Button } from "@heroui/react";
+import { Modal, Button, toast } from "@heroui/react";
 import { Package } from "lucide-react";
 import { useFormProduit, type TypeProduit } from "../hooks/useFormProduit";
 import { useAjouterProduitMutation } from "../queries/produit-add.mutation";
 import { useCategorieListQuery } from "../queries/categorie-list.query";
 import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { ingredientAPI } from "@/features/ingredient/apis/ingredient.api";
+import { useInvalidateIngredientQuery } from "@/features/ingredient/queries/index.query";
 import { ChampsInfoProduit } from "./champs-info-produit";
 import { SectionVarianteUnique } from "./section-variante-unique";
 import { SectionVariantesAttributs } from "./section-variantes-attributs";
+import { SectionRecetteMenu } from "./section-recette-menu";
 import { ZoneUploadImages } from "@/features/upload/components/zone-upload-images";
 
 interface Props {
@@ -16,12 +20,14 @@ interface Props {
   onFermer: () => void;
 }
 
-const TYPES_PAR_DEFAUT: TypeProduit[] = ["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE"];
+const TYPES_PAR_DEFAUT: TypeProduit[] = ["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE", "MENU"];
 
 export function ModalCreerProduit({ ouvert, onFermer }: Props) {
+  const { token } = useAuth();
   const mutation = useAjouterProduitMutation();
   const { data: categories } = useCategorieListQuery();
   const { data: boutique } = useBoutiqueActiveQuery();
+  const invalidateIngredients = useInvalidateIngredientQuery();
   const typesAutorises = (boutique?.typesProduitsAutorises ?? TYPES_PAR_DEFAUT) as TypeProduit[];
   const form = useFormProduit(typesAutorises);
 
@@ -29,7 +35,20 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
     const donnees = form.valider();
     if (!donnees) return;
     try {
-      await mutation.mutateAsync(donnees);
+      const produit = await mutation.mutateAsync(donnees);
+
+      // Pour un menu, sauvegarder la recette sur la première variante créée
+      if (typeProduit === "MENU" && lignesRecette.length > 0 && produit.variantes[0] && token) {
+        try {
+          await ingredientAPI.definirRecette(token, produit.variantes[0].id, { lignes: lignesRecette });
+          invalidateIngredients();
+        } catch (err: unknown) {
+          toast.danger(err instanceof Error
+            ? `Produit créé mais recette non enregistrée : ${err.message}`
+            : "Recette non enregistrée");
+        }
+      }
+
       form.reinitialiser();
       onFermer();
     } catch (err: unknown) {
@@ -37,7 +56,9 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
     }
   }
 
-  const { typeProduit, varianteUnique, axes, prefixeSku, variantesGenerees, images, erreur } = form.valeurs;
+  const {
+    typeProduit, varianteUnique, axes, prefixeSku, variantesGenerees, images, lignesRecette, erreur,
+  } = form.valeurs;
 
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(open) => { if (!open) onFermer(); }}>
@@ -97,6 +118,10 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
                 variante={varianteUnique}
                 onChange={(data) => form.setVarianteUnique({ ...varianteUnique, ...data })}
               />
+            )}
+
+            {typeProduit === "MENU" && (
+              <SectionRecetteMenu lignes={lignesRecette} onChange={form.setLignesRecette} />
             )}
           </Modal.Body>
 

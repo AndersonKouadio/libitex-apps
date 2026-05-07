@@ -4,4 +4,5 @@ export * from "./memberships";
 export * from "./catalog";
 export * from "./stock";
 export * from "./pos";
+export * from "./restauration";
 export * from "./audit";

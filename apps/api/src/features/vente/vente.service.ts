@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { TicketRepository } from "./repositories/ticket.repository";
 import { StockService } from "../stock/stock.service";
+import { IngredientService } from "../ingredient/ingredient.service";
 import {
   RessourceIntrouvableException,
   PaiementInsuffisantException,
@@ -19,6 +20,7 @@ export class VenteService {
   constructor(
     private readonly ticketRepo: TicketRepository,
     private readonly stockService: StockService,
+    private readonly ingredientService: IngredientService,
   ) {}
 
   // --- Creer un ticket (ouvert) ---
@@ -112,13 +114,29 @@ export class VenteService {
 
     const lignes = await this.ticketRepo.obtenirLignes(ticket.id);
     for (const ligne of lignes) {
-      await this.stockService.sortieStock(
-        tenantId, userId, ligne.variantId, ticket.locationId,
-        ligne.quantity, "TICKET", ticket.id,
-        ligne.serialId ?? undefined, ligne.batchId ?? undefined,
-      );
-      if (ligne.serialId) await this.ticketRepo.marquerSerieVendue(ligne.serialId, ticket.id);
-      if (ligne.batchId) await this.ticketRepo.decrementerLot(ligne.batchId, ligne.quantity);
+      const resolved = await this.ticketRepo.obtenirVarianteAvecProduit(ligne.variantId);
+      const estMenu = resolved?.product.productType === "MENU";
+
+      if (estMenu) {
+        // Pour un menu: pas de stock variant à décrémenter, on consomme
+        // les ingrédients de la recette.
+        await this.ingredientService.consommerRecette({
+          tenantId,
+          userId,
+          variantId: ligne.variantId,
+          locationId: ticket.locationId,
+          quantiteVendue: ligne.quantity,
+          reference: ticket.id,
+        });
+      } else {
+        await this.stockService.sortieStock(
+          tenantId, userId, ligne.variantId, ticket.locationId,
+          ligne.quantity, "TICKET", ticket.id,
+          ligne.serialId ?? undefined, ligne.batchId ?? undefined,
+        );
+        if (ligne.serialId) await this.ticketRepo.marquerSerieVendue(ligne.serialId, ticket.id);
+        if (ligne.batchId) await this.ticketRepo.decrementerLot(ligne.batchId, ligne.quantity);
+      }
     }
 
     const complete = await this.ticketRepo.changerStatut(tenantId, ticketId, "COMPLETED", {

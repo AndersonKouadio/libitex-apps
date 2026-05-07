@@ -3,10 +3,11 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { creerProduitSchema, type CreerProduitDTO, type CreerVarianteDTO } from "../schemas/produit.schema";
 import { genererVariantesParCombinaison, type AxeAttribut } from "../utils/generer-variantes";
+import type { LigneRecetteDTO } from "@/features/ingredient/schemas/ingredient.schema";
 
 const VARIANTE_VIDE: CreerVarianteDTO = { sku: "", prixDetail: 0 };
 
-export type TypeProduit = "SIMPLE" | "VARIANT" | "SERIALIZED" | "PERISHABLE";
+export type TypeProduit = "SIMPLE" | "VARIANT" | "SERIALIZED" | "PERISHABLE" | "MENU";
 
 export interface EtatFormProduit {
   nom: string;
@@ -24,7 +25,7 @@ export interface EtatFormProduit {
 
 const AXES_VIDES: AxeAttribut[] = [{ nom: "", valeurs: [] }];
 
-export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE"]) {
+export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE", "MENU"]) {
   const typeParDefaut = typesAutorises[0] ?? "SIMPLE";
   const [nom, setNom] = useState("");
   const [description, setDescription] = useState("");
@@ -43,6 +44,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
   const [axes, setAxes] = useState<AxeAttribut[]>(AXES_VIDES);
   const [varianteUnique, setVarianteUnique] = useState<CreerVarianteDTO>({ ...VARIANTE_VIDE });
   const [images, setImages] = useState<string[]>([]);
+  const [lignesRecette, setLignesRecette] = useState<LigneRecetteDTO[]>([]);
   const [erreur, setErreur] = useState("");
 
   const variantesGenerees = useMemo(() => {
@@ -67,13 +69,18 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
   const reinitialiser = useCallback(() => {
     setNom(""); setDescription(""); setTypeProduit(typeParDefaut); setMarque("");
     setCategorieId(""); setCodeBarresEan13(""); setTauxTva("0"); setPrefixeSku("");
-    setAxes(AXES_VIDES); setVarianteUnique({ ...VARIANTE_VIDE }); setImages([]); setErreur("");
+    setAxes(AXES_VIDES); setVarianteUnique({ ...VARIANTE_VIDE }); setImages([]);
+    setLignesRecette([]); setErreur("");
   }, [typeParDefaut]);
 
   const valider = useCallback((): CreerProduitDTO | null => {
     const variantes = variantesGenerees.filter((v) => v.sku && v.prixDetail > 0);
     if (variantes.length === 0) {
       setErreur("Renseignez au moins un SKU et un prix de détail");
+      return null;
+    }
+    if (typeProduit === "MENU" && lignesRecette.length === 0) {
+      setErreur("Ajoutez au moins un ingrédient à la recette du menu");
       return null;
     }
 
@@ -96,15 +103,15 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
     }
     setErreur("");
     return validation.data;
-  }, [nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva, images, variantesGenerees]);
+  }, [nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva, images, lignesRecette, variantesGenerees]);
 
   return {
     valeurs: {
       nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva,
-      prefixeSku, axes, varianteUnique, variantesGenerees, images, erreur,
+      prefixeSku, axes, varianteUnique, variantesGenerees, images, lignesRecette, erreur,
     },
     setNom, setDescription, setTypeProduit, setMarque, setCategorieId,
-    setCodeBarresEan13, setTauxTva, setPrefixeSku, setVarianteUnique, setImages,
+    setCodeBarresEan13, setTauxTva, setPrefixeSku, setVarianteUnique, setImages, setLignesRecette,
     ajouterAxe, retirerAxe, modifierAxe,
     reinitialiser, valider, setErreur,
   };

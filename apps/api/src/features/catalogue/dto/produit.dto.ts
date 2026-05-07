@@ -10,6 +10,7 @@ export enum TypeProduit {
   VARIANT = "VARIANT",
   SERIALIZED = "SERIALIZED",
   PERISHABLE = "PERISHABLE",
+  MENU = "MENU",
 }
 
 // --- Requete ---

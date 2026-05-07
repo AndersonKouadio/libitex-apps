@@ -5,16 +5,25 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@heroui/react";
 import {
-  LayoutDashboard, ShoppingCart, Package, Warehouse,
+  LayoutDashboard, ShoppingCart, Package, Warehouse, Wheat,
   Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight,
   Monitor,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { SwitcherBoutique } from "@/features/boutique/components/switcher-boutique";
 
-const NAV_ERP = [
+interface ItemNav {
+  href: string;
+  libelle: string;
+  icone: typeof LayoutDashboard;
+  visibleSi?: (secteur: string | undefined) => boolean;
+}
+
+const NAV_ERP: ItemNav[] = [
   { href: "/dashboard", libelle: "Tableau de bord", icone: LayoutDashboard },
   { href: "/catalogue", libelle: "Catalogue", icone: Package },
+  { href: "/ingredients", libelle: "Ingrédients", icone: Wheat,
+    visibleSi: (s) => s === "RESTAURATION" || s === "AUTRE" },
   { href: "/stock", libelle: "Stock", icone: Warehouse },
   { href: "/clients", libelle: "Clients", icone: Users },
   { href: "/rapports", libelle: "Rapports", icone: BarChart3 },
@@ -58,7 +67,7 @@ function ModeSwitch({ modePOS, onSwitch, replie }: {
 export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
   const pathname = usePathname();
   const router = useRouter();
-  const { deconnecter, utilisateur } = useAuth();
+  const { deconnecter, utilisateur, boutiqueActive } = useAuth();
   const [replie, setReplie] = useState(false);
 
   const modePOS = pathname === "/pos" || pathname.startsWith("/pos/");
@@ -96,7 +105,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
 
       {!modePOS && (
         <nav className="flex-1 py-1 px-2.5 space-y-0.5 overflow-y-auto">
-          {NAV_ERP.map((item) => {
+          {NAV_ERP.filter((item) => !item.visibleSi || item.visibleSi(boutiqueActive?.secteurActivite)).map((item) => {
             const actif = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icone = item.icone;
             return (

@@ -5,6 +5,15 @@ export enum ProductType {
   VARIANT = "VARIANT",
   SERIALIZED = "SERIALIZED",
   PERISHABLE = "PERISHABLE",
+  MENU = "MENU",
+}
+
+export enum IngredientUnit {
+  G = "G",
+  KG = "KG",
+  ML = "ML",
+  L = "L",
+  PIECE = "PIECE",
 }
 
 export enum StockMovementType {
@@ -91,13 +100,39 @@ export const ACTIVITY_SECTOR_PRODUCT_TYPES: Record<ActivitySector, ProductType[]
   [ActivitySector.VETEMENT]: [ProductType.SIMPLE, ProductType.VARIANT],
   [ActivitySector.ALIMENTAIRE]: [ProductType.SIMPLE, ProductType.PERISHABLE],
   [ActivitySector.ELECTRONIQUE]: [ProductType.SIMPLE, ProductType.VARIANT, ProductType.SERIALIZED],
-  [ActivitySector.RESTAURATION]: [ProductType.SIMPLE, ProductType.PERISHABLE],
+  [ActivitySector.RESTAURATION]: [ProductType.MENU, ProductType.SIMPLE],
   [ActivitySector.BEAUTE_COSMETIQUE]: [ProductType.SIMPLE, ProductType.VARIANT, ProductType.PERISHABLE],
   [ActivitySector.QUINCAILLERIE]: [ProductType.SIMPLE, ProductType.VARIANT],
   [ActivitySector.LIBRAIRIE]: [ProductType.SIMPLE],
   [ActivitySector.PHARMACIE]: [ProductType.SIMPLE, ProductType.PERISHABLE, ProductType.SERIALIZED],
   [ActivitySector.BIJOUTERIE]: [ProductType.SIMPLE, ProductType.VARIANT, ProductType.SERIALIZED],
-  [ActivitySector.AUTRE]: [ProductType.SIMPLE, ProductType.VARIANT, ProductType.SERIALIZED, ProductType.PERISHABLE],
+  [ActivitySector.AUTRE]: [ProductType.SIMPLE, ProductType.VARIANT, ProductType.SERIALIZED, ProductType.PERISHABLE, ProductType.MENU],
+};
+
+/** Indique si le secteur utilise des recettes (BOM) avec ingredients */
+export const SECTORS_AVEC_INGREDIENTS: ActivitySector[] = [
+  ActivitySector.RESTAURATION,
+];
+
+export const INGREDIENT_UNIT_LABELS: Record<IngredientUnit, string> = {
+  [IngredientUnit.G]: "g",
+  [IngredientUnit.KG]: "kg",
+  [IngredientUnit.ML]: "mL",
+  [IngredientUnit.L]: "L",
+  [IngredientUnit.PIECE]: "pièce",
+};
+
+/**
+ * Conversion vers l'unite de base (g, mL ou pieces) pour faire les
+ * calculs de stock. Les ingredients stockes en kg sont convertis en g
+ * dans les calculs internes.
+ */
+export const INGREDIENT_UNIT_BASE: Record<IngredientUnit, { unit: IngredientUnit; factor: number }> = {
+  [IngredientUnit.G]: { unit: IngredientUnit.G, factor: 1 },
+  [IngredientUnit.KG]: { unit: IngredientUnit.G, factor: 1000 },
+  [IngredientUnit.ML]: { unit: IngredientUnit.ML, factor: 1 },
+  [IngredientUnit.L]: { unit: IngredientUnit.ML, factor: 1000 },
+  [IngredientUnit.PIECE]: { unit: IngredientUnit.PIECE, factor: 1 },
 };
 
 // ─── Types ───
