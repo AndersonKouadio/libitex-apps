@@ -1,0 +1,61 @@
+services:
+  # PostgreSQL commenté — on utilise Neon (cloud) à la place
+  # postgres:
+  #   image: postgres:17-alpine
+  #   container_name: libitex-postgres
+  #   environment:
+  #     POSTGRES_USER: libitex
+  #     POSTGRES_PASSWORD: libitex_dev
+  #     POSTGRES_DB: libitex_dev
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U libitex -d libitex_dev"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: libitex-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.13
+    container_name: libitex-meilisearch
+    environment:
+      MEILI_MASTER_KEY: libitex-meili-master-key
+      MEILI_ENV: development
+    ports:
+      - "7700:7700"
+    volumes:
+      - meili-data:/meili_data
+
+  minio:
+    image: minio/minio:latest
+    container_name: libitex-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: libitex
+      MINIO_ROOT_PASSWORD: libitex_dev_secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+volumes:
+  # postgres-data:
+  redis-data:
+  meili-data:
+  minio-data:
