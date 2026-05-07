@@ -22,7 +22,7 @@ export function SelectVariante({ produits, varianteId, onChange }: Props) {
     <Select
       isRequired
       name="varianteId"
-      placeholder="Selectionnez un article"
+      placeholder="Sélectionnez un article"
       selectedKey={varianteId}
       onSelectionChange={(key) => onChange(String(key))}
     >

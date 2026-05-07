@@ -10,14 +10,14 @@ const SECTIONS = [
     href: "/parametres/boutiques",
     icone: Store,
     titre: "Mes boutiques",
-    description: "Gerez vos boutiques, basculez entre elles ou creez-en une nouvelle.",
+    description: "Gérez vos boutiques, basculez entre elles ou creez-en une nouvelle.",
     classes: "bg-accent/10 text-accent",
   },
   {
     href: "/parametres",
     icone: Users,
-    titre: "Equipe",
-    description: "Inviter des utilisateurs, attribuer roles et acces aux points de vente.",
+    titre: "Équipe",
+    description: "Inviter des utilisateurs, attribuer roles et accès aux points de vente.",
     classes: "bg-warning/10 text-warning",
     enConstruction: true,
   },
@@ -25,15 +25,15 @@ const SECTIONS = [
     href: "/parametres",
     icone: Building2,
     titre: "Profil de la boutique",
-    description: "Nom, adresse, devise, secteur d'activite et types de produits autorises.",
+    description: "Nom, adresse, devise, secteur d'activité et types de produits autorises.",
     classes: "bg-success/10 text-success",
     enConstruction: true,
   },
   {
     href: "/parametres",
     icone: Tag,
-    titre: "Categories",
-    description: "Organisez votre catalogue par categories et sous-categories.",
+    titre: "Catégories",
+    description: "Organisez votre catalogue par catégories et sous-categories.",
     classes: "bg-muted/10 text-muted",
     enConstruction: true,
   },
@@ -42,7 +42,7 @@ const SECTIONS = [
 export default function PageParametres() {
   return (
     <>
-      <Topbar titre="Parametres" />
+      <Topbar titre="Paramètres" />
       <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {SECTIONS.map((s) => {

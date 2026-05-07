@@ -29,7 +29,7 @@ export function useCategorieListQuery() {
   const { token } = useAuth();
 
   return useQuery({
-    queryKey: catalogueKeyQuery("categories"),
+    queryKey: catalogueKeyQuery("catégories"),
     queryFn: () => catalogueAPI.listerCategories(token!),
     enabled: !!token,
   });

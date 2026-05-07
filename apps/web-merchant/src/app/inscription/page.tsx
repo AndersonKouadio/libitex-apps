@@ -77,7 +77,7 @@ export default function PageInscription() {
             <Store size={20} className="text-accent-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Creer votre boutique</h1>
+            <h1 className="text-xl font-bold text-white">Créer votre boutique</h1>
             <p className="text-sm text-white/40">Inscription en quelques secondes</p>
           </div>
         </div>
@@ -118,7 +118,7 @@ export default function PageInscription() {
             />
 
             <Button type="submit" variant="primary" className="w-full" isDisabled={enCours}>
-              {enCours ? "Creation en cours..." : "Creer ma boutique"}
+              {enCours ? "Création en cours..." : "Créer ma boutique"}
             </Button>
           </form>
         </div>

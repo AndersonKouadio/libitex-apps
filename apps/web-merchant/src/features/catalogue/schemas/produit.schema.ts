@@ -6,13 +6,13 @@ export const creerVarianteSchema = z.object({
   attributs: z.record(z.string(), z.string()).optional(),
   codeBarres: z.string().optional(),
   prixAchat: z.number().min(0).optional(),
-  prixDetail: z.number().min(0, "Prix de detail requis"),
+  prixDetail: z.number().min(0, "Prix de détail requis"),
   prixGros: z.number().min(0).optional(),
   prixVip: z.number().min(0).optional(),
 });
 
 export const creerProduitSchema = z.object({
-  nom: z.string().min(2, "Nom du produit requis (2 caracteres min.)"),
+  nom: z.string().min(2, "Nom du produit requis (2 caractères min.)"),
   description: z.string().optional(),
   typeProduit: z.enum(["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE"]),
   categorieId: z.string().optional(),

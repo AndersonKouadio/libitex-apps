@@ -46,7 +46,7 @@ export class PaiementInsuffisantException extends MetierException {
 export class NumeroSerieObligatoireException extends MetierException {
   constructor(produit: string) {
     super(
-      `Numero de serie obligatoire pour "${produit}" (produit serialise)`,
+      `Numéro de serie obligatoire pour "${produit}" (produit serialise)`,
       HttpStatus.UNPROCESSABLE_ENTITY,
       "NUMERO_SERIE_OBLIGATOIRE",
     );
@@ -56,7 +56,7 @@ export class NumeroSerieObligatoireException extends MetierException {
 export class LotIndisponibleException extends MetierException {
   constructor(produit: string) {
     super(
-      `Aucun lot disponible pour "${produit}" (produit perissable)`,
+      `Aucun lot disponible pour "${produit}" (produit périssable)`,
       HttpStatus.CONFLICT,
       "LOT_INDISPONIBLE",
     );
@@ -71,13 +71,13 @@ export class IdentifiantsInvalidesException extends MetierException {
 
 export class EmailDejaUtiliseException extends MetierException {
   constructor() {
-    super("Cette adresse email est deja utilisee", HttpStatus.CONFLICT, "EMAIL_DEJA_UTILISE");
+    super("Cette adresse email est déjà utilisee", HttpStatus.CONFLICT, "EMAIL_DEJA_UTILISE");
   }
 }
 
 export class SlugDejaUtiliseException extends MetierException {
   constructor() {
-    super("Ce nom de boutique est deja pris", HttpStatus.CONFLICT, "SLUG_DEJA_UTILISE");
+    super("Ce nom de boutique est déjà pris", HttpStatus.CONFLICT, "SLUG_DEJA_UTILISE");
   }
 }
 

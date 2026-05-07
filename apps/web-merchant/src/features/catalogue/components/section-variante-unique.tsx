@@ -13,8 +13,8 @@ interface Props {
 
 const NOTES: Record<Exclude<TypeProduit, "VARIANT">, string | null> = {
   SIMPLE: null,
-  SERIALIZED: "Les numeros de serie / IMEI seront saisis a la reception du stock, pas ici.",
-  PERISHABLE: "Les lots et dates de peremption seront saisis a la reception du stock, pas ici.",
+  SERIALIZED: "Les numéros de série et IMEI seront saisis à la réception du stock, pas ici.",
+  PERISHABLE: "Les lots et dates de péremption seront saisis à la réception du stock, pas ici.",
 };
 
 export function SectionVarianteUnique({ type, variante, onChange }: Props) {
@@ -68,7 +68,7 @@ export function SectionVarianteUnique({ type, variante, onChange }: Props) {
           value={variante.prixDetail ? String(variante.prixDetail) : ""}
           onChange={(v) => onChange({ prixDetail: Number(v) || 0 })}
         >
-          <Label>Prix de detail (F CFA)</Label>
+          <Label>Prix de détail (F CFA)</Label>
           <Input placeholder="15 000" min="0" />
         </TextField>
       </div>

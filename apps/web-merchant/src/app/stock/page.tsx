@@ -13,7 +13,7 @@ import { Table, Chip, Card, Button } from "@heroui/react";
 import { MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus, Plus } from "lucide-react";
 
 const LABELS_TYPE: Record<string, string> = {
-  SIMPLE: "Standard", VARIANT: "Variantes", SERIALIZED: "Serialise", PERISHABLE: "Perissable",
+  SIMPLE: "Standard", VARIANT: "Variantes", SERIALIZED: "Sérialisé", PERISHABLE: "Périssable",
 };
 
 export default function PageStock() {
@@ -98,7 +98,7 @@ export default function PageStock() {
               <Card>
                 <Card.Content className="py-20 text-center">
                   <ArrowDownToLine size={28} className="text-neutral-200 mx-auto mb-3" />
-                  <p className="text-sm text-neutral-500">Selectionnez un emplacement</p>
+                  <p className="text-sm text-neutral-500">Sélectionnez un emplacement</p>
                   <p className="text-xs text-neutral-400 mt-1">pour consulter le stock disponible</p>
                 </Card.Content>
               </Card>
@@ -119,7 +119,7 @@ export default function PageStock() {
                       <Table.Column isRowHeader>Produit</Table.Column>
                       <Table.Column>SKU</Table.Column>
                       <Table.Column>Type</Table.Column>
-                      <Table.Column>Quantite</Table.Column>
+                      <Table.Column>Quantité</Table.Column>
                     </Table.Header>
                     <Table.Body>
                       {stockDetail.map((s) => (

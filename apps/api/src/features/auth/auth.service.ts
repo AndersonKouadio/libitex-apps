@@ -69,7 +69,7 @@ export class AuthService {
       });
     } catch (err) {
       this.logger.error(
-        `Echec creation emplacement par defaut pour tenant ${tenant.id}`,
+        `Échec creation emplacement par defaut pour tenant ${tenant.id}`,
         err instanceof Error ? err.stack : String(err),
       );
     }
@@ -127,7 +127,7 @@ export class AuthService {
       });
     } catch (err) {
       this.logger.error(
-        `Echec creation emplacement defaut pour boutique ${tenant.id}`,
+        `Échec creation emplacement defaut pour boutique ${tenant.id}`,
         err instanceof Error ? err.stack : String(err),
       );
     }
@@ -140,7 +140,7 @@ export class AuthService {
     if (!user) throw new NotFoundException("Utilisateur introuvable");
 
     const membership = await this.membershipRepo.trouver(userId, tenantId);
-    if (!membership) throw new ForbiddenException("Vous n'avez pas acces a cette boutique");
+    if (!membership) throw new ForbiddenException("Vous n'avez pas accès a cette boutique");
 
     return this.construireReponseAuth(user, tenantId);
   }

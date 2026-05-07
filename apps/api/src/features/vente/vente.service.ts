@@ -55,7 +55,7 @@ export class VenteService {
       if (product.productType === "SERIALIZED") {
         if (!ligne.numeroSerie) throw new NumeroSerieObligatoireException(product.name);
         const serial = await this.ticketRepo.trouverSerieDisponible(variant.id, ligne.numeroSerie);
-        if (!serial) throw new RessourceIntrouvableException("Numero de serie", ligne.numeroSerie);
+        if (!serial) throw new RessourceIntrouvableException("Numéro de serie", ligne.numeroSerie);
         serialId = serial.id;
         serialNumber = serial.serialNumber;
       }

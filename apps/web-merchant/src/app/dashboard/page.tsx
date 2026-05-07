@@ -90,7 +90,7 @@ export default function TableauDeBordPage() {
           </h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <LienRapide href="/pos" icone={ShoppingCart} libelle="Ouvrir la caisse" classesIcone="bg-accent/10 text-accent" />
-            <LienRapide href="/catalogue" icone={Package} libelle="Gerer le catalogue" classesIcone="bg-warning/10 text-warning" />
+            <LienRapide href="/catalogue" icone={Package} libelle="Gérer le catalogue" classesIcone="bg-warning/10 text-warning" />
             <LienRapide href="/stock" icone={Warehouse} libelle="Mouvements de stock" classesIcone="bg-success/10 text-success" />
             <LienRapide href="/rapports" icone={BarChart3} libelle="Consulter les rapports" classesIcone="bg-muted/10 text-muted" />
           </div>

@@ -80,7 +80,7 @@ export default function PageRapports() {
 
 
           <Button variant="primary" onPress={generer} isDisabled={isFetching || !empParDefaut}>
-            {isFetching ? <Spinner size="sm" /> : "Generer le Z"}
+            {isFetching ? <Spinner size="sm" /> : "Générer le Z"}
           </Button>
         </div>
 

@@ -18,7 +18,7 @@ const NAV_ERP = [
   { href: "/stock", libelle: "Stock", icone: Warehouse },
   { href: "/clients", libelle: "Clients", icone: Users },
   { href: "/rapports", libelle: "Rapports", icone: BarChart3 },
-  { href: "/parametres", libelle: "Parametres", icone: Settings },
+  { href: "/parametres", libelle: "Paramètres", icone: Settings },
 ];
 
 function ModeSwitch({ modePOS, onSwitch, replie }: {
@@ -138,7 +138,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
           onPress={deconnecter}
         >
           <LogOut size={18} strokeWidth={1.5} />
-          {!replie && <span>Deconnexion</span>}
+          {!replie && <span>Déconnexion</span>}
         </Button>
       </div>
     </aside>

@@ -16,7 +16,7 @@ export class StockController {
   constructor(private readonly stockService: StockService) {}
 
   @Post("emplacements")
-  @ApiOperation({ summary: "Creer un emplacement (entrepot, boutique)" })
+  @ApiOperation({ summary: "Créer un emplacement (entrepot, boutique)" })
   @Roles("ADMIN", "MANAGER")
   creerEmplacement(@CurrentUser() user: CurrentUserData, @Body() dto: CreerEmplacementDto) {
     return this.stockService.creerEmplacement(user.tenantId, dto);
@@ -29,7 +29,7 @@ export class StockController {
   }
 
   @Post("entree")
-  @ApiOperation({ summary: "Entree de stock — reception de marchandise" })
+  @ApiOperation({ summary: "Entree de stock — réception de marchandise" })
   @Roles("ADMIN", "MANAGER", "WAREHOUSE")
   entreeStock(@CurrentUser() user: CurrentUserData, @Body() dto: EntreeStockDto) {
     return this.stockService.entreeStock(user.tenantId, user.userId, dto);

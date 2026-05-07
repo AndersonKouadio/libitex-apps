@@ -13,6 +13,6 @@ export function useAjouterEmplacementMutation() {
   return useMutation({
     mutationFn: (data: { nom: string; type?: string; adresse?: string }) =>
       stockAPI.creerEmplacement(token!, data),
-    onSuccess: () => { invalidate(); toast.success("Emplacement cree"); },
+    onSuccess: () => { invalidate(); toast.success("Emplacement créé"); },
   });
 }

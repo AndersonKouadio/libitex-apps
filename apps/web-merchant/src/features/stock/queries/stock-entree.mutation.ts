@@ -18,7 +18,7 @@ export function useEntreeStockMutation() {
       toast.success("Stock receptionne");
     },
     onError: (err: Error) => {
-      toast.danger(err.message || "Erreur lors de la reception");
+      toast.danger(err.message || "Erreur lors de la réception");
     },
   });
 }

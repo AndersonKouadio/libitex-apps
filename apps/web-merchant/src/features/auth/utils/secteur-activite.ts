@@ -29,8 +29,8 @@ export const SECTEUR_TYPES_PRODUITS: Record<SecteurActivite, TypeProduit[]> = {
 export const TYPE_PRODUIT_LABELS: Record<TypeProduit, string> = {
   SIMPLE: "Standard",
   VARIANT: "Avec variantes",
-  SERIALIZED: "Serialise",
-  PERISHABLE: "Perissable",
+  SERIALIZED: "Sérialisé",
+  PERISHABLE: "Périssable",
 };
 
 export const SECTEURS_ORDONNES: SecteurActivite[] = [

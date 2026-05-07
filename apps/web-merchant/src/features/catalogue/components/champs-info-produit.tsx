@@ -7,9 +7,9 @@ import type { TypeProduit } from "../hooks/useFormProduit";
 
 const TYPES_PRODUIT: Array<{ id: TypeProduit; label: string; description: string }> = [
   { id: "SIMPLE", label: "Standard", description: "Un seul SKU, sans variantes ni suivi unitaire." },
-  { id: "VARIANT", label: "Avec variantes", description: "Genere une matrice (couleur, taille, matiere...)." },
-  { id: "SERIALIZED", label: "Serialise", description: "Numeros de serie / IMEI saisis a la reception." },
-  { id: "PERISHABLE", label: "Perissable", description: "Suivi par lots et dates de peremption." },
+  { id: "VARIANT", label: "Avec variantes", description: "Génère une matrice (couleur, taille, matière...)." },
+  { id: "SERIALIZED", label: "Sérialisé", description: "Numéros de série ou IMEI saisis à la réception." },
+  { id: "PERISHABLE", label: "Périssable", description: "Suivi par lots et dates de péremption." },
 ];
 
 interface Props {
@@ -97,9 +97,9 @@ export function ChampsInfoProduit({
                 selectedKey={categorieId || undefined}
                 onSelectionChange={(key) => onCategorieId(key ? String(key) : "")}
                 isDisabled={categories.length === 0}
-                placeholder={categories.length === 0 ? "Aucune categorie" : "Selectionner..."}
+                placeholder={categories.length === 0 ? "Aucune catégorie" : "Sélectionner..."}
               >
-                <Label>Categorie</Label>
+                <Label>Catégorie</Label>
                 <Select.Trigger>
                   <Select.Value />
                   <Select.Indicator />

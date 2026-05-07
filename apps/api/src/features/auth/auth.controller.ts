@@ -9,9 +9,9 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post("inscription")
-  @ApiOperation({ summary: "Inscription — cree une boutique et un compte administrateur" })
+  @ApiOperation({ summary: "Inscription — créé une boutique et un compte administrateur" })
   @ApiResponse({ status: 201, description: "Boutique et compte crees" })
-  @ApiResponse({ status: 409, description: "Email ou identifiant boutique deja pris" })
+  @ApiResponse({ status: 409, description: "Email ou identifiant boutique déjà pris" })
   inscrire(@Body() dto: InscriptionDto) {
     return this.authService.inscrire(dto);
   }

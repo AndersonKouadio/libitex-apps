@@ -50,7 +50,7 @@ export function ModalTransfertStock({ ouvert, onFermer, emplacementSourceParDefa
 
     const validation = transfertStockSchema.safeParse(donnees);
     if (!validation.success) {
-      setErreur(validation.error.issues[0]?.message || "Donnees invalides");
+      setErreur(validation.error.issues[0]?.message || "Données invalides");
       return;
     }
 
@@ -97,14 +97,14 @@ export function ModalTransfertStock({ ouvert, onFermer, emplacementSourceParDefa
               />
             </div>
 
-            <TextField isRequired name="quantite" type="number" value={quantite} onChange={setQuantite}>
-              <Label>Quantite a transferer</Label>
+            <TextField isRequired name="quantité" type="number" value={quantite} onChange={setQuantite}>
+              <Label>Quantité a transferer</Label>
               <Input placeholder="10" min="1" />
             </TextField>
 
             <TextField name="note" value={note} onChange={setNote}>
               <Label>Note (optionnel)</Label>
-              <TextArea placeholder="Motif du transfert, reference du bon..." rows={2} />
+              <TextArea placeholder="Motif du transfert, référence du bon..." rows={2} />
             </TextField>
           </Modal.Body>
 

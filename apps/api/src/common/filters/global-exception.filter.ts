@@ -30,7 +30,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
     } else {
       this.logger.error(
-        `Erreur non geree: ${request.method} ${request.url}`,
+        `Erreur non gérée: ${request.method} ${request.url}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
     }

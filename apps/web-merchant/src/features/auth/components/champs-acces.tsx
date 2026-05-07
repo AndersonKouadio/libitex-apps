@@ -21,7 +21,7 @@ export function ChampsAcces({ motDePasse, devise, onChange }: Props) {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <TextField isRequired name="motDePasse" type="password" value={motDePasse} onChange={(v) => onChange("motDePasse", v)}>
         <Label>Mot de passe</Label>
-        <Input placeholder="6 caracteres minimum" />
+        <Input placeholder="6 caractères minimum" />
       </TextField>
       <Select
         name="devise"

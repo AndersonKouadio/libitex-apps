@@ -23,7 +23,7 @@ export function ChampSecteur({ valeur, onChange, isRequired }: Props) {
         selectedKey={valeur}
         onSelectionChange={(key) => onChange(String(key) as SecteurActivite)}
       >
-        <Label>Secteur d'activite</Label>
+        <Label>Secteur d'activité</Label>
         <Select.Trigger>
           <Select.Value />
           <Select.Indicator />

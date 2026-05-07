@@ -9,8 +9,8 @@ const LIBELLE_STATUT: Record<string, string> = {
   PARKED: "En attente",
   COMPLETE: "Complete",
   COMPLETED: "Complete",
-  ANNULE: "Annule",
-  VOIDED: "Annule",
+  ANNULE: "Annulé",
+  VOIDED: "Annulé",
   OPEN: "Ouvert",
 };
 

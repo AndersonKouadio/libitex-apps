@@ -48,7 +48,7 @@ export function ModalEntreeStock({ ouvert, onFermer }: Props) {
 
     const validation = entreeStockSchema.safeParse(donnees);
     if (!validation.success) {
-      setErreur(validation.error.issues[0]?.message || "Donnees invalides");
+      setErreur(validation.error.issues[0]?.message || "Données invalides");
       return;
     }
 
@@ -70,7 +70,7 @@ export function ModalEntreeStock({ ouvert, onFermer }: Props) {
             <Modal.Icon className="bg-success/10 text-success">
               <PackagePlus className="size-5" />
             </Modal.Icon>
-            <Modal.Heading>Reception de marchandise</Modal.Heading>
+            <Modal.Heading>Réception de marchandise</Modal.Heading>
           </Modal.Header>
 
           <Modal.Body className="space-y-4">
@@ -81,21 +81,21 @@ export function ModalEntreeStock({ ouvert, onFermer }: Props) {
             <SelectVariante produits={produits} varianteId={varianteId} onChange={setVarianteId} />
             <SelectEmplacement emplacements={emps} emplacementId={emplacementId} onChange={setEmplacementId} />
 
-            <TextField isRequired name="quantite" type="number" value={quantite} onChange={setQuantite}>
-              <Label>Quantite recue</Label>
+            <TextField isRequired name="quantité" type="number" value={quantite} onChange={setQuantite}>
+              <Label>Quantité recue</Label>
               <Input placeholder="50" min="1" />
             </TextField>
 
             <TextField name="note" value={note} onChange={setNote}>
               <Label>Note (optionnel)</Label>
-              <TextArea placeholder="Reference commande, nom fournisseur, constat a l'arrivee..." rows={2} />
+              <TextArea placeholder="Référence commande, nom fournisseur, constat a l'arrivee..." rows={2} />
             </TextField>
           </Modal.Body>
 
           <Modal.Footer>
             <Button variant="secondary" slot="close">Annuler</Button>
             <Button variant="primary" onPress={soumettre} isDisabled={mutation.isPending}>
-              {mutation.isPending ? "Enregistrement..." : "Confirmer la reception"}
+              {mutation.isPending ? "Enregistrement..." : "Confirmer la réception"}
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

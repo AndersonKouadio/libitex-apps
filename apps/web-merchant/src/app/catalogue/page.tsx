@@ -15,8 +15,8 @@ function formatPrix(n: number) {
 const LABELS_TYPE: Record<string, { label: string; color: string }> = {
   SIMPLE: { label: "Standard", color: "primary" },
   VARIANT: { label: "Variantes", color: "secondary" },
-  SERIALIZED: { label: "Serialise", color: "warning" },
-  PERISHABLE: { label: "Perissable", color: "success" },
+  SERIALIZED: { label: "Sérialisé", color: "warning" },
+  PERISHABLE: { label: "Périssable", color: "success" },
 };
 
 export default function PageCatalogue() {
@@ -80,7 +80,7 @@ export default function PageCatalogue() {
                   <Table.Column isRowHeader>Produit</Table.Column>
                   <Table.Column>Type</Table.Column>
                   <Table.Column>Variantes</Table.Column>
-                  <Table.Column>Prix detail</Table.Column>
+                  <Table.Column>Prix détail</Table.Column>
                 </Table.Header>
                 <Table.Body>
                   {produits.map((p: IProduit) => {

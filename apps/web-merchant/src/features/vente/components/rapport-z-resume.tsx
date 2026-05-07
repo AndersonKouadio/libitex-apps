@@ -44,7 +44,7 @@ export function RapportZResume({ rapport }: Props) {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <CaseKpi libelle="Recettes" valeur={`${formatMontant(chiffreAffaires)} F`} />
           <CaseKpi libelle="Tickets" valeur={String(totalTickets)} />
-          <CaseKpi libelle="TVA collectee" valeur={`${formatMontant(totalTva)} F`} />
+          <CaseKpi libelle="TVA collectée" valeur={`${formatMontant(totalTva)} F`} />
           <CaseKpi libelle="Ticket moyen" valeur={`${ticketMoyen}${totalTickets > 0 ? " F" : ""}`} />
         </div>
       </Card.Content>

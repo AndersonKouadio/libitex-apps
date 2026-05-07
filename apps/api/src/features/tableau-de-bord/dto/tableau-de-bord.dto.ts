@@ -21,7 +21,7 @@ export class PointVentesJourDto {
   @ApiProperty({ description: "Date AAAA-MM-JJ", example: "2026-05-07" })
   date!: string;
 
-  @ApiProperty({ description: "Recettes de la journee", example: 158400 })
+  @ApiProperty({ description: "Recettes de la journée", example: 158400 })
   recettes!: number;
 
   @ApiProperty({ description: "Nombre de tickets", example: 12 })

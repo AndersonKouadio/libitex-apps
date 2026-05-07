@@ -18,14 +18,14 @@ export class VenteController {
   constructor(private readonly venteService: VenteService) {}
 
   @Post("tickets")
-  @ApiOperation({ summary: "Creer un nouveau ticket de vente" })
+  @ApiOperation({ summary: "Créer un nouveau ticket de vente" })
   @Roles("ADMIN", "MANAGER", "CASHIER")
   creerTicket(@CurrentUser() user: CurrentUserData, @Body() dto: CreerTicketDto) {
     return this.venteService.creerTicket(user.tenantId, user.userId, dto);
   }
 
   @Post("tickets/:id/completer")
-  @ApiOperation({ summary: "Completer un ticket — enregistrer paiements et decrementer stock" })
+  @ApiOperation({ summary: "Compléter un ticket — enregistrer paiements et decrementer stock" })
   @Roles("ADMIN", "MANAGER", "CASHIER")
   completerTicket(
     @CurrentUser() user: CurrentUserData,

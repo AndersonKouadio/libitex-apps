@@ -20,7 +20,7 @@ interface MethodeUI {
 }
 
 const METHODES: MethodeUI[] = [
-  { code: MethodePaiement.CASH, libelle: "Especes", icone: Banknote, classes: "bg-success/10 text-success" },
+  { code: MethodePaiement.CASH, libelle: "Espèces", icone: Banknote, classes: "bg-success/10 text-success" },
   { code: MethodePaiement.MOBILE_MONEY, libelle: "Mobile Money", icone: Smartphone, classes: "bg-warning/10 text-warning" },
   { code: MethodePaiement.CARD, libelle: "Carte bancaire", icone: CreditCard, classes: "bg-accent/10 text-accent" },
   { code: MethodePaiement.BANK_TRANSFER, libelle: "Virement", icone: Landmark, classes: "bg-muted/10 text-muted" },

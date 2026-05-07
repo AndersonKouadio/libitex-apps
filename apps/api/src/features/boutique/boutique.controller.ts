@@ -29,7 +29,7 @@ export class BoutiqueController {
   }
 
   @Post()
-  @ApiOperation({ summary: "Creer une nouvelle boutique pour l'utilisateur connecte" })
+  @ApiOperation({ summary: "Créer une nouvelle boutique pour l'utilisateur connecte" })
   creerBoutique(@CurrentUser() user: CurrentUserData, @Body() dto: CreerBoutiqueDto) {
     return this.authService.creerBoutique(user.userId, dto);
   }

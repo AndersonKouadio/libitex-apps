@@ -39,7 +39,7 @@ export function ModalCreerBoutique({ ouvert, onFermer }: Props) {
     setErreur("");
     const validation = creerBoutiqueSchema.safeParse(form);
     if (!validation.success) {
-      setErreur(validation.error.issues[0]?.message || "Donnees invalides");
+      setErreur(validation.error.issues[0]?.message || "Données invalides");
       return;
     }
     try {
@@ -86,7 +86,7 @@ export function ModalCreerBoutique({ ouvert, onFermer }: Props) {
           <Modal.Footer>
             <Button variant="secondary" slot="close">Annuler</Button>
             <Button variant="primary" onPress={soumettre} isDisabled={mutation.isPending}>
-              {mutation.isPending ? "Creation..." : "Creer la boutique"}
+              {mutation.isPending ? "Création..." : "Créer la boutique"}
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

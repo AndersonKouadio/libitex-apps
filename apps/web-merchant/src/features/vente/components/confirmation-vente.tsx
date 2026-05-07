@@ -20,7 +20,7 @@ export function ConfirmationVente({ numeroTicket, total, monnaie, onNouvelle }: 
             <div className="w-14 h-14 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-5">
               <CheckCircle2 size={28} className="text-success" />
             </div>
-            <h3 className="text-xl font-semibold text-foreground">Vente enregistree</h3>
+            <h3 className="text-xl font-semibold text-foreground">Vente enregistrée</h3>
             <p className="text-sm text-muted mt-1 font-mono">{numeroTicket}</p>
             <p className="text-3xl font-bold text-accent mt-4 tabular-nums">
               {formatMontant(total)}

@@ -19,7 +19,7 @@ export function useAjouterProduitMutation() {
       toast.success(`${data.nom} ajoute au catalogue`);
     },
     onError: (err) => {
-      toast.danger(err.message || "Erreur lors de la creation");
+      toast.danger(err.message || "Erreur lors de la création");
     },
   });
 }

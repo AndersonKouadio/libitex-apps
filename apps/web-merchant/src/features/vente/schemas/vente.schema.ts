@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const ligneTicketSchema = z.object({
   varianteId: z.string().min(1, "Article requis"),
-  quantite: z.number().int().positive("Quantite invalide"),
+  quantite: z.number().int().positive("Quantité invalide"),
   numeroSerie: z.string().optional(),
 });
 

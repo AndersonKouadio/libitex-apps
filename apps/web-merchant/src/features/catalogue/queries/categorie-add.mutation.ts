@@ -13,6 +13,6 @@ export function useAjouterCategorieMutation() {
   return useMutation({
     mutationFn: (data: { nom: string; parentId?: string }) =>
       catalogueAPI.creerCategorie(token!, data),
-    onSuccess: () => { invalidate(); toast.success("Categorie creee"); },
+    onSuccess: () => { invalidate(); toast.success("Catégorie creee"); },
   });
 }

@@ -34,7 +34,7 @@ export function SectionVariantesAttributs({
           <Input placeholder="TSHRT, CHEM..." />
         </TextField>
         <TextField name="prixDetailReference" type="number" value={prixDetailReference} onChange={onPrixReference}>
-          <Label>Prix de detail (F CFA)</Label>
+          <Label>Prix de détail (F CFA)</Label>
           <Input placeholder="15 000" min="0" />
         </TextField>
       </div>

@@ -29,7 +29,7 @@ export class EntreeStockDto {
 
   @ApiProperty({ example: 50 })
   @IsNumber()
-  @Min(1, { message: "La quantite doit etre superieure a 0" })
+  @Min(1, { message: "La quantité doit etre superieure a 0" })
   quantite!: number;
 
   @ApiPropertyOptional({ example: "Livraison fournisseur ref. CMD-2026-042" })

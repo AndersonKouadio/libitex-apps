@@ -73,7 +73,7 @@ export function ModalCreerEmplacement({ ouvert, onFermer }: Props) {
           <Modal.Footer>
             <Button variant="secondary" slot="close">Annuler</Button>
             <Button variant="primary" onPress={soumettre} isDisabled={mutation.isPending}>
-              {mutation.isPending ? "Creation..." : "Creer"}
+              {mutation.isPending ? "Création..." : "Créer"}
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

@@ -22,7 +22,7 @@ export class CatalogueController {
   // --- Produits ---
 
   @Post("produits")
-  @ApiOperation({ summary: "Creer un produit avec ses variantes" })
+  @ApiOperation({ summary: "Créer un produit avec ses variantes" })
   @Roles("ADMIN", "MANAGER")
   creerProduit(@CurrentUser() user: CurrentUserData, @Body() dto: CreerProduitDto) {
     return this.catalogueService.creerProduit(user.tenantId, dto);
@@ -68,14 +68,14 @@ export class CatalogueController {
   // --- Categories ---
 
   @Post("categories")
-  @ApiOperation({ summary: "Creer une categorie" })
+  @ApiOperation({ summary: "Créer une catégorie" })
   @Roles("ADMIN", "MANAGER")
   creerCategorie(@CurrentUser() user: CurrentUserData, @Body() dto: CreerCategorieDto) {
     return this.catalogueService.creerCategorie(user.tenantId, dto);
   }
 
   @Get("categories")
-  @ApiOperation({ summary: "Lister les categories" })
+  @ApiOperation({ summary: "Lister les catégories" })
   listerCategories(@CurrentUser() user: CurrentUserData) {
     return this.catalogueService.listerCategories(user.tenantId);
   }

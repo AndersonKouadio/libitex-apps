@@ -15,11 +15,11 @@ const MESSAGES: Record<NonNullable<Props["contexte"]>, { titre: string; descript
   },
   rapports: {
     titre: "Aucun emplacement",
-    description: "Le rapport Z se calcule par point de vente. Creez-en un pour generer vos rapports.",
+    description: "Le rapport Z se calcule par point de vente. Creez-en un pour générer vos rapports.",
   },
   stock: {
     titre: "Aucun emplacement",
-    description: "Creez un point de vente ou un entrepot pour commencer a gerer votre stock.",
+    description: "Creez un point de vente ou un entrepot pour commencer a gérer votre stock.",
   },
 };
 

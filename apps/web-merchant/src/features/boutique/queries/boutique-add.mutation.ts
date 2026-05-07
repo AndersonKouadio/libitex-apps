@@ -16,10 +16,10 @@ export function useAjouterBoutiqueMutation() {
     mutationFn: (data) => boutiqueAPI.creer(token!, data),
     onSuccess: (data) => {
       invalidate();
-      toast.success(`${data.nom} cree`);
+      toast.success(`${data.nom} créé`);
     },
     onError: (err) => {
-      toast.danger(err.message || "Erreur lors de la creation");
+      toast.danger(err.message || "Erreur lors de la création");
     },
   });
 }

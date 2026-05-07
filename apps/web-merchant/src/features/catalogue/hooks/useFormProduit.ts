@@ -73,7 +73,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
   const valider = useCallback((): CreerProduitDTO | null => {
     const variantes = variantesGenerees.filter((v) => v.sku && v.prixDetail > 0);
     if (variantes.length === 0) {
-      setErreur("Renseignez au moins un SKU et un prix de detail");
+      setErreur("Renseignez au moins un SKU et un prix de détail");
       return null;
     }
 
@@ -91,7 +91,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
 
     const validation = creerProduitSchema.safeParse(donnees);
     if (!validation.success) {
-      setErreur(validation.error.issues[0]?.message || "Donnees invalides");
+      setErreur(validation.error.issues[0]?.message || "Données invalides");
       return null;
     }
     setErreur("");

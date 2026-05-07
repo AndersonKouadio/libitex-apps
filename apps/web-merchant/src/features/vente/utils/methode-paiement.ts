@@ -1,11 +1,11 @@
 import { Banknote, CreditCard, Smartphone, Landmark, Receipt, type LucideIcon } from "lucide-react";
 
 export const LABELS_METHODE_PAIEMENT: Record<string, string> = {
-  CASH: "Especes",
+  CASH: "Espèces",
   MOBILE_MONEY: "Mobile Money",
   CARD: "Carte bancaire",
   BANK_TRANSFER: "Virement",
-  CREDIT: "Credit client",
+  CREDIT: "Crédit client",
 };
 
 export const ICONES_METHODE_PAIEMENT: Record<string, LucideIcon> = {

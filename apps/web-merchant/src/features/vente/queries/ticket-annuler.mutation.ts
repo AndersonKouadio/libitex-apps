@@ -12,6 +12,6 @@ export function useAnnulerTicketMutation() {
 
   return useMutation({
     mutationFn: (ticketId: string) => venteAPI.annuler(token!, ticketId),
-    onSuccess: () => { invalidate(); toast.success("Ticket annule"); },
+    onSuccess: () => { invalidate(); toast.success("Ticket annulé"); },
   });
 }

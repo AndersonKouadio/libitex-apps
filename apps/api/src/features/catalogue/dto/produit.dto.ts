@@ -64,7 +64,7 @@ export class CreerProduitDto {
   @IsNotEmpty()
   nom!: string;
 
-  @ApiPropertyOptional({ example: "Smartphone 4G, ecran 6.5 pouces" })
+  @ApiPropertyOptional({ example: "Smartphone 4G, écran 6.5 pouces" })
   @IsString()
   @IsOptional()
   description?: string;

@@ -37,7 +37,7 @@ export function LigneAxeAttribut({ index, axe, onChange, onRetirer, peutRetirer 
           className="flex-1"
         >
           <Label>Nom de l'attribut</Label>
-          <Input placeholder="Couleur, Taille, Matiere..." />
+          <Input placeholder="Couleur, Taille, Matière..." />
         </TextField>
         {peutRetirer && (
           <Button

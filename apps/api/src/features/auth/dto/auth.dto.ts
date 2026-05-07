@@ -9,7 +9,7 @@ export class ConnexionDto {
 
   @ApiProperty({ example: "motdepasse123" })
   @IsString()
-  @MinLength(6, { message: "Le mot de passe doit contenir au moins 6 caracteres" })
+  @MinLength(6, { message: "Le mot de passe doit contenir au moins 6 caractères" })
   motDePasse!: string;
 }
 
@@ -30,7 +30,7 @@ export class InscriptionDto {
 
   @ApiProperty({ example: "motdepasse123" })
   @IsString()
-  @MinLength(6, { message: "Le mot de passe doit contenir au moins 6 caracteres" })
+  @MinLength(6, { message: "Le mot de passe doit contenir au moins 6 caractères" })
   motDePasse!: string;
 
   @ApiProperty({ example: "Amadou" })

@@ -19,7 +19,7 @@ export function RapportZVentilation({ rapport }: Props) {
       </Card.Header>
       <Card.Content>
         {rapport.ventilationPaiements.length === 0 ? (
-          <p className="text-sm text-muted py-4">Aucune vente pour cette journee</p>
+          <p className="text-sm text-muted py-4">Aucune vente pour cette journée</p>
         ) : (
           <div className="space-y-3">
             {rapport.ventilationPaiements.map((p) => {

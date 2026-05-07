@@ -33,7 +33,7 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
       form.reinitialiser();
       onFermer();
     } catch (err: unknown) {
-      form.setErreur(err instanceof Error ? err.message : "Erreur lors de la creation");
+      form.setErreur(err instanceof Error ? err.message : "Erreur lors de la création");
     }
   }
 
@@ -103,7 +103,7 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
           <Modal.Footer>
             <Button variant="secondary" slot="close">Annuler</Button>
             <Button variant="primary" onPress={soumettre} isDisabled={mutation.isPending}>
-              {mutation.isPending ? "Creation..." : "Creer le produit"}
+              {mutation.isPending ? "Création..." : "Créer le produit"}
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

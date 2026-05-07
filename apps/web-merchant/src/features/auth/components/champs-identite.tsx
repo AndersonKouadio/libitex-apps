@@ -15,10 +15,10 @@ export function ChampsIdentite({ prenom, nomFamille, email, telephone, onChange 
   return (
     <>
       <div>
-        <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Votre identite</p>
+        <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Votre identité</p>
         <div className="grid grid-cols-2 gap-3">
           <TextField isRequired name="prenom" value={prenom} onChange={(v) => onChange("prenom", v)}>
-            <Label>Prenom</Label>
+            <Label>Prénom</Label>
             <Input placeholder="Amadou" />
           </TextField>
           <TextField isRequired name="nomFamille" value={nomFamille} onChange={(v) => onChange("nomFamille", v)}>
@@ -34,7 +34,7 @@ export function ChampsIdentite({ prenom, nomFamille, email, telephone, onChange 
           <Input placeholder="amadou@boutique.sn" />
         </TextField>
         <TextField name="telephone" type="tel" value={telephone} onChange={(v) => onChange("telephone", v)}>
-          <Label>Telephone</Label>
+          <Label>Téléphone</Label>
           <Input placeholder="+221 77 000 12 34" />
         </TextField>
       </div>

@@ -40,7 +40,7 @@ export class LigneTicketDto {
   @Min(0)
   remise?: number;
 
-  @ApiPropertyOptional({ description: "Obligatoire pour produits serialises" })
+  @ApiPropertyOptional({ description: "Obligatoire pour produits sérialisés" })
   @IsString()
   @IsOptional()
   numeroSerie?: string;

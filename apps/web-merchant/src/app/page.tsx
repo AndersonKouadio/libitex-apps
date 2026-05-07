@@ -51,7 +51,7 @@ export default function PageConnexion() {
       <div className="relative w-full max-w-[400px]">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold tracking-tight text-accent">LIBITEX</h1>
-          <p className="mt-2.5 text-sm text-white/50">Espace commercant</p>
+          <p className="mt-2.5 text-sm text-white/50">Espace commerçant</p>
         </div>
 
         <div className="bg-surface rounded-2xl shadow-xl p-7">

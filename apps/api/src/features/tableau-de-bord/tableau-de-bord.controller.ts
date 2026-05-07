@@ -12,7 +12,7 @@ export class TableauDeBordController {
   constructor(private readonly service: TableauDeBordService) {}
 
   @Get("kpis")
-  @ApiOperation({ summary: "Indicateurs cles de la journee (recettes, tickets, ticket moyen, catalogue, emplacements)" })
+  @ApiOperation({ summary: "Indicateurs cles de la journée (recettes, tickets, ticket moyen, catalogue, emplacements)" })
   kpis(@CurrentUser() user: CurrentUserData) {
     return this.service.kpis(user.tenantId);
   }

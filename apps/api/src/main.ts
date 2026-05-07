@@ -44,7 +44,7 @@ async function bootstrap() {
     .setVersion("0.1.0")
     .addBearerAuth()
     .addTag("Authentification", "Inscription et connexion")
-    .addTag("Catalogue", "Produits, variantes, categories")
+    .addTag("Catalogue", "Produits, variantes, catégories")
     .addTag("Stock", "Mouvements de stock, emplacements")
     .addTag("Vente / POS", "Tickets de caisse, paiements")
     .build();
