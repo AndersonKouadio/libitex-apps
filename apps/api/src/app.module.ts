@@ -1,10 +1,10 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { DatabaseModule } from "./database/database.module";
-import { AuthModule } from "./modules/auth/auth.module";
-import { CatalogModule } from "./modules/catalog/catalog.module";
-import { StockModule } from "./modules/stock/stock.module";
-import { PosModule } from "./modules/pos/pos.module";
+import { AuthModule } from "./features/auth/auth.module";
+import { CatalogueModule } from "./features/catalogue/catalogue.module";
+import { StockModule } from "./features/stock/stock.module";
+import { VenteModule } from "./features/vente/vente.module";
 
 @Module({
   imports: [
@@ -14,9 +14,9 @@ import { PosModule } from "./modules/pos/pos.module";
     }),
     DatabaseModule,
     AuthModule,
-    CatalogModule,
+    CatalogueModule,
     StockModule,
-    PosModule,
+    VenteModule,
   ],
 })
 export class AppModule {}

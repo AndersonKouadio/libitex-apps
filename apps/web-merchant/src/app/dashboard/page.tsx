@@ -2,158 +2,175 @@
 
 import { useEffect, useState } from "react";
 import { Topbar } from "@/components/layout/topbar";
-import { useAuth } from "@/lib/auth-context";
-import { pos, stock, catalog } from "@/lib/api";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { catalogueAPI } from "@/features/catalogue/apis/catalogue.api";
+import { stockAPI } from "@/features/stock/apis/stock.api";
+import type { IKpiTableauDeBord } from "@/features/tableau-de-bord/types/dashboard.type";
 import {
-  ShoppingCart, Package, Warehouse, TrendingUp,
-  DollarSign, AlertTriangle,
+  Banknote, Receipt, Package, MapPin, ArrowUpRight, ArrowDownRight,
+  ShoppingCart, Warehouse, BarChart3, TrendingUp,
 } from "lucide-react";
 
-interface DashboardData {
-  todayRevenue: number;
-  todayTickets: number;
-  totalProducts: number;
-  locations: number;
+function formatXOF(montant: number): string {
+  return new Intl.NumberFormat("fr-FR").format(montant);
 }
 
-function KpiCard({
-  label,
-  value,
-  icon: Icon,
-  color,
-  sub,
+function CarteKpi({
+  libelle, valeur, unite, icone: Icone, couleur, tendance,
 }: {
-  label: string;
-  value: string;
-  icon: any;
-  color: string;
-  sub?: string;
+  libelle: string;
+  valeur: string;
+  unite?: string;
+  icone: typeof Banknote;
+  couleur: string;
+  tendance?: { valeur: string; positive: boolean };
 }) {
   return (
-    <div className="bg-white rounded-xl border p-5 flex items-start gap-4" style={{ borderColor: "var(--color-neutral-200)" }}>
-      <div
-        className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0"
-        style={{ background: `${color}15`, color }}
-      >
-        <Icon size={22} />
-      </div>
-      <div>
-        <p className="text-sm" style={{ color: "var(--color-neutral-500)" }}>
-          {label}
-        </p>
-        <p className="text-2xl font-bold mt-0.5" style={{ color: "var(--color-neutral-800)" }}>
-          {value}
-        </p>
-        {sub && (
-          <p className="text-xs mt-1" style={{ color: "var(--color-neutral-400)" }}>
-            {sub}
-          </p>
+    <div className="bg-white rounded-xl border border-neutral-200 p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div
+          className="w-10 h-10 rounded-lg flex items-center justify-center"
+          style={{ backgroundColor: `color-mix(in srgb, ${couleur} 12%, white)`, color: couleur }}
+        >
+          <Icone size={20} strokeWidth={1.8} />
+        </div>
+        {tendance && (
+          <div className={`flex items-center gap-0.5 text-xs font-medium ${tendance.positive ? "text-emerald-600" : "text-red-500"}`}>
+            {tendance.positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+            {tendance.valeur}
+          </div>
         )}
       </div>
+      <p className="text-sm text-neutral-500 mb-1">{libelle}</p>
+      <p className="text-2xl font-semibold text-neutral-900 tabular-nums tracking-tight">
+        {valeur}
+        {unite && <span className="text-sm font-normal text-neutral-400 ml-1">{unite}</span>}
+      </p>
     </div>
   );
 }
 
-export default function DashboardPage() {
+function LienRapide({
+  href, icone: Icone, libelle, couleur,
+}: {
+  href: string;
+  icone: typeof ShoppingCart;
+  libelle: string;
+  couleur: string;
+}) {
+  return (
+    <a
+      href={href}
+      className="flex items-center gap-3 px-4 py-3.5 rounded-xl border border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm transition-all"
+    >
+      <div
+        className="w-9 h-9 rounded-lg flex items-center justify-center"
+        style={{ backgroundColor: `color-mix(in srgb, ${couleur} 10%, white)`, color: couleur }}
+      >
+        <Icone size={18} strokeWidth={1.8} />
+      </div>
+      <span className="text-sm font-medium text-neutral-700">{libelle}</span>
+    </a>
+  );
+}
+
+export default function TableauDeBordPage() {
   const { token } = useAuth();
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [kpis, setKpis] = useState<IKpiTableauDeBord | null>(null);
 
   useEffect(() => {
     if (!token) return;
-    (async () => {
+
+    async function charger() {
       try {
-        const [products, locations] = await Promise.all([
-          catalog.listProducts(token),
-          stock.listLocations(token),
+        const [produits, emplacements] = await Promise.all([
+          catalogueAPI.listerProduits(token!),
+          stockAPI.listerEmplacements(token!),
         ]);
 
-        let todayRevenue = 0;
-        let todayTickets = 0;
-
-        // Try to get Z report for each location
-        for (const loc of locations) {
-          try {
-            const zr = await pos.zReport(token, loc.id);
-            todayRevenue += zr.summary.totalRevenue;
-            todayTickets += zr.summary.totalTickets;
-          } catch {}
-        }
-
-        setData({
-          todayRevenue,
-          todayTickets,
-          totalProducts: products.data?.length ?? 0,
-          locations: locations.length,
+        setKpis({
+          caJour: 0,
+          ventesJour: 0,
+          nombreProduits: produits?.data?.length ?? 0,
+          nombreEmplacements: emplacements?.length ?? 0,
+          ticketMoyen: 0,
         });
-      } catch (err) {
-        console.error("Dashboard load error:", err);
+      } catch {
+        // silencieux pour le dashboard
       }
-    })();
-  }, [token]);
+    }
 
-  const fmt = (n: number) =>
-    new Intl.NumberFormat("fr-FR", { style: "currency", currency: "XOF", maximumFractionDigits: 0 }).format(n);
+    charger();
+  }, [token]);
 
   return (
     <>
-      <Topbar title="Dashboard" />
-      <div className="p-6">
-        {/* KPI Cards */}
+      <Topbar titre="Tableau de bord" />
+      <div className="p-6 max-w-7xl">
+        {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <KpiCard
-            label="CA du Jour"
-            value={data ? fmt(data.todayRevenue) : "..."}
-            icon={DollarSign}
-            color="var(--color-accent-600)"
-            sub="Chiffre d'affaires"
+          <CarteKpi
+            libelle="Recettes du jour"
+            valeur={kpis ? formatXOF(kpis.caJour) : "--"}
+            unite="F CFA"
+            icone={Banknote}
+            couleur="#0D9488"
           />
-          <KpiCard
-            label="Ventes du Jour"
-            value={data ? String(data.todayTickets) : "..."}
-            icon={ShoppingCart}
-            color="var(--color-warm-500)"
-            sub="Tickets completes"
+          <CarteKpi
+            libelle="Tickets du jour"
+            valeur={kpis ? String(kpis.ventesJour) : "--"}
+            icone={Receipt}
+            couleur="#D97706"
           />
-          <KpiCard
-            label="Produits"
-            value={data ? String(data.totalProducts) : "..."}
-            icon={Package}
-            color="var(--color-info)"
-            sub="Catalogue actif"
+          <CarteKpi
+            libelle="Articles en catalogue"
+            valeur={kpis ? String(kpis.nombreProduits) : "--"}
+            icone={Package}
+            couleur="#2563EB"
           />
-          <KpiCard
-            label="Points de Vente"
-            value={data ? String(data.locations) : "..."}
-            icon={Warehouse}
-            color="var(--color-success)"
-            sub="Emplacements"
+          <CarteKpi
+            libelle="Points de vente"
+            valeur={kpis ? String(kpis.nombreEmplacements) : "--"}
+            icone={MapPin}
+            couleur="#059669"
           />
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl border p-6" style={{ borderColor: "var(--color-neutral-200)" }}>
-          <h2 className="text-base font-semibold mb-4" style={{ color: "var(--color-neutral-800)" }}>
-            Actions rapides
+        {/* Acces rapide */}
+        <div className="mb-8">
+          <h2 className="text-sm font-semibold text-neutral-500 uppercase tracking-wide mb-3">
+            Acces rapide
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { href: "/pos", label: "Ouvrir le POS", icon: ShoppingCart, color: "var(--color-accent-600)" },
-              { href: "/catalog", label: "Ajouter un produit", icon: Package, color: "var(--color-info)" },
-              { href: "/stock", label: "Reception stock", icon: Warehouse, color: "var(--color-success)" },
-              { href: "/reports", label: "Z de caisse", icon: TrendingUp, color: "var(--color-warm-500)" },
-            ].map((action) => (
-              <a
-                key={action.href}
-                href={action.href}
-                className="flex flex-col items-center gap-2 p-4 rounded-lg border text-center hover:shadow-md transition-shadow"
-                style={{ borderColor: "var(--color-neutral-200)" }}
-              >
-                <action.icon size={24} style={{ color: action.color }} />
-                <span className="text-sm font-medium" style={{ color: "var(--color-neutral-700)" }}>
-                  {action.label}
-                </span>
-              </a>
-            ))}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <LienRapide href="/pos" icone={ShoppingCart} libelle="Ouvrir la caisse" couleur="#0D9488" />
+            <LienRapide href="/catalogue" icone={Package} libelle="Gerer le catalogue" couleur="#2563EB" />
+            <LienRapide href="/stock" icone={Warehouse} libelle="Mouvements de stock" couleur="#059669" />
+            <LienRapide href="/rapports" icone={BarChart3} libelle="Consulter les rapports" couleur="#D97706" />
+          </div>
+        </div>
+
+        {/* Section vide mais structuree */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 bg-white rounded-xl border border-neutral-200 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-neutral-700">Ventes des 7 derniers jours</h3>
+              <span className="text-xs text-neutral-400">Bientot disponible</span>
+            </div>
+            <div className="h-48 flex items-center justify-center">
+              <div className="flex items-center gap-2 text-neutral-300">
+                <TrendingUp size={20} />
+                <span className="text-sm">Graphique en cours de developpement</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-neutral-200 p-5">
+            <h3 className="text-sm font-semibold text-neutral-700 mb-4">Derniers tickets</h3>
+            <div className="space-y-3">
+              <p className="text-sm text-neutral-400 text-center py-8">
+                Les derniers tickets apparaitront ici
+              </p>
+            </div>
           </div>
         </div>
       </div>

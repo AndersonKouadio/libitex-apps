@@ -1,0 +1,122 @@
+import { Injectable, Inject } from "@nestjs/common";
+import { eq, and, isNull, sql, ilike, or } from "drizzle-orm";
+import { DATABASE_TOKEN } from "../../../database/database.module";
+import { type Database, products, variants, categories } from "@libitex/db";
+
+@Injectable()
+export class ProduitRepository {
+  constructor(@Inject(DATABASE_TOKEN) private readonly db: Database) {}
+
+  async creerProduit(tenantId: string, data: {
+    name: string;
+    description?: string;
+    productType: "SIMPLE" | "VARIANT" | "SERIALIZED" | "PERISHABLE";
+    categoryId?: string;
+    brand?: string;
+    barcodeEan13?: string;
+    taxRate?: string;
+    images?: string[];
+  }) {
+    const [produit] = await this.db
+      .insert(products)
+      .values({ tenantId, ...data, images: data.images || [] })
+      .returning();
+    return produit;
+  }
+
+  async creerVariante(productId: string, data: {
+    sku: string;
+    name?: string;
+    attributes?: Record<string, string>;
+    barcode?: string;
+    pricePurchase?: string;
+    priceRetail: string;
+    priceWholesale?: string;
+    priceVip?: string;
+  }) {
+    const [variante] = await this.db
+      .insert(variants)
+      .values({ productId, ...data, attributes: data.attributes || {} })
+      .returning();
+    return variante;
+  }
+
+  async obtenirParId(tenantId: string, id: string) {
+    return this.db.query.products.findFirst({
+      where: and(eq(products.id, id), eq(products.tenantId, tenantId), isNull(products.deletedAt)),
+    });
+  }
+
+  async obtenirVariantes(productId: string) {
+    return this.db.query.variants.findMany({
+      where: and(eq(variants.productId, productId), isNull(variants.deletedAt)),
+    });
+  }
+
+  async listerProduits(tenantId: string, offset: number, limit: number, recherche?: string) {
+    const conditions = [eq(products.tenantId, tenantId), isNull(products.deletedAt)];
+
+    if (recherche) {
+      conditions.push(
+        or(
+          ilike(products.name, `%${recherche}%`),
+          ilike(products.brand, `%${recherche}%`),
+        )!,
+      );
+    }
+
+    const data = await this.db.query.products.findMany({
+      where: and(...conditions),
+      limit,
+      offset,
+      orderBy: products.createdAt,
+    });
+
+    const [countResult] = await this.db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(products)
+      .where(and(...conditions));
+
+    return { data, total: Number(countResult?.count ?? 0) };
+  }
+
+  async modifier(tenantId: string, id: string, data: Partial<{
+    name: string;
+    description: string;
+    categoryId: string;
+    brand: string;
+    isActive: boolean;
+  }>) {
+    const [updated] = await this.db
+      .update(products)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(products.id, id), eq(products.tenantId, tenantId)))
+      .returning();
+    return updated;
+  }
+
+  async supprimer(tenantId: string, id: string) {
+    await this.db
+      .update(products)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(products.id, id), eq(products.tenantId, tenantId)));
+  }
+
+  // --- Categories ---
+
+  async creerCategorie(tenantId: string, nom: string, parentId?: string) {
+    const slug = nom.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const [categorie] = await this.db
+      .insert(categories)
+      .values({ tenantId, name: nom, slug, parentId })
+      .returning();
+    return categorie;
+  }
+
+  async listerCategories(tenantId: string) {
+    return this.db.query.categories.findMany({
+      where: and(eq(categories.tenantId, tenantId), isNull(categories.deletedAt)),
+      orderBy: categories.sortOrder,
+    });
+  }
+}

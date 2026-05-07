@@ -7,93 +7,87 @@ import {
   Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/pos", label: "POS", icon: ShoppingCart, highlight: true },
-  { href: "/catalog", label: "Catalogue", icon: Package },
-  { href: "/stock", label: "Stock", icon: Warehouse },
-  { href: "/clients", label: "Clients", icon: Users },
-  { href: "/reports", label: "Rapports", icon: BarChart3 },
-  { href: "/settings", label: "Parametres", icon: Settings },
+const ITEMS_NAV = [
+  { href: "/dashboard", libelle: "Tableau de bord", icone: LayoutDashboard },
+  { href: "/pos", libelle: "Point de vente", icone: ShoppingCart, accent: true },
+  { href: "/catalogue", libelle: "Catalogue", icone: Package },
+  { href: "/stock", libelle: "Stock", icone: Warehouse },
+  { href: "/clients", libelle: "Clients", icone: Users },
+  { href: "/rapports", libelle: "Rapports", icone: BarChart3 },
+  { href: "/parametres", libelle: "Parametres", icone: Settings },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { logout, user } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
+  const { deconnecter, utilisateur } = useAuth();
+  const [replie, setReplie] = useState(false);
 
   return (
     <aside
-      className={`fixed top-0 left-0 h-screen flex flex-col transition-all duration-200 z-40 ${
-        collapsed ? "w-[72px]" : "w-[256px]"
+      className={`fixed top-0 left-0 h-screen flex flex-col bg-[#1B1F3B] z-40 transition-[width] duration-200 ${
+        replie ? "w-[72px]" : "w-[256px]"
       }`}
-      style={{ background: "var(--color-primary-900)" }}
     >
-      {/* Logo */}
+      {/* En-tete */}
       <div className="flex items-center justify-between px-5 h-16 border-b border-white/10">
-        {!collapsed && (
-          <span className="text-xl font-bold" style={{ color: "var(--color-accent-400)" }}>
-            LIBITEX
-          </span>
+        {!replie && (
+          <span className="text-xl font-bold text-teal-400 tracking-tight">LIBITEX</span>
         )}
-        {collapsed && (
-          <span className="text-xl font-bold mx-auto" style={{ color: "var(--color-accent-400)" }}>
-            L
-          </span>
+        {replie && (
+          <span className="text-xl font-bold text-teal-400 mx-auto">L</span>
         )}
         <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1 rounded hover:bg-white/10 text-white/60"
+          onClick={() => setReplie(!replie)}
+          className="p-1 rounded hover:bg-white/10 text-white/50"
         >
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {replie ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
       </div>
 
-      {/* Nav Items */}
-      <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
-          const Icon = item.icon;
+      {/* Navigation */}
+      <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
+        {ITEMS_NAV.map((item) => {
+          const actif = pathname.startsWith(item.href);
+          const Icone = item.icone;
           return (
             <Link
               key={item.href}
               href={item.href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? "text-white"
-                  : "text-white/60 hover:text-white hover:bg-white/5"
-              } ${item.highlight && !isActive ? "text-[var(--color-accent-400)]" : ""}`}
-              style={
-                isActive
-                  ? {
-                      background: "var(--color-primary-700)",
-                      borderLeft: "3px solid var(--color-accent-400)",
-                    }
-                  : undefined
-              }
+                actif
+                  ? "bg-[#2D3561] text-white border-l-[3px] border-teal-400"
+                  : item.accent
+                  ? "text-teal-400 hover:bg-white/5"
+                  : "text-white/50 hover:text-white/80 hover:bg-white/5"
+              }`}
             >
-              <Icon size={20} />
-              {!collapsed && <span>{item.label}</span>}
+              <Icone size={20} strokeWidth={1.8} />
+              {!replie && <span>{item.libelle}</span>}
             </Link>
           );
         })}
       </nav>
 
-      {/* User & Logout */}
+      {/* Pied */}
       <div className="px-3 py-4 border-t border-white/10">
-        {!collapsed && user && (
-          <div className="px-3 mb-2 text-xs text-white/40 truncate">
-            {user.role}
+        {!replie && utilisateur && (
+          <div className="px-3 mb-2">
+            <p className="text-xs text-white/30 truncate">
+              {utilisateur.prenom} {utilisateur.nomFamille}
+            </p>
+            <p className="text-[10px] text-white/20 uppercase tracking-wider">
+              {utilisateur.role}
+            </p>
           </div>
         )}
         <button
-          onClick={logout}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 w-full"
+          onClick={deconnecter}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/40 hover:text-white/70 hover:bg-white/5 w-full transition-colors"
         >
-          <LogOut size={20} />
-          {!collapsed && <span>Deconnexion</span>}
+          <LogOut size={20} strokeWidth={1.8} />
+          {!replie && <span>Deconnexion</span>}
         </button>
       </div>
     </aside>

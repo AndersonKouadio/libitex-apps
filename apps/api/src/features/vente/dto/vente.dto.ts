@@ -1,0 +1,159 @@
+import {
+  IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsArray,
+  ValidateNested, Min, IsInt,
+} from "class-validator";
+import { Type } from "class-transformer";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+
+// --- Enums ---
+
+export enum MethodePaiement {
+  ESPECES = "CASH",
+  CARTE = "CARD",
+  MOBILE_MONEY = "MOBILE_MONEY",
+  VIREMENT = "BANK_TRANSFER",
+  CREDIT = "CREDIT",
+}
+
+// --- Requete ---
+
+export class LigneTicketDto {
+  @ApiProperty({ example: "uuid-variante" })
+  @IsString()
+  @IsNotEmpty()
+  varianteId!: string;
+
+  @ApiProperty({ example: 2 })
+  @IsInt()
+  @Min(1)
+  quantite!: number;
+
+  @ApiPropertyOptional({ example: 150000 })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  prixUnitaire?: number;
+
+  @ApiPropertyOptional({ example: 5000 })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  remise?: number;
+
+  @ApiPropertyOptional({ description: "Obligatoire pour produits serialises" })
+  @IsString()
+  @IsOptional()
+  numeroSerie?: string;
+}
+
+export class CreerTicketDto {
+  @ApiProperty({ example: "uuid-emplacement" })
+  @IsString()
+  @IsNotEmpty()
+  emplacementId!: string;
+
+  @ApiPropertyOptional({ example: "Amadou Diallo" })
+  @IsString()
+  @IsOptional()
+  nomClient?: string;
+
+  @ApiPropertyOptional({ example: "+225 07 00 00 00" })
+  @IsString()
+  @IsOptional()
+  telephoneClient?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  note?: string;
+
+  @ApiProperty({ type: [LigneTicketDto] })
+  @ValidateNested({ each: true })
+  @Type(() => LigneTicketDto)
+  @IsArray()
+  lignes!: LigneTicketDto[];
+}
+
+export class PaiementDto {
+  @ApiProperty({ enum: MethodePaiement })
+  @IsEnum(MethodePaiement)
+  methode!: MethodePaiement;
+
+  @ApiProperty({ example: 300000 })
+  @IsNumber()
+  @Min(0)
+  montant!: number;
+
+  @ApiPropertyOptional({ example: "REF-MM-123" })
+  @IsString()
+  @IsOptional()
+  reference?: string;
+}
+
+export class CompleterTicketDto {
+  @ApiProperty({ type: [PaiementDto] })
+  @ValidateNested({ each: true })
+  @Type(() => PaiementDto)
+  @IsArray()
+  paiements!: PaiementDto[];
+}
+
+// --- Reponse ---
+
+export class LigneTicketResponseDto {
+  id!: string;
+  varianteId!: string;
+  nomProduit!: string;
+  nomVariante!: string | null;
+  sku!: string;
+  quantite!: number;
+  prixUnitaire!: number;
+  remise!: number;
+  tauxTva!: number;
+  montantTva!: number;
+  totalLigne!: number;
+  numeroSerie!: string | null;
+  numeroBatch!: string | null;
+}
+
+export class PaiementResponseDto {
+  id!: string;
+  methode!: string;
+  montant!: number;
+  reference!: string | null;
+}
+
+export class TicketResponseDto {
+  id!: string;
+  numeroTicket!: string;
+  statut!: string;
+  emplacementId!: string;
+  sousTotal!: number;
+  montantTva!: number;
+  montantRemise!: number;
+  total!: number;
+  nomClient!: string | null;
+  telephoneClient!: string | null;
+  note!: string | null;
+  completeLe!: string | null;
+  creeLe!: string;
+  lignes!: LigneTicketResponseDto[];
+  paiements!: PaiementResponseDto[];
+  monnaie?: number;
+}
+
+export class RapportZResponseDto {
+  date!: string;
+  emplacementId!: string;
+  resume!: {
+    totalTickets: number;
+    chiffreAffaires: number;
+    totalTva: number;
+    totalRemise: number;
+  };
+  ventilationPaiements!: {
+    methode: string;
+    total: number;
+    nombre: number;
+  }[];
+}
