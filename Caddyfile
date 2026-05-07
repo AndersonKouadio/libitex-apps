@@ -1,17 +1,25 @@
 # ── LIBITEX Production ──
-# Remplacer les domaines par les vrais domaines
+#
+# Mode 1 : Sans domaine (IP directe)
+# Caddy ecoute sur :80 et route par path
+#
+# Mode 2 : Avec sous-domaines (decommenter et remplacer)
+# api-libitex.mondomaine.com { reverse_proxy api:3000 }
+# libitex.mondomaine.com { reverse_proxy web:3001 }
 
-# API Backend
-api.libitex.app {
-	reverse_proxy api:3000
-}
+:80 {
+	# API — tout ce qui commence par /api/
+	handle /api/* {
+		reverse_proxy api:3000
+	}
 
-# Frontend App Commercant
-app.libitex.app {
-	reverse_proxy web:3001
-}
+	# Swagger docs
+	handle /docs* {
+		reverse_proxy api:3000
+	}
 
-# Rediriger le domaine racine vers l'app
-libitex.app {
-	redir https://app.libitex.app{uri} permanent
+	# Frontend — tout le reste
+	handle {
+		reverse_proxy web:3001
+	}
 }
