@@ -107,30 +107,51 @@ export default function TableauDeBordPage() {
     <>
       <Topbar titre="Tableau de bord" />
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        {/* Accueil nouveau commercant */}
+        {kpis && kpis.nombreProduits === 0 && (
+          <div className="mb-6 p-5 rounded-xl border border-accent/20 bg-accent/5">
+            <p className="text-sm font-medium text-foreground">
+              Bienvenue sur LIBITEX
+            </p>
+            <p className="text-sm text-muted mt-1">
+              Commencez par ajouter vos produits dans le catalogue, puis recevez du stock pour pouvoir vendre.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <a href="/catalogue" className="text-sm font-medium text-accent hover:underline">
+                Ajouter un produit
+              </a>
+              <span className="text-muted">puis</span>
+              <a href="/stock" className="text-sm font-medium text-accent hover:underline">
+                Recevoir du stock
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <CarteKpi
             libelle="Recettes du jour"
-            valeur={kpis ? formatXOF(kpis.caJour) : "--"}
+            valeur={formatXOF(kpis?.caJour ?? 0)}
             unite="F CFA"
             icone={Banknote}
             couleur="#0D9488"
           />
           <CarteKpi
             libelle="Tickets du jour"
-            valeur={kpis ? String(kpis.ventesJour) : "--"}
+            valeur={String(kpis?.ventesJour ?? 0)}
             icone={Receipt}
             couleur="#D97706"
           />
           <CarteKpi
             libelle="Articles en catalogue"
-            valeur={kpis ? String(kpis.nombreProduits) : "--"}
+            valeur={String(kpis?.nombreProduits ?? 0)}
             icone={Package}
             couleur="#2563EB"
           />
           <CarteKpi
             libelle="Points de vente"
-            valeur={kpis ? String(kpis.nombreEmplacements) : "--"}
+            valeur={String(kpis?.nombreEmplacements ?? 0)}
             icone={MapPin}
             couleur="#059669"
           />

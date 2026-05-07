@@ -56,10 +56,14 @@ export default function PageCatalogue() {
             <p className="text-sm text-neutral-400">Chargement du catalogue...</p>
           </div>
         ) : produits.length === 0 ? (
-          <div className="bg-white rounded-xl border border-neutral-200 py-16 text-center">
-            <Package size={32} className="text-neutral-200 mx-auto mb-3" />
-            <p className="text-sm text-neutral-500">Aucun produit dans le catalogue</p>
-            <p className="text-xs text-neutral-400 mt-1">Commencez par ajouter votre premier article</p>
+          <div className="bg-surface rounded-xl border border-border py-16 text-center">
+            <Package size={32} className="text-muted/30 mx-auto mb-3" />
+            <p className="text-sm text-foreground font-medium">Votre catalogue est vide</p>
+            <p className="text-sm text-muted mt-1 mb-4">Ajoutez votre premier produit pour commencer a vendre</p>
+            <Button variant="primary" className="gap-1.5" onPress={() => setModalOuvert(true)}>
+              <Plus size={16} />
+              Ajouter un produit
+            </Button>
           </div>
         ) : (
           <Table>

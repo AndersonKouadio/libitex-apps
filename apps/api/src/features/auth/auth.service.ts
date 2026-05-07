@@ -3,6 +3,7 @@ import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcryptjs";
 import { UtilisateurRepository } from "./repositories/utilisateur.repository";
+import { StockService } from "../stock/stock.service";
 import {
   IdentifiantsInvalidesException,
   EmailDejaUtiliseException,
@@ -17,6 +18,7 @@ import {
 export class AuthService {
   constructor(
     private readonly utilisateurRepo: UtilisateurRepository,
+    private readonly stockService: StockService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
   ) {}
@@ -44,6 +46,12 @@ export class AuthService {
       lastName: dto.nomFamille,
       phone: dto.telephone,
       role: "ADMIN",
+    });
+
+    // Creer l'emplacement par defaut
+    await this.stockService.creerEmplacement(tenant.id, {
+      nom: dto.nomBoutique,
+      type: "STORE",
     });
 
     return this.genererTokens(user);
