@@ -1,5 +1,6 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional } from "class-validator";
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsEnum } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ActivitySector } from "@libitex/shared";
 
 export class ConnexionDto {
   @ApiProperty({ example: "amadou@boutique-dakar.sn" })
@@ -51,6 +52,32 @@ export class InscriptionDto {
   @IsString()
   @IsOptional()
   devise?: string;
+
+  @ApiPropertyOptional({ enum: ActivitySector, example: ActivitySector.AUTRE })
+  @IsEnum(ActivitySector)
+  @IsOptional()
+  secteurActivite?: ActivitySector;
+}
+
+export class CreerBoutiqueDto {
+  @ApiProperty({ example: "Ma Seconde Boutique" })
+  @IsString()
+  @IsNotEmpty({ message: "Le nom de la boutique est requis" })
+  nomBoutique!: string;
+
+  @ApiProperty({ example: "ma-seconde-boutique" })
+  @IsString()
+  @IsNotEmpty({ message: "L'identifiant boutique est requis" })
+  slugBoutique!: string;
+
+  @ApiPropertyOptional({ example: "XOF" })
+  @IsString()
+  @IsOptional()
+  devise?: string;
+
+  @ApiProperty({ enum: ActivitySector })
+  @IsEnum(ActivitySector)
+  secteurActivite!: ActivitySector;
 }
 
 // --- Reponse ---
@@ -70,8 +97,20 @@ export class UtilisateurSessionDto {
   nomFamille!: string;
 }
 
+export class BoutiqueResumeDto {
+  id!: string;
+  nom!: string;
+  slug!: string;
+  secteurActivite!: string;
+  devise!: string;
+  role!: string;
+  isOwner!: boolean;
+}
+
 export class AuthResponseDto {
   accessToken!: string;
   refreshToken!: string;
   utilisateur!: UtilisateurSessionDto;
+  boutiques!: BoutiqueResumeDto[];
+  boutiqueActive!: BoutiqueResumeDto;
 }

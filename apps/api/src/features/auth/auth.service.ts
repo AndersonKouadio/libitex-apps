@@ -1,8 +1,10 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException, ForbiddenException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcryptjs";
+import { ActivitySector, ACTIVITY_SECTOR_PRODUCT_TYPES } from "@libitex/shared";
 import { UtilisateurRepository } from "./repositories/utilisateur.repository";
+import { MembershipRepository } from "./repositories/membership.repository";
 import { StockService } from "../stock/stock.service";
 import {
   IdentifiantsInvalidesException,
@@ -10,8 +12,8 @@ import {
   SlugDejaUtiliseException,
 } from "../../common/exceptions/metier.exception";
 import {
-  ConnexionDto, InscriptionDto, AuthResponseDto,
-  TokenPayload, UtilisateurSessionDto,
+  ConnexionDto, InscriptionDto, CreerBoutiqueDto,
+  AuthResponseDto, BoutiqueResumeDto, TokenPayload,
 } from "./dto/auth.dto";
 
 @Injectable()
@@ -20,6 +22,7 @@ export class AuthService {
 
   constructor(
     private readonly utilisateurRepo: UtilisateurRepository,
+    private readonly membershipRepo: MembershipRepository,
     private readonly stockService: StockService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
@@ -37,6 +40,7 @@ export class AuthService {
       slug: dto.slugBoutique,
       email: dto.email,
       currency: dto.devise || "XOF",
+      activitySector: dto.secteurActivite ?? ActivitySector.AUTRE,
     });
 
     const hash = await bcrypt.hash(dto.motDePasse, 12);
@@ -50,6 +54,14 @@ export class AuthService {
       role: "ADMIN",
     });
 
+    await this.membershipRepo.creer({
+      userId: user.id,
+      tenantId: tenant.id,
+      role: "ADMIN",
+      isOwner: true,
+      accessAllLocations: true,
+    });
+
     try {
       await this.stockService.creerEmplacement(tenant.id, {
         nom: dto.nomBoutique,
@@ -57,12 +69,12 @@ export class AuthService {
       });
     } catch (err) {
       this.logger.error(
-        `Echec creation emplacement par defaut pour tenant ${tenant.id} (${dto.nomBoutique})`,
+        `Echec creation emplacement par defaut pour tenant ${tenant.id}`,
         err instanceof Error ? err.stack : String(err),
       );
     }
 
-    return this.genererTokens(user);
+    return this.construireReponseAuth(user, tenant.id);
   }
 
   async connecter(dto: ConnexionDto): Promise<AuthResponseDto> {
@@ -72,20 +84,96 @@ export class AuthService {
     const motDePasseValide = await bcrypt.compare(dto.motDePasse, user.passwordHash);
     if (!motDePasseValide) throw new IdentifiantsInvalidesException();
 
+    await this.assurerMembership(user.id, user.tenantId, user.role);
     await this.utilisateurRepo.mettreAJourDerniereConnexion(user.id);
 
-    return this.genererTokens(user);
+    const memberships = await this.membershipRepo.listerParUtilisateur(user.id);
+    const tenantActifId = memberships[0]?.tenant.id;
+    if (!tenantActifId) {
+      throw new ForbiddenException("Aucune boutique associee a ce compte");
+    }
+
+    return this.construireReponseAuth(user, tenantActifId);
   }
 
-  private async genererTokens(user: any): Promise<AuthResponseDto> {
-    const payload: TokenPayload = { sub: user.id, tenantId: user.tenantId, role: user.role };
+  async listerBoutiques(userId: string): Promise<BoutiqueResumeDto[]> {
+    const list = await this.membershipRepo.listerParUtilisateur(userId);
+    return list.map(({ membership, tenant }) => this.toBoutiqueResume(tenant, membership));
+  }
 
+  async creerBoutique(userId: string, dto: CreerBoutiqueDto): Promise<BoutiqueResumeDto> {
+    const slugExiste = await this.utilisateurRepo.trouverTenantParSlug(dto.slugBoutique);
+    if (slugExiste) throw new SlugDejaUtiliseException();
+
+    const tenant = await this.utilisateurRepo.creerTenant({
+      name: dto.nomBoutique,
+      slug: dto.slugBoutique,
+      currency: dto.devise || "XOF",
+      activitySector: dto.secteurActivite,
+    });
+
+    const membership = await this.membershipRepo.creer({
+      userId,
+      tenantId: tenant.id,
+      role: "ADMIN",
+      isOwner: true,
+      accessAllLocations: true,
+    });
+
+    try {
+      await this.stockService.creerEmplacement(tenant.id, {
+        nom: dto.nomBoutique,
+        type: "STORE",
+      });
+    } catch (err) {
+      this.logger.error(
+        `Echec creation emplacement defaut pour boutique ${tenant.id}`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
+
+    return this.toBoutiqueResume(tenant, membership);
+  }
+
+  async switcherBoutique(userId: string, tenantId: string): Promise<AuthResponseDto> {
+    const user = await this.utilisateurRepo.trouverParId(userId);
+    if (!user) throw new NotFoundException("Utilisateur introuvable");
+
+    const membership = await this.membershipRepo.trouver(userId, tenantId);
+    if (!membership) throw new ForbiddenException("Vous n'avez pas acces a cette boutique");
+
+    return this.construireReponseAuth(user, tenantId);
+  }
+
+  // --- Internes ---
+
+  private async assurerMembership(userId: string, legacyTenantId: string | null, role: string) {
+    if (!legacyTenantId) return;
+    const existant = await this.membershipRepo.trouver(userId, legacyTenantId);
+    if (existant) return;
+    await this.membershipRepo.creer({
+      userId,
+      tenantId: legacyTenantId,
+      role: role as "ADMIN" | "MANAGER" | "CASHIER" | "WAREHOUSE" | "COMMERCIAL" | "SUPER_ADMIN",
+      isOwner: role === "ADMIN",
+      accessAllLocations: true,
+    });
+  }
+
+  private async construireReponseAuth(user: any, tenantActifId: string): Promise<AuthResponseDto> {
+    const memberships = await this.membershipRepo.listerParUtilisateur(user.id);
+    const boutiques = memberships.map(({ membership, tenant }) => this.toBoutiqueResume(tenant, membership));
+    const boutiqueActive = boutiques.find((b) => b.id === tenantActifId) ?? boutiques[0]!;
+
+    const membershipActif = memberships.find((m) => m.tenant.id === boutiqueActive.id);
+    const role = membershipActif?.membership.role ?? user.role;
+
+    const payload: TokenPayload = { sub: user.id, tenantId: boutiqueActive.id, role };
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.config.getOrThrow<string>("JWT_REFRESH_SECRET"),
       expiresIn: this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "7d") as any,
     });
-
     const refreshHash = await bcrypt.hash(refreshToken, 10);
     await this.utilisateurRepo.sauvegarderRefreshToken(user.id, refreshHash);
 
@@ -94,12 +182,26 @@ export class AuthService {
       refreshToken,
       utilisateur: {
         id: user.id,
-        tenantId: user.tenantId,
-        role: user.role,
+        tenantId: boutiqueActive.id,
+        role,
         email: user.email,
         prenom: user.firstName,
         nomFamille: user.lastName,
       },
+      boutiques,
+      boutiqueActive,
+    };
+  }
+
+  private toBoutiqueResume(tenant: any, membership: any): BoutiqueResumeDto {
+    return {
+      id: tenant.id,
+      nom: tenant.name,
+      slug: tenant.slug,
+      secteurActivite: tenant.activitySector ?? ActivitySector.AUTRE,
+      devise: tenant.currency ?? "XOF",
+      role: membership.role,
+      isOwner: membership.isOwner ?? false,
     };
   }
 }

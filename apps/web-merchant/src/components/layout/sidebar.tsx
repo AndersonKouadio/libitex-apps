@@ -10,6 +10,7 @@ import {
   Monitor,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { SwitcherBoutique } from "@/features/boutique/components/switcher-boutique";
 
 const NAV_ERP = [
   { href: "/dashboard", libelle: "Tableau de bord", icone: LayoutDashboard },
@@ -85,6 +86,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
         >
           {replie ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </Button>
+      </div>
+
+      <div className="px-2.5 pb-1">
+        <SwitcherBoutique replie={replie} />
       </div>
 
       <ModeSwitch modePOS={modePOS} onSwitch={basculerMode} replie={replie} />

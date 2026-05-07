@@ -61,6 +61,45 @@ export enum UserRole {
   WAREHOUSE = "WAREHOUSE",
 }
 
+export enum ActivitySector {
+  VETEMENT = "VETEMENT",
+  ALIMENTAIRE = "ALIMENTAIRE",
+  ELECTRONIQUE = "ELECTRONIQUE",
+  RESTAURATION = "RESTAURATION",
+  BEAUTE_COSMETIQUE = "BEAUTE_COSMETIQUE",
+  QUINCAILLERIE = "QUINCAILLERIE",
+  LIBRAIRIE = "LIBRAIRIE",
+  PHARMACIE = "PHARMACIE",
+  BIJOUTERIE = "BIJOUTERIE",
+  AUTRE = "AUTRE",
+}
+
+export const ACTIVITY_SECTOR_LABELS: Record<ActivitySector, string> = {
+  [ActivitySector.VETEMENT]: "Vetement & mode",
+  [ActivitySector.ALIMENTAIRE]: "Alimentaire & marche",
+  [ActivitySector.ELECTRONIQUE]: "Electronique & telephonie",
+  [ActivitySector.RESTAURATION]: "Restauration",
+  [ActivitySector.BEAUTE_COSMETIQUE]: "Beaute & cosmetique",
+  [ActivitySector.QUINCAILLERIE]: "Quincaillerie & bricolage",
+  [ActivitySector.LIBRAIRIE]: "Librairie & papeterie",
+  [ActivitySector.PHARMACIE]: "Pharmacie & parapharmacie",
+  [ActivitySector.BIJOUTERIE]: "Bijouterie & accessoires",
+  [ActivitySector.AUTRE]: "Autre / multi-activites",
+};
+
+export const ACTIVITY_SECTOR_PRODUCT_TYPES: Record<ActivitySector, ProductType[]> = {
+  [ActivitySector.VETEMENT]: [ProductType.SIMPLE, ProductType.VARIANT],
+  [ActivitySector.ALIMENTAIRE]: [ProductType.SIMPLE, ProductType.PERISHABLE],
+  [ActivitySector.ELECTRONIQUE]: [ProductType.SIMPLE, ProductType.VARIANT, ProductType.SERIALIZED],
+  [ActivitySector.RESTAURATION]: [ProductType.SIMPLE, ProductType.PERISHABLE],
+  [ActivitySector.BEAUTE_COSMETIQUE]: [ProductType.SIMPLE, ProductType.VARIANT, ProductType.PERISHABLE],
+  [ActivitySector.QUINCAILLERIE]: [ProductType.SIMPLE, ProductType.VARIANT],
+  [ActivitySector.LIBRAIRIE]: [ProductType.SIMPLE],
+  [ActivitySector.PHARMACIE]: [ProductType.SIMPLE, ProductType.PERISHABLE, ProductType.SERIALIZED],
+  [ActivitySector.BIJOUTERIE]: [ProductType.SIMPLE, ProductType.VARIANT, ProductType.SERIALIZED],
+  [ActivitySector.AUTRE]: [ProductType.SIMPLE, ProductType.VARIANT, ProductType.SERIALIZED, ProductType.PERISHABLE],
+};
+
 // ─── Types ───
 
 export interface PaginationParams {

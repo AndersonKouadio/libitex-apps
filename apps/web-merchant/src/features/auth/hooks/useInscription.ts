@@ -2,11 +2,8 @@
 
 import { useCallback, useState } from "react";
 import { authAPI } from "../apis/auth.api";
+import { useAuth } from "./useAuth";
 import type { InscriptionDTO } from "../schemas/auth.schema";
-import type { IUtilisateurSession } from "../types/auth.type";
-
-const STORAGE_TOKEN = "libitex_token";
-const STORAGE_USER = "libitex_user";
 
 interface EtatInscription {
   enCours: boolean;
@@ -15,6 +12,7 @@ interface EtatInscription {
 }
 
 export function useInscription(): EtatInscription {
+  const { appliquerSession } = useAuth();
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState("");
 
@@ -23,8 +21,7 @@ export function useInscription(): EtatInscription {
     setEnCours(true);
     try {
       const res = await authAPI.inscrire(data);
-      localStorage.setItem(STORAGE_TOKEN, res.accessToken);
-      localStorage.setItem(STORAGE_USER, JSON.stringify(res.utilisateur));
+      appliquerSession(res.accessToken, res.utilisateur, res.boutiques, res.boutiqueActive);
       return true;
     } catch (err: unknown) {
       setErreur(err instanceof Error ? err.message : "Erreur lors de l'inscription");
@@ -32,7 +29,7 @@ export function useInscription(): EtatInscription {
     } finally {
       setEnCours(false);
     }
-  }, []);
+  }, [appliquerSession]);
 
   return { enCours, erreur, inscrire };
 }

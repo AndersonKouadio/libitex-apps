@@ -21,6 +21,7 @@ interface Props {
   codeBarresEan13: string;
   tauxTva: string;
   categories: ICategorie[];
+  typesAutorises: TypeProduit[];
   onNom: (v: string) => void;
   onDescription: (v: string) => void;
   onTypeProduit: (v: TypeProduit) => void;
@@ -32,9 +33,10 @@ interface Props {
 
 export function ChampsInfoProduit({
   nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva,
-  categories,
+  categories, typesAutorises,
   onNom, onDescription, onTypeProduit, onMarque, onCategorieId, onCodeBarresEan13, onTauxTva,
 }: Props) {
+  const typesDisponibles = TYPES_PRODUIT.filter((t) => typesAutorises.includes(t.id));
   const typeSelectionne = TYPES_PRODUIT.find((t) => t.id === typeProduit);
 
   return (
@@ -56,7 +58,7 @@ export function ChampsInfoProduit({
         </Select.Trigger>
         <Select.Popover>
           <ListBox>
-            {TYPES_PRODUIT.map((t) => (
+            {typesDisponibles.map((t) => (
               <ListBox.Item key={t.id} id={t.id} textValue={t.label}>
                 <div>
                   <p className="text-sm font-medium">{t.label}</p>

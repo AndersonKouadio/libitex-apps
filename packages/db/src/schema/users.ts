@@ -1,5 +1,4 @@
 import { pgTable, uuid, varchar, text, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
-import { tenants } from "./tenants";
 
 export const userRoleEnum = pgEnum("user_role", [
   "SUPER_ADMIN",
@@ -12,12 +11,15 @@ export const userRoleEnum = pgEnum("user_role", [
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id").references(() => tenants.id).notNull(),
+  // tenantId: garde pendant la migration vers memberships, deviendra nullable.
+  // Sera retire apres l'audit complet du code (voir memberships pour la nouvelle source).
+  tenantId: uuid("tenant_id"),
   email: varchar("email", { length: 255 }).notNull(),
   passwordHash: text("password_hash").notNull(),
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
   phone: varchar("phone", { length: 50 }),
+  // role: garde pour le moment, sera porte par memberships.role
   role: userRoleEnum("role").notNull().default("CASHIER"),
   isActive: boolean("is_active").notNull().default(true),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),

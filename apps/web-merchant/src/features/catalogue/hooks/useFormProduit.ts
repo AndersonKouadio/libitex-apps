@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { creerProduitSchema, type CreerProduitDTO, type CreerVarianteDTO } from "../schemas/produit.schema";
 import { genererVariantesParCombinaison, type AxeAttribut } from "../utils/generer-variantes";
 
@@ -24,10 +24,17 @@ export interface EtatFormProduit {
 
 const AXES_VIDES: AxeAttribut[] = [{ nom: "", valeurs: [] }];
 
-export function useFormProduit() {
+export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE"]) {
+  const typeParDefaut = typesAutorises[0] ?? "SIMPLE";
   const [nom, setNom] = useState("");
   const [description, setDescription] = useState("");
-  const [typeProduit, setTypeProduit] = useState<TypeProduit>("SIMPLE");
+  const [typeProduit, setTypeProduit] = useState<TypeProduit>(typeParDefaut);
+
+  useEffect(() => {
+    if (!typesAutorises.includes(typeProduit)) {
+      setTypeProduit(typesAutorises[0] ?? "SIMPLE");
+    }
+  }, [typesAutorises, typeProduit]);
   const [marque, setMarque] = useState("");
   const [categorieId, setCategorieId] = useState("");
   const [codeBarresEan13, setCodeBarresEan13] = useState("");
@@ -57,10 +64,10 @@ export function useFormProduit() {
   }, []);
 
   const reinitialiser = useCallback(() => {
-    setNom(""); setDescription(""); setTypeProduit("SIMPLE"); setMarque("");
+    setNom(""); setDescription(""); setTypeProduit(typeParDefaut); setMarque("");
     setCategorieId(""); setCodeBarresEan13(""); setTauxTva("0"); setPrefixeSku("");
     setAxes(AXES_VIDES); setVarianteUnique({ ...VARIANTE_VIDE }); setErreur("");
-  }, []);
+  }, [typeParDefaut]);
 
   const valider = useCallback((): CreerProduitDTO | null => {
     const variantes = variantesGenerees.filter((v) => v.sku && v.prixDetail > 0);

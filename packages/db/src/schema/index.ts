@@ -1,5 +1,6 @@
 export * from "./tenants";
 export * from "./users";
+export * from "./memberships";
 export * from "./catalog";
 export * from "./stock";
 export * from "./pos";

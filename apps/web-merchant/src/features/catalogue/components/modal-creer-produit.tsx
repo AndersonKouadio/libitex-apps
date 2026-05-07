@@ -2,9 +2,10 @@
 
 import { Modal, Button } from "@heroui/react";
 import { Package } from "lucide-react";
-import { useFormProduit } from "../hooks/useFormProduit";
+import { useFormProduit, type TypeProduit } from "../hooks/useFormProduit";
 import { useAjouterProduitMutation } from "../queries/produit-add.mutation";
 import { useCategorieListQuery } from "../queries/categorie-list.query";
+import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
 import { ChampsInfoProduit } from "./champs-info-produit";
 import { SectionVarianteUnique } from "./section-variante-unique";
 import { SectionVariantesAttributs } from "./section-variantes-attributs";
@@ -14,10 +15,14 @@ interface Props {
   onFermer: () => void;
 }
 
+const TYPES_PAR_DEFAUT: TypeProduit[] = ["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE"];
+
 export function ModalCreerProduit({ ouvert, onFermer }: Props) {
   const mutation = useAjouterProduitMutation();
   const { data: categories } = useCategorieListQuery();
-  const form = useFormProduit();
+  const { data: boutique } = useBoutiqueActiveQuery();
+  const typesAutorises = (boutique?.typesProduitsAutorises ?? TYPES_PAR_DEFAUT) as TypeProduit[];
+  const form = useFormProduit(typesAutorises);
 
   async function soumettre() {
     const donnees = form.valider();
@@ -61,6 +66,7 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
               codeBarresEan13={form.valeurs.codeBarresEan13}
               tauxTva={form.valeurs.tauxTva}
               categories={categories ?? []}
+              typesAutorises={typesAutorises}
               onNom={form.setNom}
               onDescription={form.setDescription}
               onTypeProduit={form.setTypeProduit}

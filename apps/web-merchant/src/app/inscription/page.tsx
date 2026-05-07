@@ -10,7 +10,9 @@ import { useInscription } from "@/features/auth/hooks/useInscription";
 import { ChampsBoutique } from "@/features/auth/components/champs-boutique";
 import { ChampsIdentite } from "@/features/auth/components/champs-identite";
 import { ChampsAcces } from "@/features/auth/components/champs-acces";
+import { ChampSecteur } from "@/features/auth/components/champ-secteur";
 import { slugifier } from "@/features/auth/utils/slug";
+import type { SecteurActivite } from "@/features/auth/types/auth.type";
 
 const FORM_VIDE: InscriptionDTO = {
   nomBoutique: "",
@@ -21,6 +23,7 @@ const FORM_VIDE: InscriptionDTO = {
   nomFamille: "",
   telephone: "",
   devise: "XOF",
+  secteurActivite: "AUTRE",
 };
 
 export default function PageInscription() {
@@ -92,6 +95,12 @@ export default function PageInscription() {
               nomBoutique={form.nomBoutique}
               slugBoutique={form.slugBoutique}
               onChange={maj}
+            />
+
+            <ChampSecteur
+              isRequired
+              valeur={form.secteurActivite as SecteurActivite}
+              onChange={(s) => setForm((p) => ({ ...p, secteurActivite: s }))}
             />
 
             <ChampsIdentite
