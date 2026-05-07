@@ -9,7 +9,7 @@ import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-act
 import { ChampsInfoProduit } from "./champs-info-produit";
 import { SectionVarianteUnique } from "./section-variante-unique";
 import { SectionVariantesAttributs } from "./section-variantes-attributs";
-import { SectionImages } from "./section-images";
+import { ZoneUploadImages } from "@/features/upload/components/zone-upload-images";
 
 interface Props {
   ouvert: boolean;
@@ -77,7 +77,7 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
               onTauxTva={form.setTauxTva}
             />
 
-            <SectionImages images={images} onChange={form.setImages} />
+            <ZoneUploadImages cible="produits" images={images} onChange={form.setImages} />
 
             {typeProduit === "VARIANT" ? (
               <SectionVariantesAttributs

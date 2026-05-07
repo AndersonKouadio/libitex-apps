@@ -7,6 +7,7 @@ import { StockModule } from "./features/stock/stock.module";
 import { VenteModule } from "./features/vente/vente.module";
 import { TableauDeBordModule } from "./features/tableau-de-bord/tableau-de-bord.module";
 import { BoutiqueModule } from "./features/boutique/boutique.module";
+import { UploadModule } from "./features/upload/upload.module";
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { BoutiqueModule } from "./features/boutique/boutique.module";
     VenteModule,
     TableauDeBordModule,
     BoutiqueModule,
+    UploadModule,
   ],
 })
 export class AppModule {}

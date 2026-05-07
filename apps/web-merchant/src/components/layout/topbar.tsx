@@ -9,23 +9,29 @@ export function Topbar({ titre }: { titre?: string }) {
   const initiales = `${utilisateur?.prenom?.charAt(0) ?? ""}${utilisateur?.nomFamille?.charAt(0) ?? ""}`;
 
   return (
-    <header className="h-14 flex items-center justify-between px-6 border-b border-border bg-surface">
-      <div className="flex items-center gap-4">
-        {titre && <h1 className="text-lg font-semibold text-foreground">{titre}</h1>}
+    <header className="h-14 flex items-center justify-between px-4 lg:px-6 border-b border-border bg-surface sticky top-0 z-10">
+      <div className="flex items-center gap-2 lg:gap-4 min-w-0 pl-12 lg:pl-0">
+        {titre && (
+          <h1 className="text-base lg:text-lg font-semibold text-foreground truncate">{titre}</h1>
+        )}
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border text-sm text-muted">
+      <div className="flex items-center gap-2 lg:gap-3 shrink-0">
+        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border text-sm text-muted">
           <Search size={16} />
           <span>Rechercher...</span>
           <Kbd>/</Kbd>
         </div>
 
-        <Button variant="ghost" className="p-2 h-auto min-w-0 text-muted" aria-label="Notifications">
-          <Bell size={20} />
+        <Button
+          variant="ghost"
+          className="p-2 h-auto min-w-0 text-muted"
+          aria-label="Notifications"
+        >
+          <Bell size={18} />
         </Button>
 
-        <Avatar className="bg-accent text-accent-foreground text-xs font-semibold">
+        <Avatar className="bg-accent text-accent-foreground text-xs font-semibold w-8 h-8">
           {initiales || "•"}
         </Avatar>
       </div>
