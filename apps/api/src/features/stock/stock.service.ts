@@ -82,7 +82,14 @@ export class StockService {
 
   async obtenirStockParEmplacement(tenantId: string, locationId: string) {
     const rows = await this.stockRepo.obtenirStockParEmplacement(tenantId, locationId);
-    return rows.map((r) => ({ varianteId: r.variantId, quantite: Number(r.quantite) }));
+    return rows.map((r) => ({
+      varianteId: r.variantId,
+      sku: r.sku,
+      nomProduit: r.nomProduit,
+      nomVariante: r.nomVariante,
+      typeProduit: r.typeProduit,
+      quantite: Number(r.quantite),
+    }));
   }
 
   private mapMouvement(raw: any): MouvementResponseDto {

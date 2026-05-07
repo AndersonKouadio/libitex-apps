@@ -96,6 +96,15 @@ export class StockActuelResponseDto {
   quantite!: number;
 }
 
+export class StockEmplacementResponseDto {
+  varianteId!: string;
+  sku!: string;
+  nomProduit!: string;
+  nomVariante!: string | null;
+  typeProduit!: string;
+  quantite!: number;
+}
+
 export class MouvementResponseDto {
   id!: string;
   typeMouvement!: string;

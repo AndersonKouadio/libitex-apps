@@ -1,7 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 import { eq, and, sql, isNull } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
-import { type Database, locations, stockMovements } from "@libitex/db";
+import { type Database, locations, stockMovements, variants, products } from "@libitex/db";
 
 @Injectable()
 export class StockRepository {
@@ -53,13 +53,25 @@ export class StockRepository {
       .select({
         variantId: stockMovements.variantId,
         quantite: sql<number>`SUM(${stockMovements.quantity})`,
+        sku: variants.sku,
+        nomVariante: variants.name,
+        nomProduit: products.name,
+        typeProduit: products.productType,
       })
       .from(stockMovements)
+      .innerJoin(variants, eq(stockMovements.variantId, variants.id))
+      .innerJoin(products, eq(variants.productId, products.id))
       .where(and(
         eq(stockMovements.tenantId, tenantId),
         eq(stockMovements.locationId, locationId),
       ))
-      .groupBy(stockMovements.variantId);
+      .groupBy(
+        stockMovements.variantId,
+        variants.sku,
+        variants.name,
+        products.name,
+        products.productType,
+      );
   }
 
   async obtenirHistorique(tenantId: string, opts: {

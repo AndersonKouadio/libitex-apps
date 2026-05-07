@@ -13,5 +13,9 @@ export interface IStockActuel {
 
 export interface IStockEmplacement {
   varianteId: string;
+  sku: string;
+  nomProduit: string;
+  nomVariante: string | null;
+  typeProduit: string;
   quantite: number;
 }
