@@ -1,13 +1,9 @@
 # ── LIBITEX Production ──
-#
-# Mode 1 : Sans domaine (IP directe)
-# Caddy ecoute sur :80 et route par path
-#
-# Mode 2 : Avec sous-domaines (decommenter et remplacer)
-# api-libitex.mondomaine.com { reverse_proxy api:3000 }
-# libitex.mondomaine.com { reverse_proxy web:3001 }
 
-:80 {
+# Tout passe par libitex.lunion-lab.com
+# Caddy gere le SSL automatiquement via Let's Encrypt
+
+libitex.lunion-lab.com {
 	# API — tout ce qui commence par /api/
 	handle /api/* {
 		reverse_proxy api:3000
