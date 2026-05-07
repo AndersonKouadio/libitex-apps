@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Topbar } from "@/components/layout/topbar";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
 import type { IProduit } from "@/features/catalogue/types/produit.type";
+import { ModalCreerProduit } from "@/features/catalogue/components/modal-creer-produit";
 import { Table, Chip, Button } from "@heroui/react";
 import { Package, Plus, Search } from "lucide-react";
 
@@ -21,6 +22,7 @@ const LABELS_TYPE: Record<string, { label: string; color: string }> = {
 export default function PageCatalogue() {
   const [page, setPage] = useState(1);
   const [recherche, setRecherche] = useState("");
+  const [modalOuvert, setModalOuvert] = useState(false);
   const { data, isLoading } = useProduitListQuery(page, recherche || undefined);
 
   const produits = data?.data ?? [];
@@ -42,7 +44,7 @@ export default function PageCatalogue() {
               className="flex-1 text-sm outline-none bg-transparent"
             />
           </div>
-          <Button variant="primary" className="gap-1.5" onPress={() => {}}>
+          <Button variant="primary" className="gap-1.5" onPress={() => setModalOuvert(true)}>
             <Plus size={16} />
             Nouveau produit
           </Button>
@@ -130,6 +132,11 @@ export default function PageCatalogue() {
           </div>
         )}
       </div>
+
+      <ModalCreerProduit
+        ouvert={modalOuvert}
+        onFermer={() => setModalOuvert(false)}
+      />
     </>
   );
 }
