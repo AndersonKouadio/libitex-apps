@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { X, Banknote, Smartphone, CreditCard, Landmark } from "lucide-react";
+import { Button, CloseButton } from "@heroui/react";
+import { Banknote, Smartphone, CreditCard, Landmark, type LucideIcon } from "lucide-react";
 import { MethodePaiement } from "../types/vente.type";
+import { formatMontant } from "../utils/format";
 
 interface Props {
   total: number;
@@ -11,44 +12,43 @@ interface Props {
   onFermer: () => void;
 }
 
-const METHODES = [
-  { code: MethodePaiement.CASH, libelle: "Especes", icone: Banknote, couleur: "#059669" },
-  { code: MethodePaiement.MOBILE_MONEY, libelle: "Mobile Money", icone: Smartphone, couleur: "#D97706" },
-  { code: MethodePaiement.CARD, libelle: "Carte bancaire", icone: CreditCard, couleur: "#2563EB" },
-  { code: MethodePaiement.BANK_TRANSFER, libelle: "Virement", icone: Landmark, couleur: "#7C3AED" },
-];
-
-function formatPrix(montant: number) {
-  return new Intl.NumberFormat("fr-FR").format(montant);
+interface MethodeUI {
+  code: string;
+  libelle: string;
+  icone: LucideIcon;
+  classes: string;
 }
+
+const METHODES: MethodeUI[] = [
+  { code: MethodePaiement.CASH, libelle: "Especes", icone: Banknote, classes: "bg-success/10 text-success" },
+  { code: MethodePaiement.MOBILE_MONEY, libelle: "Mobile Money", icone: Smartphone, classes: "bg-warning/10 text-warning" },
+  { code: MethodePaiement.CARD, libelle: "Carte bancaire", icone: CreditCard, classes: "bg-accent/10 text-accent" },
+  { code: MethodePaiement.BANK_TRANSFER, libelle: "Virement", icone: Landmark, classes: "bg-muted/10 text-muted" },
+];
 
 export function ModalPaiement({ total, enCours, onPayer, onFermer }: Props) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-sm font-semibold text-neutral-700">Mode de paiement</span>
-        <button onClick={onFermer} className="text-neutral-400 hover:text-neutral-600 p-0.5">
-          <X size={16} />
-        </button>
+        <span className="text-sm font-semibold text-foreground">Mode de paiement</span>
+        <CloseButton onPress={onFermer} aria-label="Fermer le paiement" />
       </div>
       {METHODES.map((m) => (
-        <button
+        <Button
           key={m.code}
-          onClick={() => onPayer(m.code)}
-          disabled={enCours}
-          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-lg border border-neutral-200 hover:border-neutral-300 hover:shadow-sm active:scale-[0.99] disabled:opacity-40 transition-all"
+          variant="outline"
+          className="w-full justify-start gap-3 px-4 py-3.5 h-auto hover:border-accent/50 hover:shadow-sm"
+          onPress={() => onPayer(m.code)}
+          isDisabled={enCours}
         >
-          <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center"
-            style={{ backgroundColor: `color-mix(in srgb, ${m.couleur} 10%, white)`, color: m.couleur }}
-          >
+          <span className={`w-9 h-9 rounded-lg flex items-center justify-center ${m.classes}`}>
             <m.icone size={18} strokeWidth={1.8} />
-          </div>
-          <span className="text-sm font-medium text-neutral-700">{m.libelle}</span>
-          <span className="ml-auto text-sm font-semibold text-neutral-900 tabular-nums">
-            {formatPrix(total)} F
           </span>
-        </button>
+          <span className="text-sm font-medium text-foreground">{m.libelle}</span>
+          <span className="ml-auto text-sm font-semibold text-foreground tabular-nums">
+            {formatMontant(total)} F
+          </span>
+        </Button>
       ))}
     </div>
   );

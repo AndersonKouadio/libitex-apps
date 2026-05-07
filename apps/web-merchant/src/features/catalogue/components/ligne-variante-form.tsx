@@ -1,6 +1,6 @@
 "use client";
 
-import { TextField, Label, Input } from "@heroui/react";
+import { TextField, Label, Input, Button } from "@heroui/react";
 import { Trash2 } from "lucide-react";
 import type { CreerVarianteDTO } from "../schemas/produit.schema";
 
@@ -58,13 +58,14 @@ export function LigneVarianteForm({ index, variante, onChange, onRetirer, seulEl
       </div>
 
       {!seulElement && (
-        <button
-          type="button"
-          onClick={() => onRetirer(index)}
-          className="mt-7 p-1.5 rounded-lg text-muted hover:text-danger hover:bg-danger/10 transition-colors"
+        <Button
+          variant="ghost"
+          className="mt-7 p-1.5 h-auto min-w-0 text-muted hover:text-danger hover:bg-danger/10"
+          onPress={() => onRetirer(index)}
+          aria-label="Retirer cette variante"
         >
           <Trash2 size={16} />
-        </button>
+        </Button>
       )}
     </div>
   );

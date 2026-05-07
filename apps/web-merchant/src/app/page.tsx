@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button, TextField, Label, Input, FieldError } from "@heroui/react";
+import { AlertCircle } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { connexionSchema, type ConnexionDTO } from "@/features/auth/schemas/auth.schema";
-import { AlertCircle } from "lucide-react";
 
 export default function PageConnexion() {
   const router = useRouter();
@@ -33,72 +35,73 @@ export default function PageConnexion() {
       await connecter(validation.data);
       router.push("/dashboard");
     } catch (err: unknown) {
-      setErreur(err instanceof Error ? err.message : "Connexion echouee");
+      setErreur(err instanceof Error ? err.message : "Identifiants incorrects");
     } finally {
       setSoumission(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-[#1B1F3B]">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-navy">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 -right-32 w-72 h-72 rounded-full bg-teal-600/5" />
-        <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-teal-400/5" />
+        <div className="absolute -top-32 -right-32 w-72 h-72 rounded-full bg-accent/5" />
+        <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-accent/5" />
       </div>
 
       <div className="relative w-full max-w-[400px]">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold tracking-tight text-teal-400">LIBITEX</h1>
-          <p className="mt-2.5 text-sm text-neutral-400">Espace commercant</p>
+          <h1 className="text-4xl font-bold tracking-tight text-accent">LIBITEX</h1>
+          <p className="mt-2.5 text-sm text-white/50">Espace commercant</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-xl p-7">
+        <div className="bg-surface rounded-2xl shadow-xl p-7">
           <form onSubmit={soumettre} className="space-y-4">
             {erreur && (
-              <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-lg bg-red-50 text-red-700 text-sm">
+              <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-lg bg-danger/10 text-danger text-sm">
                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
                 {erreur}
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="nom@boutique.sn"
-                required
-                className="w-full px-3.5 py-2.5 rounded-lg border border-neutral-200 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 transition-all placeholder:text-neutral-400"
-              />
-            </div>
+            <TextField
+              isRequired
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={(v) => setForm({ ...form, email: v })}
+            >
+              <Label>Adresse email</Label>
+              <Input placeholder="nom@boutique.sn" autoComplete="email" />
+              <FieldError />
+            </TextField>
 
-            <div>
-              <label className="block text-sm font-medium text-neutral-700 mb-1.5">Mot de passe</label>
-              <input
-                type="password"
-                value={form.motDePasse}
-                onChange={(e) => setForm({ ...form, motDePasse: e.target.value })}
-                placeholder="Votre mot de passe"
-                required
-                className="w-full px-3.5 py-2.5 rounded-lg border border-neutral-200 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 transition-all placeholder:text-neutral-400"
-              />
-            </div>
+            <TextField
+              isRequired
+              type="password"
+              name="motDePasse"
+              value={form.motDePasse}
+              onChange={(v) => setForm({ ...form, motDePasse: v })}
+            >
+              <Label>Mot de passe</Label>
+              <Input placeholder="Votre mot de passe" autoComplete="current-password" />
+              <FieldError />
+            </TextField>
 
-            <button
+            <Button
               type="submit"
-              disabled={soumission}
-              className="w-full py-3 rounded-lg bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 active:bg-teal-800 disabled:opacity-50 transition-colors"
+              variant="primary"
+              className="w-full"
+              isDisabled={soumission}
             >
               {soumission ? "Connexion en cours..." : "Se connecter"}
-            </button>
+            </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-neutral-500">
+          <p className="mt-6 text-center text-sm text-muted">
             Pas encore de boutique ?{" "}
-            <a href="/inscription" className="font-medium" style={{ color: "oklch(0.55 0.17 175)" }}>
+            <Link href="/inscription" className="font-medium text-accent hover:underline">
               Creer un compte
-            </a>
+            </Link>
           </p>
         </div>
       </div>

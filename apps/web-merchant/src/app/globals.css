@@ -1,8 +1,17 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
-/* ─── LIBITEX Theme Overrides (oklch) ─── */
+/* ─── Tailwind v4 — tokens custom (au-dela de HeroUI) ─── */
+@theme {
+  --color-navy: oklch(0.22 0.04 280);
+  --color-navy-foreground: oklch(0.98 0 0);
+  --color-sidebar: oklch(0.18 0.02 280);
+  --color-sidebar-mute: oklch(0.15 0.015 280);
+  --color-accent-soft: oklch(0.6 0.17 175 / 0.1);
+  --color-accent-strong: oklch(0.5 0.15 175);
+}
 
+/* ─── LIBITEX — overrides theme HeroUI v3 (oklch) ─── */
 :root {
   --accent: oklch(0.6 0.17 175);
   --accent-foreground: oklch(0.98 0 0);

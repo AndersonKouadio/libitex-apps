@@ -1,23 +1,13 @@
-export interface IRapportZ {
-  date: string;
-  emplacementId: string;
-  resume: {
-    totalTickets: number;
-    totalRevenu: number;
-    totalTaxe: number;
-    totalRemise: number;
-  };
-  ventilationPaiements: {
-    methode: string;
-    total: number;
-    nombre: number;
-  }[];
-}
-
 export interface IKpiTableauDeBord {
-  caJour: number;
-  ventesJour: number;
+  recettesJour: number;
+  ticketsJour: number;
+  ticketMoyen: number;
   nombreProduits: number;
   nombreEmplacements: number;
-  ticketMoyen: number;
+}
+
+export interface IPointVentesJour {
+  date: string;
+  recettes: number;
+  nombre: number;
 }

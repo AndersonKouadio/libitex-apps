@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { Select, ListBox, Label, toast } from "@heroui/react";
 import { ShoppingCart } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import { venteAPI } from "@/features/vente/apis/vente.api";
+import { creerTicketSchema } from "@/features/vente/schemas/vente.schema";
 import { usePanier } from "@/features/vente/hooks/usePanier";
 import { GrilleProduits } from "@/features/vente/components/grille-produits";
 import { PanierLateral } from "@/features/vente/components/panier-lateral";
 import { ModalPaiement } from "@/features/vente/components/modal-paiement";
 import { ConfirmationVente } from "@/features/vente/components/confirmation-vente";
+import { formatMontant } from "@/features/vente/utils/format";
 
 export default function PagePOS() {
   const { token } = useAuth();
@@ -25,23 +28,24 @@ export default function PagePOS() {
     numero: string; total: number; monnaie: number;
   } | null>(null);
 
-  // Selectionner le premier emplacement par defaut
   const empId = emplacementId || emplacements?.[0]?.id || "";
-
   const produits = produitsData?.data ?? [];
 
   const encaisser = useCallback(async (methode: string) => {
     if (!token || !empId || panier.articles.length === 0) return;
+
+    const payload = creerTicketSchema.safeParse({
+      emplacementId: empId,
+      lignes: panier.articles.map((a) => ({ varianteId: a.varianteId, quantite: a.quantite })),
+    });
+    if (!payload.success) {
+      toast.danger(payload.error.issues[0]?.message ?? "Panier invalide");
+      return;
+    }
+
     setEnCours(true);
     try {
-      const ticket = await venteAPI.creerTicket(token, {
-        emplacementId: empId,
-        lignes: panier.articles.map((a) => ({
-          varianteId: a.varianteId,
-          quantite: a.quantite,
-        })),
-      });
-
+      const ticket = await venteAPI.creerTicket(token, payload.data);
       const resultat = await venteAPI.completerTicket(token, ticket.id, {
         paiements: [{ methode, montant: ticket.total }],
       });
@@ -54,8 +58,28 @@ export default function PagePOS() {
       panier.vider();
       setAfficherPaiement(false);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erreur lors de la vente";
-      alert(msg);
+      toast.danger(err instanceof Error ? err.message : "Erreur lors de la vente");
+    } finally {
+      setEnCours(false);
+    }
+  }, [token, empId, panier]);
+
+  const mettreEnAttente = useCallback(async () => {
+    if (!token || !empId || panier.articles.length === 0) return;
+    setEnCours(true);
+    try {
+      const ticket = await venteAPI.creerTicket(token, {
+        emplacementId: empId,
+        lignes: panier.articles.map((a) => ({
+          varianteId: a.varianteId,
+          quantite: a.quantite,
+        })),
+      });
+      await venteAPI.mettreEnAttente(token, ticket.id);
+      panier.vider();
+      toast.success(`Ticket ${ticket.numeroTicket} mis en attente`);
+    } catch (err: unknown) {
+      toast.danger(err instanceof Error ? err.message : "Erreur lors de la mise en attente");
     } finally {
       setEnCours(false);
     }
@@ -63,29 +87,40 @@ export default function PagePOS() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Colonne gauche — Produits */}
-      <div className="flex-1 flex flex-col bg-neutral-50 overflow-hidden">
-        {/* En-tete POS */}
-        <div className="h-14 flex items-center justify-between px-4 border-b border-neutral-200 bg-white shrink-0">
+      <div className="flex-1 flex flex-col bg-surface-secondary overflow-hidden">
+        <header className="h-14 flex items-center justify-between px-4 border-b border-border bg-surface shrink-0">
           <div className="flex items-center gap-2.5">
-            <ShoppingCart size={20} className="text-teal-600" />
-            <span className="font-semibold text-neutral-800">Point de vente</span>
+            <ShoppingCart size={20} className="text-accent" />
+            <span className="font-semibold text-foreground">Point de vente</span>
           </div>
-          <select
-            value={empId}
-            onChange={(e) => setEmplacementId(e.target.value)}
-            className="px-3 py-1.5 rounded-lg border border-neutral-200 text-sm text-neutral-700 bg-white"
-          >
-            {(emplacements ?? []).map((e) => (
-              <option key={e.id} value={e.id}>{e.nom}</option>
-            ))}
-          </select>
-        </div>
+          {(emplacements ?? []).length > 0 && (
+            <Select
+              selectedKey={empId}
+              onSelectionChange={(key) => setEmplacementId(String(key))}
+              aria-label="Emplacement de caisse"
+              className="min-w-[180px]"
+            >
+              <Label className="sr-only">Emplacement</Label>
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  {(emplacements ?? []).map((e) => (
+                    <ListBox.Item key={e.id} id={e.id} textValue={e.nom}>
+                      {e.nom}
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
+            </Select>
+          )}
+        </header>
 
         <GrilleProduits produits={produits} onAjouter={panier.ajouter} />
       </div>
 
-      {/* Colonne droite — Panier */}
       {!afficherPaiement ? (
         <PanierLateral
           articles={panier.articles}
@@ -94,17 +129,17 @@ export default function PagePOS() {
           onRetirer={panier.retirer}
           onVider={panier.vider}
           onEncaisser={() => setAfficherPaiement(true)}
-          onAttente={() => {/* TODO mettre en attente */}}
+          onAttente={mettreEnAttente}
         />
       ) : (
-        <div className="w-[360px] flex flex-col bg-white border-l border-neutral-200 shrink-0">
+        <aside className="w-[360px] flex flex-col bg-surface border-l border-border shrink-0">
           <div className="flex-1" />
-          <div className="border-t border-neutral-200 p-4 space-y-3">
-            <div className="flex items-center justify-between px-4 py-3.5 rounded-lg bg-[#1B1F3B]">
-              <span className="text-sm text-white/60">TOTAL</span>
-              <span className="text-2xl font-bold text-white tabular-nums">
-                {new Intl.NumberFormat("fr-FR").format(panier.total)}
-                <span className="text-sm font-normal text-white/50 ml-1">F</span>
+          <div className="border-t border-border p-4 space-y-3">
+            <div className="flex items-center justify-between px-4 py-3.5 rounded-lg bg-navy">
+              <span className="text-sm text-navy-foreground/60">TOTAL</span>
+              <span className="text-2xl font-bold text-navy-foreground tabular-nums">
+                {formatMontant(panier.total)}
+                <span className="text-sm font-normal text-navy-foreground/50 ml-1">F</span>
               </span>
             </div>
             <ModalPaiement
@@ -114,10 +149,9 @@ export default function PagePOS() {
               onFermer={() => setAfficherPaiement(false)}
             />
           </div>
-        </div>
+        </aside>
       )}
 
-      {/* Confirmation */}
       {derniereVente && (
         <ConfirmationVente
           numeroTicket={derniereVente.numero}

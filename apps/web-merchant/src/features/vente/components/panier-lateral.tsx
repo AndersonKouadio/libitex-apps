@@ -1,7 +1,9 @@
 "use client";
 
-import { Minus, Plus, Trash2, ShoppingCart } from "lucide-react";
+import { Button } from "@heroui/react";
+import { Minus, Plus, Trash2, ShoppingCart, PauseCircle } from "lucide-react";
 import type { ArticlePanier } from "../hooks/usePanier";
+import { formatMontant } from "../utils/format";
 
 interface Props {
   articles: ArticlePanier[];
@@ -13,106 +15,113 @@ interface Props {
   onAttente: () => void;
 }
 
-function formatPrix(montant: number) {
-  return new Intl.NumberFormat("fr-FR").format(montant);
-}
-
 export function PanierLateral({
   articles, total, onModifierQuantite, onRetirer, onVider, onEncaisser, onAttente,
 }: Props) {
+  const vide = articles.length === 0;
+
   return (
-    <div className="w-[360px] flex flex-col bg-white border-l border-neutral-200 shrink-0">
-      {/* En-tete */}
-      <div className="px-4 py-3 border-b border-neutral-100 flex items-center justify-between">
-        <span className="text-sm font-semibold text-neutral-800">
+    <div className="w-[360px] flex flex-col bg-surface border-l border-border shrink-0">
+      <header className="px-4 py-3 border-b border-border flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground">
           Panier
-          {articles.length > 0 && (
-            <span className="ml-1.5 text-xs font-normal text-neutral-400">
+          {!vide && (
+            <span className="ml-1.5 text-xs font-normal text-muted">
               {articles.length} article{articles.length > 1 ? "s" : ""}
             </span>
           )}
         </span>
-        {articles.length > 0 && (
-          <button onClick={onVider} className="text-xs text-red-500 hover:text-red-600 font-medium">
+        {!vide && (
+          <Button variant="ghost" className="text-xs text-danger px-2 h-7" onPress={onVider}>
             Vider
-          </button>
+          </Button>
         )}
-      </div>
+      </header>
 
-      {/* Lignes */}
       <div className="flex-1 overflow-y-auto">
-        {articles.length === 0 ? (
+        {vide ? (
           <div className="flex flex-col items-center justify-center h-full px-6">
-            <ShoppingCart size={36} className="text-neutral-200 mb-3" />
-            <p className="text-sm text-neutral-400">Panier vide</p>
-            <p className="text-xs text-neutral-300 mt-1">Selectionnez un article pour commencer</p>
+            <ShoppingCart size={36} className="text-muted/30 mb-3" />
+            <p className="text-sm text-muted">Panier vide</p>
+            <p className="text-xs text-muted/70 mt-1">Selectionnez un article pour commencer</p>
           </div>
         ) : (
-          <div className="divide-y divide-neutral-100">
+          <ul className="divide-y divide-border">
             {articles.map((a) => (
-              <div key={a.varianteId} className="px-4 py-3">
+              <li key={a.varianteId} className="px-4 py-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-neutral-800 truncate">{a.nomProduit}</p>
-                    <p className="text-xs text-neutral-500">{a.nomVariante}</p>
+                    <p className="text-sm font-medium text-foreground truncate">{a.nomProduit}</p>
+                    {a.nomVariante && <p className="text-xs text-muted">{a.nomVariante}</p>}
                   </div>
-                  <button onClick={() => onRetirer(a.varianteId)} className="text-neutral-300 hover:text-red-400 p-0.5 shrink-0">
+                  <Button
+                    variant="ghost"
+                    className="text-muted hover:text-danger p-1 h-auto min-w-0"
+                    onPress={() => onRetirer(a.varianteId)}
+                    aria-label={`Retirer ${a.nomProduit}`}
+                  >
                     <Trash2 size={14} />
-                  </button>
+                  </Button>
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => onModifierQuantite(a.varianteId, -1)}
-                      className="w-7 h-7 rounded border border-neutral-200 flex items-center justify-center text-neutral-500 hover:bg-neutral-50 active:bg-neutral-100"
+                    <Button
+                      variant="outline"
+                      className="w-7 h-7 min-w-0 p-0"
+                      onPress={() => onModifierQuantite(a.varianteId, -1)}
+                      aria-label="Diminuer la quantite"
                     >
                       <Minus size={14} />
-                    </button>
+                    </Button>
                     <span className="w-8 text-center text-sm font-semibold tabular-nums">{a.quantite}</span>
-                    <button
-                      onClick={() => onModifierQuantite(a.varianteId, 1)}
-                      className="w-7 h-7 rounded border border-neutral-200 flex items-center justify-center text-neutral-500 hover:bg-neutral-50 active:bg-neutral-100"
+                    <Button
+                      variant="outline"
+                      className="w-7 h-7 min-w-0 p-0"
+                      onPress={() => onModifierQuantite(a.varianteId, 1)}
+                      aria-label="Augmenter la quantite"
                     >
                       <Plus size={14} />
-                    </button>
+                    </Button>
                   </div>
-                  <span className="text-sm font-semibold text-neutral-900 tabular-nums">
-                    {formatPrix(a.totalLigne)} F
+                  <span className="text-sm font-semibold text-foreground tabular-nums">
+                    {formatMontant(a.totalLigne)} F
                   </span>
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
 
-      {/* Pied — Total + Actions */}
-      <div className="border-t border-neutral-200 p-4 space-y-3">
-        <div className="flex items-center justify-between px-4 py-3.5 rounded-lg bg-[#1B1F3B]">
-          <span className="text-sm text-white/60">TOTAL</span>
-          <span className="text-2xl font-bold text-white tabular-nums tracking-tight">
-            {formatPrix(total)}
-            <span className="text-sm font-normal text-white/50 ml-1">F</span>
+      <footer className="border-t border-border p-4 space-y-3">
+        <div className="flex items-center justify-between px-4 py-3.5 rounded-lg bg-navy">
+          <span className="text-sm text-navy-foreground/60">TOTAL</span>
+          <span className="text-2xl font-bold text-navy-foreground tabular-nums tracking-tight">
+            {formatMontant(total)}
+            <span className="text-sm font-normal text-navy-foreground/50 ml-1">F</span>
           </span>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={onEncaisser}
-            disabled={articles.length === 0}
-            className="flex-1 py-3 rounded-lg bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 active:bg-teal-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          <Button
+            variant="primary"
+            className="flex-1"
+            onPress={onEncaisser}
+            isDisabled={vide}
           >
             Encaisser
-          </button>
-          <button
-            onClick={onAttente}
-            disabled={articles.length === 0}
-            className="px-4 py-3 rounded-lg border border-amber-400 text-amber-600 text-sm font-medium hover:bg-amber-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            title="Mettre en attente"
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-1.5 border-warning text-warning"
+            onPress={onAttente}
+            isDisabled={vide}
+            aria-label="Mettre en attente"
           >
+            <PauseCircle size={16} />
             Attente
-          </button>
+          </Button>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }

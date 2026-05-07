@@ -5,8 +5,8 @@ import { Topbar } from "@/components/layout/topbar";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
 import type { IProduit } from "@/features/catalogue/types/produit.type";
 import { ModalCreerProduit } from "@/features/catalogue/components/modal-creer-produit";
-import { Table, Chip, Button, Skeleton } from "@heroui/react";
-import { Package, Plus, Search } from "lucide-react";
+import { Table, Chip, Button, Skeleton, SearchField, Input } from "@heroui/react";
+import { Package, Plus } from "lucide-react";
 
 function formatPrix(n: number) {
   return new Intl.NumberFormat("fr-FR").format(n);
@@ -32,19 +32,16 @@ export default function PageCatalogue() {
     <>
       <Topbar titre="Catalogue" />
       <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
-        {/* Barre d'actions */}
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-200 bg-white w-full max-w-sm focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/10 transition-all">
-            <Search size={16} className="text-neutral-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un produit..."
-              value={recherche}
-              onChange={(e) => { setRecherche(e.target.value); setPage(1); }}
-              className="flex-1 text-sm outline-none bg-transparent"
-            />
-          </div>
-          <Button variant="primary" className="gap-1.5" onPress={() => setModalOuvert(true)}>
+        <div className="flex items-center justify-between gap-3 mb-5">
+          <SearchField
+            value={recherche}
+            onChange={(v) => { setRecherche(v); setPage(1); }}
+            aria-label="Rechercher un produit"
+            className="w-full max-w-sm"
+          >
+            <Input placeholder="Rechercher un produit..." />
+          </SearchField>
+          <Button variant="primary" className="gap-1.5 shrink-0" onPress={() => setModalOuvert(true)}>
             <Plus size={16} />
             Nouveau produit
           </Button>

@@ -9,7 +9,7 @@ import type { IStockEmplacement } from "@/features/stock/types/stock.type";
 import { ModalEntreeStock } from "@/features/stock/components/modal-entree-stock";
 import { ModalCreerEmplacement } from "@/features/stock/components/modal-creer-emplacement";
 import { Table, Chip, Card, Button } from "@heroui/react";
-import { Warehouse, MapPin, ArrowDownToLine, Package, PackagePlus, Plus } from "lucide-react";
+import { MapPin, ArrowDownToLine, Package, PackagePlus, Plus } from "lucide-react";
 
 const LABELS_TYPE: Record<string, string> = {
   SIMPLE: "Standard", VARIANT: "Variantes", SERIALIZED: "Serialise", PERISHABLE: "Perissable",
@@ -17,7 +17,7 @@ const LABELS_TYPE: Record<string, string> = {
 
 export default function PageStock() {
   const { token } = useAuth();
-  const { data: emplacements, isLoading } = useEmplacementListQuery();
+  const { data: emplacements } = useEmplacementListQuery();
   const [stockDetail, setStockDetail] = useState<IStockEmplacement[] | null>(null);
   const [empSelectionne, setEmpSelectionne] = useState("");
   const [modalOuvert, setModalOuvert] = useState(false);
@@ -54,29 +54,30 @@ export default function PageStock() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {/* Emplacements */}
           <div className="lg:col-span-1 space-y-2">
-            {(emplacements ?? []).map((emp) => (
-              <button
-                key={emp.id}
-                onClick={() => chargerStock(emp.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
-                  empSelectionne === emp.id
-                    ? "border-teal-400 bg-teal-50 shadow-sm"
-                    : "border-neutral-200 bg-white hover:border-neutral-300"
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                  empSelectionne === emp.id ? "bg-teal-100 text-teal-600" : "bg-neutral-100 text-neutral-400"
-                }`}>
-                  <MapPin size={16} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-neutral-800 truncate">{emp.nom}</p>
-                  <p className="text-xs text-neutral-400 capitalize">{emp.type.toLowerCase()}</p>
-                </div>
-              </button>
-            ))}
+            {(emplacements ?? []).map((emp) => {
+              const actif = empSelectionne === emp.id;
+              return (
+                <Button
+                  key={emp.id}
+                  variant={actif ? "outline" : "ghost"}
+                  className={`w-full justify-start gap-3 px-4 py-3 h-auto bg-surface ${
+                    actif ? "border-accent shadow-sm" : "border-border hover:border-foreground/20"
+                  }`}
+                  onPress={() => chargerStock(emp.id)}
+                >
+                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                    actif ? "bg-accent/10 text-accent" : "bg-surface-secondary text-muted"
+                  }`}>
+                    <MapPin size={16} />
+                  </span>
+                  <span className="min-w-0 text-left">
+                    <span className="block text-sm font-medium text-foreground truncate">{emp.nom}</span>
+                    <span className="block text-xs text-muted capitalize">{emp.type.toLowerCase()}</span>
+                  </span>
+                </Button>
+              );
+            })}
           </div>
 
           {/* Detail stock */}

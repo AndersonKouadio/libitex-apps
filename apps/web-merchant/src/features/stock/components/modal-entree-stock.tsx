@@ -1,15 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Modal, Button, TextField, Label, Input, Select, ListBox, TextArea,
-} from "@heroui/react";
+import { Modal, Button, TextField, Label, Input, TextArea } from "@heroui/react";
 import { PackagePlus } from "lucide-react";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
 import { useEmplacementListQuery } from "../queries/emplacement-list.query";
 import { useEntreeStockMutation } from "../queries/stock-entree.mutation";
 import { entreeStockSchema, type EntreeStockDTO } from "../schemas/stock.schema";
-import type { IProduit } from "@/features/catalogue/types/produit.type";
+import { SelectVariante } from "./select-variante";
+import { SelectEmplacement } from "./select-emplacement";
 
 interface Props {
   ouvert: boolean;
@@ -28,14 +27,7 @@ export function ModalEntreeStock({ ouvert, onFermer }: Props) {
   const [erreur, setErreur] = useState("");
 
   const produits = produitsData?.data ?? [];
-
-  // Construire la liste des variantes avec le nom du produit parent
-  const optionsVariantes = produits.flatMap((p: IProduit) =>
-    p.variantes.map((v) => ({
-      id: v.id,
-      label: v.nom ? `${p.nom} — ${v.nom} (${v.sku})` : `${p.nom} (${v.sku})`,
-    })),
-  );
+  const emps = emplacements ?? [];
 
   function reinitialiser() {
     setVarianteId("");
@@ -47,10 +39,9 @@ export function ModalEntreeStock({ ouvert, onFermer }: Props) {
 
   async function soumettre() {
     setErreur("");
-
     const donnees: EntreeStockDTO = {
       varianteId,
-      emplacementId: emplacementId || emplacements?.[0]?.id || "",
+      emplacementId: emplacementId || emps[0]?.id || "",
       quantite: Number(quantite) || 0,
       note: note || undefined,
     };
@@ -76,7 +67,7 @@ export function ModalEntreeStock({ ouvert, onFermer }: Props) {
         <Modal.Dialog>
           <Modal.CloseTrigger />
           <Modal.Header>
-            <Modal.Icon className="bg-success-soft text-success-soft-foreground">
+            <Modal.Icon className="bg-success/10 text-success">
               <PackagePlus className="size-5" />
             </Modal.Icon>
             <Modal.Heading>Reception de marchandise</Modal.Heading>
@@ -84,71 +75,17 @@ export function ModalEntreeStock({ ouvert, onFermer }: Props) {
 
           <Modal.Body className="space-y-4">
             {erreur && (
-              <div className="px-3 py-2.5 rounded-lg bg-danger/10 text-danger text-sm">
-                {erreur}
-              </div>
+              <div className="px-3 py-2.5 rounded-lg bg-danger/10 text-danger text-sm">{erreur}</div>
             )}
 
-            {/* Produit / Variante */}
-            <Select
-              isRequired
-              name="varianteId"
-              placeholder="Selectionnez un article"
-              selectedKey={varianteId}
-              onSelectionChange={(key) => setVarianteId(String(key))}
-            >
-              <Label>Produit / Variante</Label>
-              <Select.Trigger>
-                <Select.Value />
-                <Select.Indicator />
-              </Select.Trigger>
-              <Select.Popover>
-                <ListBox>
-                  {optionsVariantes.map((v) => (
-                    <ListBox.Item key={v.id} id={v.id} textValue={v.label}>
-                      {v.label}
-                    </ListBox.Item>
-                  ))}
-                </ListBox>
-              </Select.Popover>
-            </Select>
+            <SelectVariante produits={produits} varianteId={varianteId} onChange={setVarianteId} />
+            <SelectEmplacement emplacements={emps} emplacementId={emplacementId} onChange={setEmplacementId} />
 
-            {/* Emplacement */}
-            <Select
-              isRequired
-              name="emplacementId"
-              selectedKey={emplacementId || emplacements?.[0]?.id || ""}
-              onSelectionChange={(key) => setEmplacementId(String(key))}
-            >
-              <Label>Emplacement de destination</Label>
-              <Select.Trigger>
-                <Select.Value />
-                <Select.Indicator />
-              </Select.Trigger>
-              <Select.Popover>
-                <ListBox>
-                  {(emplacements ?? []).map((e) => (
-                    <ListBox.Item key={e.id} id={e.id} textValue={e.nom}>
-                      {e.nom}
-                    </ListBox.Item>
-                  ))}
-                </ListBox>
-              </Select.Popover>
-            </Select>
-
-            {/* Quantite */}
-            <TextField
-              isRequired
-              name="quantite"
-              type="number"
-              value={quantite}
-              onChange={setQuantite}
-            >
+            <TextField isRequired name="quantite" type="number" value={quantite} onChange={setQuantite}>
               <Label>Quantite recue</Label>
               <Input placeholder="50" min="1" />
             </TextField>
 
-            {/* Note */}
             <TextField name="note" value={note} onChange={setNote}>
               <Label>Note (optionnel)</Label>
               <TextArea placeholder="Reference commande, nom fournisseur, constat a l'arrivee..." rows={2} />
@@ -156,14 +93,8 @@ export function ModalEntreeStock({ ouvert, onFermer }: Props) {
           </Modal.Body>
 
           <Modal.Footer>
-            <Button variant="secondary" slot="close">
-              Annuler
-            </Button>
-            <Button
-              variant="primary"
-              onPress={soumettre}
-              isDisabled={mutation.isPending}
-            >
+            <Button variant="secondary" slot="close">Annuler</Button>
+            <Button variant="primary" onPress={soumettre} isDisabled={mutation.isPending}>
               {mutation.isPending ? "Enregistrement..." : "Confirmer la reception"}
             </Button>
           </Modal.Footer>
