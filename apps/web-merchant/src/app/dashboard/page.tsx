@@ -106,7 +106,7 @@ export default function TableauDeBordPage() {
   return (
     <>
       <Topbar titre="Tableau de bord" />
-      <div className="p-6 max-w-7xl">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <CarteKpi

@@ -53,7 +53,7 @@ export default function PageRapports() {
   return (
     <>
       <Topbar titre="Rapports" />
-      <div className="p-6 max-w-4xl">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
         {/* Filtres */}
         <div className="flex items-end gap-3 mb-6">
           <div>

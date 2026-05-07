@@ -29,7 +29,7 @@ export default function PageCatalogue() {
   return (
     <>
       <Topbar titre="Catalogue" />
-      <div className="p-6 max-w-6xl">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
         {/* Barre d'actions */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-200 bg-white w-full max-w-sm focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/10 transition-all">

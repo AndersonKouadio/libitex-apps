@@ -15,16 +15,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (enChargement || !token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-        <div className="w-6 h-6 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex bg-neutral-50">
+    <div className="min-h-screen flex bg-background">
       <Sidebar />
-      <main className="flex-1 ml-[256px]">{children}</main>
+      <main className="flex-1 ml-[256px] min-h-screen">
+        <div className="w-full">{children}</div>
+      </main>
     </div>
   );
 }

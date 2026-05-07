@@ -1,86 +1,30 @@
 @import "tailwindcss";
 @import "@heroui/styles";
 
-/* ─── LIBITEX Design System Tokens ─── */
+/* ─── LIBITEX Theme Overrides (oklch) ─── */
 
 :root {
-  /* Primary */
-  --color-primary-900: #1B1F3B;
-  --color-primary-700: #2D3561;
-  --color-primary-500: #4A51A0;
-
-  /* Accent */
-  --color-accent-600: #0D9488;
-  --color-accent-500: #14B8A6;
-  --color-accent-400: #2DD4BF;
-  --color-accent-100: #CCFBF1;
-
-  /* Warm */
-  --color-warm-500: #F59E0B;
-  --color-warm-300: #FCD34D;
-  --color-warm-100: #FEF3C7;
-
-  /* Neutral */
-  --color-neutral-900: #0F172A;
-  --color-neutral-800: #1E293B;
-  --color-neutral-700: #334155;
-  --color-neutral-600: #475569;
-  --color-neutral-500: #64748B;
-  --color-neutral-400: #94A3B8;
-  --color-neutral-300: #CBD5E1;
-  --color-neutral-200: #E2E8F0;
-  --color-neutral-100: #F1F5F9;
-  --color-neutral-50: #F8FAFC;
-
-  /* Semantic */
-  --color-success: #059669;
-  --color-success-light: #D1FAE5;
-  --color-warning: #D97706;
-  --color-warning-light: #FEF3C7;
-  --color-error: #DC2626;
-  --color-error-light: #FEE2E2;
-  --color-info: #2563EB;
-  --color-info-light: #DBEAFE;
-
-  /* Layout */
-  --sidebar-width: 256px;
-  --sidebar-collapsed: 72px;
-  --topbar-height: 56px;
-}
-
-@theme inline {
-  --color-primary-900: var(--color-primary-900);
-  --color-primary-700: var(--color-primary-700);
-  --color-accent-600: var(--color-accent-600);
-  --color-accent-400: var(--color-accent-400);
-  --color-warm-500: var(--color-warm-500);
-  --color-neutral-800: var(--color-neutral-800);
-  --color-neutral-500: var(--color-neutral-500);
-  --color-neutral-200: var(--color-neutral-200);
-  --color-neutral-100: var(--color-neutral-100);
-  --color-neutral-50: var(--color-neutral-50);
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --accent: oklch(0.6 0.17 175);
+  --accent-foreground: oklch(0.98 0 0);
+  --radius: 0.625rem;
 }
 
 body {
-  background: var(--color-neutral-50);
-  color: var(--color-neutral-800);
-  font-family: var(--font-sans);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-neutral-300);
+  background: oklch(0.8 0 0);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-neutral-400);
+  background: oklch(0.7 0 0);
 }
