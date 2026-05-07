@@ -45,7 +45,7 @@ export function ModalCreerEmplacement({ ouvert, onFermer }: Props) {
         <Modal.Dialog>
           <Modal.CloseTrigger />
           <Modal.Header>
-            <Modal.Icon className="bg-success-soft text-success-soft-foreground">
+            <Modal.Icon className="bg-success/10 text-success">
               <MapPin className="size-5" />
             </Modal.Icon>
             <Modal.Heading>Nouvel emplacement</Modal.Heading>

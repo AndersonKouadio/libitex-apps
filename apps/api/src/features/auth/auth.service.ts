@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcryptjs";
@@ -16,6 +16,8 @@ import {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly utilisateurRepo: UtilisateurRepository,
     private readonly stockService: StockService,
@@ -48,11 +50,17 @@ export class AuthService {
       role: "ADMIN",
     });
 
-    // Creer l'emplacement par defaut
-    await this.stockService.creerEmplacement(tenant.id, {
-      nom: dto.nomBoutique,
-      type: "STORE",
-    });
+    try {
+      await this.stockService.creerEmplacement(tenant.id, {
+        nom: dto.nomBoutique,
+        type: "STORE",
+      });
+    } catch (err) {
+      this.logger.error(
+        `Echec creation emplacement par defaut pour tenant ${tenant.id} (${dto.nomBoutique})`,
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
 
     return this.genererTokens(user);
   }

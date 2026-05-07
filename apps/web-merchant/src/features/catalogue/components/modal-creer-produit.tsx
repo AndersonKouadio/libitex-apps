@@ -4,8 +4,10 @@ import { Modal, Button } from "@heroui/react";
 import { Package } from "lucide-react";
 import { useFormProduit } from "../hooks/useFormProduit";
 import { useAjouterProduitMutation } from "../queries/produit-add.mutation";
+import { useCategorieListQuery } from "../queries/categorie-list.query";
 import { ChampsInfoProduit } from "./champs-info-produit";
-import { SectionVariantes } from "./section-variantes";
+import { SectionVarianteUnique } from "./section-variante-unique";
+import { SectionVariantesAttributs } from "./section-variantes-attributs";
 
 interface Props {
   ouvert: boolean;
@@ -14,12 +16,12 @@ interface Props {
 
 export function ModalCreerProduit({ ouvert, onFermer }: Props) {
   const mutation = useAjouterProduitMutation();
+  const { data: categories } = useCategorieListQuery();
   const form = useFormProduit();
 
   async function soumettre() {
     const donnees = form.valider();
     if (!donnees) return;
-
     try {
       await mutation.mutateAsync(donnees);
       form.reinitialiser();
@@ -28,6 +30,8 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
       form.setErreur(err instanceof Error ? err.message : "Erreur lors de la creation");
     }
   }
+
+  const { typeProduit, varianteUnique, axes, prefixeSku, variantesGenerees, erreur } = form.valeurs;
 
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(open) => { if (!open) onFermer(); }}>
@@ -41,36 +45,54 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
             <Modal.Heading>Nouveau produit</Modal.Heading>
           </Modal.Header>
 
-          <Modal.Body className="space-y-5">
-            {form.valeurs.erreur && (
+          <Modal.Body className="space-y-6">
+            {erreur && (
               <div className="px-3 py-2.5 rounded-lg bg-danger/10 text-danger text-sm">
-                {form.valeurs.erreur}
+                {erreur}
               </div>
             )}
 
             <ChampsInfoProduit
               nom={form.valeurs.nom}
               description={form.valeurs.description}
-              typeProduit={form.valeurs.typeProduit}
+              typeProduit={typeProduit}
               marque={form.valeurs.marque}
+              categorieId={form.valeurs.categorieId}
+              codeBarresEan13={form.valeurs.codeBarresEan13}
+              tauxTva={form.valeurs.tauxTva}
+              categories={categories ?? []}
               onNom={form.setNom}
               onDescription={form.setDescription}
               onTypeProduit={form.setTypeProduit}
               onMarque={form.setMarque}
+              onCategorieId={form.setCategorieId}
+              onCodeBarresEan13={form.setCodeBarresEan13}
+              onTauxTva={form.setTauxTva}
             />
 
-            <SectionVariantes
-              variantes={form.valeurs.variantes}
-              onChange={form.modifierVariante}
-              onAjouter={form.ajouterVariante}
-              onRetirer={form.retirerVariante}
-            />
+            {typeProduit === "VARIANT" ? (
+              <SectionVariantesAttributs
+                prefixeSku={prefixeSku}
+                axes={axes}
+                variantesGenerees={variantesGenerees}
+                prixDetailReference={varianteUnique.prixDetail ? String(varianteUnique.prixDetail) : ""}
+                onPrefixe={form.setPrefixeSku}
+                onPrixReference={(v) => form.setVarianteUnique({ ...varianteUnique, prixDetail: Number(v) || 0 })}
+                onAjouterAxe={form.ajouterAxe}
+                onRetirerAxe={form.retirerAxe}
+                onModifierAxe={form.modifierAxe}
+              />
+            ) : (
+              <SectionVarianteUnique
+                type={typeProduit}
+                variante={varianteUnique}
+                onChange={(data) => form.setVarianteUnique({ ...varianteUnique, ...data })}
+              />
+            )}
           </Modal.Body>
 
           <Modal.Footer>
-            <Button variant="secondary" slot="close">
-              Annuler
-            </Button>
+            <Button variant="secondary" slot="close">Annuler</Button>
             <Button variant="primary" onPress={soumettre} isDisabled={mutation.isPending}>
               {mutation.isPending ? "Creation..." : "Creer le produit"}
             </Button>

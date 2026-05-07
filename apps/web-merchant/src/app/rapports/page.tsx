@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Select, ListBox, Label, TextField, Input, Button, Spinner } from "@heroui/react";
+import { Select, ListBox, Label, Button, Spinner } from "@heroui/react";
 import { Topbar } from "@/components/layout/topbar";
+import { ChampDate } from "@/components/forms/champ-date";
+import { AucunEmplacement } from "@/components/empty-states/aucun-emplacement";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
+import { ModalCreerEmplacement } from "@/features/stock/components/modal-creer-emplacement";
 import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
 import { useRapportZQuery } from "@/features/vente/queries/rapport-z.query";
 import { RapportZResume } from "@/features/vente/components/rapport-z-resume";
@@ -20,16 +23,30 @@ export default function PageRapports() {
   const [date, setDate] = useState(aujourdhui());
   const [empConsulte, setEmpConsulte] = useState<string | undefined>();
   const [dateConsultee, setDateConsultee] = useState<string>(date);
+  const [modalEmpOuvert, setModalEmpOuvert] = useState(false);
 
   const { data: ticketsData } = useTicketListQuery({ page: 1 });
   const { data: rapport, isFetching } = useRapportZQuery(empConsulte, dateConsultee);
 
   const empParDefaut = empId || emplacements?.[0]?.id || "";
+  const aucunEmplacement = emplacements !== undefined && emplacements.length === 0;
 
   function generer() {
     if (!empParDefaut) return;
     setEmpConsulte(empParDefaut);
     setDateConsultee(date);
+  }
+
+  if (aucunEmplacement) {
+    return (
+      <>
+        <Topbar titre="Rapports" />
+        <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
+          <AucunEmplacement onCreer={() => setModalEmpOuvert(true)} contexte="rapports" />
+        </div>
+        <ModalCreerEmplacement ouvert={modalEmpOuvert} onFermer={() => setModalEmpOuvert(false)} />
+      </>
+    );
   }
 
   return (
@@ -59,10 +76,8 @@ export default function PageRapports() {
             </Select.Popover>
           </Select>
 
-          <TextField type="date" value={date} onChange={setDate}>
-            <Label>Date</Label>
-            <Input />
-          </TextField>
+          <ChampDate label="Date" value={date} onChange={setDate} />
+
 
           <Button variant="primary" onPress={generer} isDisabled={isFetching || !empParDefaut}>
             {isFetching ? <Spinner size="sm" /> : "Generer le Z"}

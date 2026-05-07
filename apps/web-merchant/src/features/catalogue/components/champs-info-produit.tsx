@@ -1,68 +1,130 @@
 "use client";
 
-import { TextField, Label, Input, Select, ListBox } from "@heroui/react";
+import { TextField, Label, Input, Select, ListBox, Disclosure, TextArea } from "@heroui/react";
+import { ChevronDown } from "lucide-react";
+import type { ICategorie } from "../types/produit.type";
+import type { TypeProduit } from "../hooks/useFormProduit";
 
-const TYPES_PRODUIT = [
-  { id: "SIMPLE", label: "Standard" },
-  { id: "VARIANT", label: "Variantes (taille, couleur...)" },
-  { id: "SERIALIZED", label: "Serialise (IMEI, N/S)" },
-  { id: "PERISHABLE", label: "Perissable (DLC)" },
-] as const;
+const TYPES_PRODUIT: Array<{ id: TypeProduit; label: string; description: string }> = [
+  { id: "SIMPLE", label: "Standard", description: "Un seul SKU, sans variantes ni suivi unitaire." },
+  { id: "VARIANT", label: "Avec variantes", description: "Genere une matrice (couleur, taille, matiere...)." },
+  { id: "SERIALIZED", label: "Serialise", description: "Numeros de serie / IMEI saisis a la reception." },
+  { id: "PERISHABLE", label: "Perissable", description: "Suivi par lots et dates de peremption." },
+];
 
 interface Props {
   nom: string;
   description: string;
-  typeProduit: string;
+  typeProduit: TypeProduit;
   marque: string;
+  categorieId: string;
+  codeBarresEan13: string;
+  tauxTva: string;
+  categories: ICategorie[];
   onNom: (v: string) => void;
   onDescription: (v: string) => void;
-  onTypeProduit: (v: string) => void;
+  onTypeProduit: (v: TypeProduit) => void;
   onMarque: (v: string) => void;
+  onCategorieId: (v: string) => void;
+  onCodeBarresEan13: (v: string) => void;
+  onTauxTva: (v: string) => void;
 }
 
 export function ChampsInfoProduit({
-  nom, description, typeProduit, marque,
-  onNom, onDescription, onTypeProduit, onMarque,
+  nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva,
+  categories,
+  onNom, onDescription, onTypeProduit, onMarque, onCategorieId, onCodeBarresEan13, onTauxTva,
 }: Props) {
+  const typeSelectionne = TYPES_PRODUIT.find((t) => t.id === typeProduit);
+
   return (
-    <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <TextField isRequired className="sm:col-span-2" name="nom" value={nom} onChange={onNom}>
-          <Label>Nom du produit</Label>
-          <Input placeholder="Samsung Galaxy A15" />
-        </TextField>
+    <div className="space-y-4">
+      <TextField isRequired name="nom" value={nom} onChange={onNom}>
+        <Label>Nom du produit</Label>
+        <Input placeholder="Samsung Galaxy A15" />
+      </TextField>
 
-        <Select
-          name="typeProduit"
-          selectedKey={typeProduit}
-          onSelectionChange={(key) => onTypeProduit(String(key))}
-        >
-          <Label>Type de produit</Label>
-          <Select.Trigger>
-            <Select.Value />
-            <Select.Indicator />
-          </Select.Trigger>
-          <Select.Popover>
-            <ListBox>
-              {TYPES_PRODUIT.map((t) => (
-                <ListBox.Item key={t.id} id={t.id} textValue={t.label}>
-                  {t.label}
-                </ListBox.Item>
-              ))}
-            </ListBox>
-          </Select.Popover>
-        </Select>
+      <Select
+        name="typeProduit"
+        selectedKey={typeProduit}
+        onSelectionChange={(key) => onTypeProduit(String(key) as TypeProduit)}
+      >
+        <Label>Type de produit</Label>
+        <Select.Trigger>
+          <Select.Value />
+          <Select.Indicator />
+        </Select.Trigger>
+        <Select.Popover>
+          <ListBox>
+            {TYPES_PRODUIT.map((t) => (
+              <ListBox.Item key={t.id} id={t.id} textValue={t.label}>
+                <div>
+                  <p className="text-sm font-medium">{t.label}</p>
+                  <p className="text-xs text-muted">{t.description}</p>
+                </div>
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </Select.Popover>
+      </Select>
 
-        <TextField name="marque" value={marque} onChange={onMarque}>
-          <Label>Marque</Label>
-          <Input placeholder="Samsung, Nike..." />
-        </TextField>
-      </div>
+      {typeSelectionne && (
+        <p className="text-xs text-muted -mt-2">{typeSelectionne.description}</p>
+      )}
 
       <TextField name="description" value={description} onChange={onDescription}>
-        <Label>Description</Label>
-        <Input placeholder="Description courte du produit" />
+        <Label>Description (optionnel)</Label>
+        <TextArea placeholder="Specifications, points cles, conditions de garantie..." rows={2} />
       </TextField>
-    </>
+
+      <Disclosure>
+        <Disclosure.Heading>
+          <Disclosure.Trigger className="flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground">
+            Details avances
+            <ChevronDown size={12} />
+          </Disclosure.Trigger>
+        </Disclosure.Heading>
+        <Disclosure.Content className="pt-3 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <TextField name="marque" value={marque} onChange={onMarque}>
+                <Label>Marque</Label>
+                <Input placeholder="Samsung, Nike..." />
+              </TextField>
+              <Select
+                name="categorieId"
+                selectedKey={categorieId || undefined}
+                onSelectionChange={(key) => onCategorieId(key ? String(key) : "")}
+                isDisabled={categories.length === 0}
+                placeholder={categories.length === 0 ? "Aucune categorie" : "Selectionner..."}
+              >
+                <Label>Categorie</Label>
+                <Select.Trigger>
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    {categories.map((c) => (
+                      <ListBox.Item key={c.id} id={c.id} textValue={c.nom}>
+                        {c.nom}
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+              </Select>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <TextField name="codeBarresEan13" value={codeBarresEan13} onChange={onCodeBarresEan13}>
+                <Label>Code-barres EAN-13 (optionnel)</Label>
+                <Input placeholder="3017620422003" />
+              </TextField>
+              <TextField name="tauxTva" type="number" value={tauxTva} onChange={onTauxTva}>
+                <Label>Taux TVA (%)</Label>
+                <Input placeholder="18" min="0" max="100" />
+              </TextField>
+            </div>
+        </Disclosure.Content>
+      </Disclosure>
+    </div>
   );
 }

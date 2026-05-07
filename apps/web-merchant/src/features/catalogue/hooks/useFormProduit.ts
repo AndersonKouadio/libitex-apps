@@ -1,54 +1,82 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { creerProduitSchema, type CreerProduitDTO, type CreerVarianteDTO } from "../schemas/produit.schema";
+import { genererVariantesParCombinaison, type AxeAttribut } from "../utils/generer-variantes";
 
 const VARIANTE_VIDE: CreerVarianteDTO = { sku: "", prixDetail: 0 };
+
+export type TypeProduit = "SIMPLE" | "VARIANT" | "SERIALIZED" | "PERISHABLE";
 
 export interface EtatFormProduit {
   nom: string;
   description: string;
-  typeProduit: string;
+  typeProduit: TypeProduit;
   marque: string;
-  variantes: CreerVarianteDTO[];
+  categorieId: string;
+  codeBarresEan13: string;
+  tauxTva: string;
+  prefixeSku: string;
+  axes: AxeAttribut[];
+  varianteUnique: CreerVarianteDTO;
   erreur: string;
 }
+
+const AXES_VIDES: AxeAttribut[] = [{ nom: "", valeurs: [] }];
 
 export function useFormProduit() {
   const [nom, setNom] = useState("");
   const [description, setDescription] = useState("");
-  const [typeProduit, setTypeProduit] = useState("SIMPLE");
+  const [typeProduit, setTypeProduit] = useState<TypeProduit>("SIMPLE");
   const [marque, setMarque] = useState("");
-  const [variantes, setVariantes] = useState<CreerVarianteDTO[]>([{ ...VARIANTE_VIDE }]);
+  const [categorieId, setCategorieId] = useState("");
+  const [codeBarresEan13, setCodeBarresEan13] = useState("");
+  const [tauxTva, setTauxTva] = useState("0");
+  const [prefixeSku, setPrefixeSku] = useState("");
+  const [axes, setAxes] = useState<AxeAttribut[]>(AXES_VIDES);
+  const [varianteUnique, setVarianteUnique] = useState<CreerVarianteDTO>({ ...VARIANTE_VIDE });
   const [erreur, setErreur] = useState("");
 
-  const modifierVariante = useCallback((index: number, data: Partial<CreerVarianteDTO>) => {
-    setVariantes((prev) => prev.map((v, i) => (i === index ? { ...v, ...data } : v)));
+  const variantesGenerees = useMemo(() => {
+    if (typeProduit === "VARIANT") {
+      return genererVariantesParCombinaison(axes, prefixeSku, varianteUnique.prixDetail);
+    }
+    return [varianteUnique];
+  }, [typeProduit, axes, prefixeSku, varianteUnique]);
+
+  const ajouterAxe = useCallback(() => {
+    setAxes((prev) => [...prev, { nom: "", valeurs: [] }]);
   }, []);
 
-  const retirerVariante = useCallback((index: number) => {
-    setVariantes((prev) => prev.filter((_, i) => i !== index));
+  const retirerAxe = useCallback((index: number) => {
+    setAxes((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const ajouterVariante = useCallback(() => {
-    setVariantes((prev) => [...prev, { ...VARIANTE_VIDE }]);
+  const modifierAxe = useCallback((index: number, data: Partial<AxeAttribut>) => {
+    setAxes((prev) => prev.map((a, i) => (i === index ? { ...a, ...data } : a)));
   }, []);
 
   const reinitialiser = useCallback(() => {
-    setNom("");
-    setDescription("");
-    setTypeProduit("SIMPLE");
-    setMarque("");
-    setVariantes([{ ...VARIANTE_VIDE }]);
-    setErreur("");
+    setNom(""); setDescription(""); setTypeProduit("SIMPLE"); setMarque("");
+    setCategorieId(""); setCodeBarresEan13(""); setTauxTva("0"); setPrefixeSku("");
+    setAxes(AXES_VIDES); setVarianteUnique({ ...VARIANTE_VIDE }); setErreur("");
   }, []);
 
   const valider = useCallback((): CreerProduitDTO | null => {
+    const variantes = variantesGenerees.filter((v) => v.sku && v.prixDetail > 0);
+    if (variantes.length === 0) {
+      setErreur("Renseignez au moins un SKU et un prix de detail");
+      return null;
+    }
+
     const donnees: CreerProduitDTO = {
       nom,
       description: description || undefined,
-      typeProduit: typeProduit as CreerProduitDTO["typeProduit"],
+      typeProduit,
       marque: marque || undefined,
+      categorieId: categorieId || undefined,
+      codeBarresEan13: codeBarresEan13 || undefined,
+      tauxTva: tauxTva ? Number(tauxTva) : undefined,
       variantes,
     };
 
@@ -59,12 +87,16 @@ export function useFormProduit() {
     }
     setErreur("");
     return validation.data;
-  }, [nom, description, typeProduit, marque, variantes]);
+  }, [nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva, variantesGenerees]);
 
   return {
-    valeurs: { nom, description, typeProduit, marque, variantes, erreur },
-    setNom, setDescription, setTypeProduit, setMarque,
-    modifierVariante, retirerVariante, ajouterVariante,
+    valeurs: {
+      nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva,
+      prefixeSku, axes, varianteUnique, variantesGenerees, erreur,
+    },
+    setNom, setDescription, setTypeProduit, setMarque, setCategorieId,
+    setCodeBarresEan13, setTauxTva, setPrefixeSku, setVarianteUnique,
+    ajouterAxe, retirerAxe, modifierAxe,
     reinitialiser, valider, setErreur,
   };
 }

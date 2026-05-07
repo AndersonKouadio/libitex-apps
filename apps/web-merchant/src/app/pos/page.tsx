@@ -6,6 +6,8 @@ import { ShoppingCart } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
+import { ModalCreerEmplacement } from "@/features/stock/components/modal-creer-emplacement";
+import { AucunEmplacement } from "@/components/empty-states/aucun-emplacement";
 import { venteAPI } from "@/features/vente/apis/vente.api";
 import { creerTicketSchema } from "@/features/vente/schemas/vente.schema";
 import { usePanier } from "@/features/vente/hooks/usePanier";
@@ -24,10 +26,12 @@ export default function PagePOS() {
   const [emplacementId, setEmplacementId] = useState("");
   const [afficherPaiement, setAfficherPaiement] = useState(false);
   const [enCours, setEnCours] = useState(false);
+  const [modalEmpOuvert, setModalEmpOuvert] = useState(false);
   const [derniereVente, setDerniereVente] = useState<{
     numero: string; total: number; monnaie: number;
   } | null>(null);
 
+  const aucunEmplacement = emplacements !== undefined && emplacements.length === 0;
   const empId = emplacementId || emplacements?.[0]?.id || "";
   const produits = produitsData?.data ?? [];
 
@@ -84,6 +88,19 @@ export default function PagePOS() {
       setEnCours(false);
     }
   }, [token, empId, panier]);
+
+  if (aucunEmplacement) {
+    return (
+      <>
+        <div className="flex items-center justify-center min-h-screen bg-surface-secondary p-4">
+          <div className="max-w-md w-full">
+            <AucunEmplacement onCreer={() => setModalEmpOuvert(true)} contexte="pos" />
+          </div>
+        </div>
+        <ModalCreerEmplacement ouvert={modalEmpOuvert} onFermer={() => setModalEmpOuvert(false)} />
+      </>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden">
