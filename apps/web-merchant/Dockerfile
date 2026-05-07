@@ -16,6 +16,10 @@ COPY tsconfig.base.json ./
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# NEXT_PUBLIC_ vars must be set at build time
+ARG NEXT_PUBLIC_API_URL=https://libitex-api.lunion-lab.com/api/v1
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 WORKDIR /app/apps/web-merchant
 RUN pnpm exec next build
 
@@ -31,7 +35,6 @@ ENV HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Le standalone d'un monorepo garde la structure du workspace
 COPY --from=builder /app/apps/web-merchant/public ./apps/web-merchant/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web-merchant/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web-merchant/.next/static ./apps/web-merchant/.next/static
