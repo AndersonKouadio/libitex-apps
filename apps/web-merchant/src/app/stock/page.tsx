@@ -7,8 +7,9 @@ import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-li
 import { stockAPI } from "@/features/stock/apis/stock.api";
 import type { IStockEmplacement } from "@/features/stock/types/stock.type";
 import { ModalEntreeStock } from "@/features/stock/components/modal-entree-stock";
+import { ModalCreerEmplacement } from "@/features/stock/components/modal-creer-emplacement";
 import { Table, Chip, Card, Button } from "@heroui/react";
-import { Warehouse, MapPin, ArrowDownToLine, Package, PackagePlus } from "lucide-react";
+import { Warehouse, MapPin, ArrowDownToLine, Package, PackagePlus, Plus } from "lucide-react";
 
 const LABELS_TYPE: Record<string, string> = {
   SIMPLE: "Standard", VARIANT: "Variantes", SERIALIZED: "Serialise", PERISHABLE: "Perissable",
@@ -20,6 +21,7 @@ export default function PageStock() {
   const [stockDetail, setStockDetail] = useState<IStockEmplacement[] | null>(null);
   const [empSelectionne, setEmpSelectionne] = useState("");
   const [modalOuvert, setModalOuvert] = useState(false);
+  const [modalEmpOuvert, setModalEmpOuvert] = useState(false);
 
   async function chargerStock(emplacementId: string) {
     if (!token) return;
@@ -39,10 +41,16 @@ export default function PageStock() {
           <p className="text-xs font-semibold text-muted uppercase tracking-wider">
             Emplacements ({emplacements?.length ?? 0})
           </p>
-          <Button variant="primary" className="gap-1.5" onPress={() => setModalOuvert(true)}>
-            <PackagePlus size={16} />
-            Recevoir du stock
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" className="gap-1.5" onPress={() => setModalEmpOuvert(true)}>
+              <Plus size={16} />
+              Emplacement
+            </Button>
+            <Button variant="primary" className="gap-1.5" onPress={() => setModalOuvert(true)}>
+              <PackagePlus size={16} />
+              Recevoir du stock
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -136,6 +144,10 @@ export default function PageStock() {
       <ModalEntreeStock
         ouvert={modalOuvert}
         onFermer={() => setModalOuvert(false)}
+      />
+      <ModalCreerEmplacement
+        ouvert={modalEmpOuvert}
+        onFermer={() => setModalEmpOuvert(false)}
       />
     </>
   );

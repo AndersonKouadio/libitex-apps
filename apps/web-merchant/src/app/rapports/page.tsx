@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Topbar } from "@/components/layout/topbar";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
+import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
 import { venteAPI } from "@/features/vente/apis/vente.api";
 import type { IRapportZ } from "@/features/vente/types/vente.type";
+import { Table, Chip } from "@heroui/react";
 import { BarChart3, Receipt, Banknote, Smartphone, CreditCard, Landmark, CalendarDays } from "lucide-react";
 
 function formatPrix(n: number) {
@@ -34,6 +36,7 @@ export default function PageRapports() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [rapport, setRapport] = useState<IRapportZ | null>(null);
   const [chargement, setChargement] = useState(false);
+  const { data: ticketsData } = useTicketListQuery({ page: 1 });
 
   const selectedEmp = empId || emplacements?.[0]?.id || "";
 
@@ -168,6 +171,55 @@ export default function PageRapports() {
             </div>
           </div>
         )}
+
+        {/* Historique tickets */}
+        <div className="mt-6">
+          <h2 className="text-sm font-semibold text-muted uppercase tracking-wider mb-3">
+            Derniers tickets
+          </h2>
+          {ticketsData?.data && ticketsData.data.length > 0 ? (
+            <Table>
+              <Table.ScrollContainer>
+                <Table.Content aria-label="Historique des tickets">
+                  <Table.Header>
+                    <Table.Column isRowHeader>Ticket</Table.Column>
+                    <Table.Column>Client</Table.Column>
+                    <Table.Column>Statut</Table.Column>
+                    <Table.Column>Total</Table.Column>
+                    <Table.Column>Date</Table.Column>
+                  </Table.Header>
+                  <Table.Body>
+                    {ticketsData.data.map((t) => (
+                      <Table.Row key={t.id}>
+                        <Table.Cell>
+                          <span className="text-sm font-mono font-medium text-foreground">{t.numeroTicket}</span>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <span className="text-sm text-muted">{t.nomClient || "—"}</span>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <Chip className="text-xs">{t.statut}</Chip>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <span className="text-sm font-semibold tabular-nums">{formatPrix(t.total)} F</span>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <span className="text-xs text-muted">
+                            {new Date(t.creeLe).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Content>
+              </Table.ScrollContainer>
+            </Table>
+          ) : (
+            <div className="bg-surface rounded-xl border border-border py-12 text-center">
+              <p className="text-sm text-muted">Aucun ticket pour le moment</p>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
