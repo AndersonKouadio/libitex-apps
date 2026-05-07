@@ -1,13 +1,15 @@
 "use client";
 
 import { Button } from "@heroui/react";
-import { Minus, Plus, Trash2, ShoppingCart, PauseCircle } from "lucide-react";
+import { ShoppingCart, PauseCircle, Receipt } from "lucide-react";
 import type { ArticlePanier } from "../hooks/usePanier";
 import { formatMontant } from "../utils/format";
+import { LignePanier } from "./ligne-panier";
 
 interface Props {
   articles: ArticlePanier[];
   total: number;
+  nombreArticles: number;
   onModifierQuantite: (varianteId: string, delta: number) => void;
   onRetirer: (varianteId: string) => void;
   onVider: () => void;
@@ -16,21 +18,27 @@ interface Props {
 }
 
 export function PanierLateral({
-  articles, total, onModifierQuantite, onRetirer, onVider, onEncaisser, onAttente,
+  articles, total, nombreArticles,
+  onModifierQuantite, onRetirer, onVider, onEncaisser, onAttente,
 }: Props) {
   const vide = articles.length === 0;
 
   return (
-    <div className="w-[360px] flex flex-col bg-surface border-l border-border shrink-0">
-      <header className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <span className="text-sm font-semibold text-foreground">
-          Panier
-          {!vide && (
-            <span className="ml-1.5 text-xs font-normal text-muted">
-              {articles.length} article{articles.length > 1 ? "s" : ""}
-            </span>
-          )}
-        </span>
+    <div className="w-[380px] flex flex-col bg-surface border-l border-border shrink-0">
+      <header className="px-4 py-3.5 border-b border-border flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="w-7 h-7 rounded-lg bg-accent/10 text-accent flex items-center justify-center">
+            <Receipt size={14} />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-foreground leading-none">Panier</p>
+            {!vide && (
+              <p className="text-[10px] text-muted leading-none mt-0.5">
+                {articles.length} ligne{articles.length > 1 ? "s" : ""} · {nombreArticles} article{nombreArticles > 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
+        </div>
         {!vide && (
           <Button variant="ghost" className="text-xs text-danger px-2 h-7" onPress={onVider}>
             Vider
@@ -40,71 +48,48 @@ export function PanierLateral({
 
       <div className="flex-1 overflow-y-auto">
         {vide ? (
-          <div className="flex flex-col items-center justify-center h-full px-6">
-            <ShoppingCart size={36} className="text-muted/30 mb-3" />
-            <p className="text-sm text-muted">Panier vide</p>
-            <p className="text-xs text-muted/70 mt-1">Selectionnez un article pour commencer</p>
+          <div className="flex flex-col items-center justify-center h-full px-6 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-surface-secondary flex items-center justify-center mb-3">
+              <ShoppingCart size={28} className="text-muted/50" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Panier vide</p>
+            <p className="text-xs text-muted mt-1 max-w-[200px]">
+              Cliquez sur un article ou scannez un code-barres
+            </p>
           </div>
         ) : (
           <ul className="divide-y divide-border">
             {articles.map((a) => (
-              <li key={a.varianteId} className="px-4 py-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{a.nomProduit}</p>
-                    {a.nomVariante && <p className="text-xs text-muted">{a.nomVariante}</p>}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    className="text-muted hover:text-danger p-1 h-auto min-w-0"
-                    onPress={() => onRetirer(a.varianteId)}
-                    aria-label={`Retirer ${a.nomProduit}`}
-                  >
-                    <Trash2 size={14} />
-                  </Button>
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      className="w-7 h-7 min-w-0 p-0"
-                      onPress={() => onModifierQuantite(a.varianteId, -1)}
-                      aria-label="Diminuer la quantite"
-                    >
-                      <Minus size={14} />
-                    </Button>
-                    <span className="w-8 text-center text-sm font-semibold tabular-nums">{a.quantite}</span>
-                    <Button
-                      variant="outline"
-                      className="w-7 h-7 min-w-0 p-0"
-                      onPress={() => onModifierQuantite(a.varianteId, 1)}
-                      aria-label="Augmenter la quantite"
-                    >
-                      <Plus size={14} />
-                    </Button>
-                  </div>
-                  <span className="text-sm font-semibold text-foreground tabular-nums">
-                    {formatMontant(a.totalLigne)} F
-                  </span>
-                </div>
-              </li>
+              <LignePanier
+                key={a.varianteId}
+                article={a}
+                onModifierQuantite={onModifierQuantite}
+                onRetirer={onRetirer}
+              />
             ))}
           </ul>
         )}
       </div>
 
-      <footer className="border-t border-border p-4 space-y-3">
-        <div className="flex items-center justify-between px-4 py-3.5 rounded-lg bg-navy">
-          <span className="text-sm text-navy-foreground/60">TOTAL</span>
-          <span className="text-2xl font-bold text-navy-foreground tabular-nums tracking-tight">
-            {formatMontant(total)}
-            <span className="text-sm font-normal text-navy-foreground/50 ml-1">F</span>
-          </span>
+      <footer className="border-t border-border p-4 space-y-3 bg-surface">
+        <div className="px-4 py-3.5 rounded-xl bg-navy">
+          <div className="flex items-end justify-between gap-2">
+            <span className="text-xs text-navy-foreground/60 uppercase tracking-wider">Total</span>
+            <span className="text-2xl font-bold text-navy-foreground tabular-nums tracking-tight leading-none">
+              {formatMontant(total)}
+              <span className="text-sm font-normal text-navy-foreground/50 ml-1">F</span>
+            </span>
+          </div>
+          {!vide && (
+            <p className="text-[10px] text-navy-foreground/40 mt-1">
+              {nombreArticles} article{nombreArticles > 1 ? "s" : ""}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <Button
             variant="primary"
-            className="flex-1"
+            className="flex-1 h-11 font-semibold"
             onPress={onEncaisser}
             isDisabled={vide}
           >
@@ -112,7 +97,7 @@ export function PanierLateral({
           </Button>
           <Button
             variant="outline"
-            className="gap-1.5 border-warning text-warning"
+            className="h-11 px-4 gap-1.5 border-warning/40 text-warning hover:bg-warning/5"
             onPress={onAttente}
             isDisabled={vide}
             aria-label="Mettre en attente"

@@ -30,18 +30,22 @@ export function ChampDate({ label, value, onChange, isRequired, className }: Pro
       className={className}
     >
       <Label>{label}</Label>
-      <DateField.Group>
+      <DateField.Group fullWidth>
         <DateField.InputContainer>
           <DateField.Input>
             {(segment) => <DateField.Segment segment={segment} />}
           </DateField.Input>
         </DateField.InputContainer>
-        <DatePicker.Trigger>
-          <CalendarDays size={16} />
-        </DatePicker.Trigger>
+        <DateField.Suffix>
+          <DatePicker.Trigger>
+            <DatePicker.TriggerIndicator>
+              <CalendarDays size={16} />
+            </DatePicker.TriggerIndicator>
+          </DatePicker.Trigger>
+        </DateField.Suffix>
       </DateField.Group>
       <FieldError />
-      <DatePicker.Popover>
+      <DatePicker.Popover className="!max-w-none w-auto min-w-[300px] p-3">
         <Calendar>
           <Calendar.Header>
             <Calendar.NavButton slot="previous">

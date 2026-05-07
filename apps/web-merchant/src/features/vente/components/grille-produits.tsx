@@ -1,19 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { SearchField, Input, Button } from "@heroui/react";
+import { SearchField, Input } from "@heroui/react";
 import { Search, Package } from "lucide-react";
 import type { IProduit, IVariante } from "@/features/catalogue/types/produit.type";
-import { formatMontant } from "../utils/format";
+import type { IStockEmplacement } from "@/features/stock/types/stock.type";
+import { CarteArticle } from "./carte-article";
 
 interface Props {
   produits: IProduit[];
+  stocks: IStockEmplacement[] | undefined;
   onAjouter: (produit: IProduit, variante: IVariante) => void;
 }
 
-export function GrilleProduits({ produits, onAjouter }: Props) {
+export function GrilleProduits({ produits, stocks, onAjouter }: Props) {
   const [recherche, setRecherche] = useState("");
+
+  const stockMap = useMemo(() => {
+    if (!stocks) return null;
+    return new Map(stocks.map((s) => [s.varianteId, s.quantite]));
+  }, [stocks]);
 
   const terme = recherche.toLowerCase().trim();
   const filtres = terme
@@ -50,27 +57,16 @@ export function GrilleProduits({ produits, onAjouter }: Props) {
             <p className="text-sm text-muted">Aucun article ne correspond a la recherche</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {filtres.flatMap((produit) =>
               produit.variantes.map((variante) => (
-                <Button
+                <CarteArticle
                   key={variante.id}
-                  variant="outline"
-                  className="flex-col items-start justify-start text-left bg-surface p-3 h-auto hover:border-accent hover:shadow-sm"
-                  onPress={() => onAjouter(produit, variante)}
-                >
-                  <span className="text-sm font-medium text-foreground truncate leading-tight w-full">
-                    {produit.nom}
-                  </span>
-                  {variante.nom && (
-                    <span className="text-xs text-muted truncate mt-0.5 w-full">{variante.nom}</span>
-                  )}
-                  <span className="text-[11px] text-muted/70 mt-0.5 font-mono">{variante.sku}</span>
-                  <span className="text-base font-semibold text-foreground mt-2 tabular-nums">
-                    {formatMontant(variante.prixDetail)}
-                    <span className="text-[11px] font-normal text-muted ml-1">F</span>
-                  </span>
-                </Button>
+                  produit={produit}
+                  variante={variante}
+                  stock={stockMap?.get(variante.id) ?? null}
+                  onAjouter={() => onAjouter(produit, variante)}
+                />
               )),
             )}
           </div>

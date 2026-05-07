@@ -90,14 +90,18 @@ export default function PageCatalogue() {
                       <Table.Row key={p.id}>
                         <Table.Cell>
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
-                              <Package size={16} className="text-neutral-400" />
+                            <div className="w-10 h-10 rounded-lg bg-surface-secondary overflow-hidden flex items-center justify-center shrink-0">
+                              {p.images?.[0] ? (
+                                <img src={p.images[0]} alt={p.nom} className="w-full h-full object-cover" loading="lazy" />
+                              ) : (
+                                <Package size={16} className="text-muted/50" />
+                              )}
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-neutral-800">{p.nom}</p>
+                              <p className="text-sm font-medium text-foreground">{p.nom}</p>
                               <div className="flex items-center gap-2">
-                                {p.marque && <span className="text-xs text-neutral-400">{p.marque}</span>}
-                                <span className="text-xs font-mono text-neutral-400">{variante?.sku}</span>
+                                {p.marque && <span className="text-xs text-muted">{p.marque}</span>}
+                                <span className="text-xs font-mono text-muted">{variante?.sku}</span>
                               </div>
                             </div>
                           </div>

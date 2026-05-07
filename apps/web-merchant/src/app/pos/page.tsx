@@ -6,6 +6,7 @@ import { ShoppingCart } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
+import { useStockEmplacementQuery } from "@/features/stock/queries/stock-emplacement.query";
 import { ModalCreerEmplacement } from "@/features/stock/components/modal-creer-emplacement";
 import { AucunEmplacement } from "@/components/empty-states/aucun-emplacement";
 import { venteAPI } from "@/features/vente/apis/vente.api";
@@ -33,6 +34,7 @@ export default function PagePOS() {
 
   const aucunEmplacement = emplacements !== undefined && emplacements.length === 0;
   const empId = emplacementId || emplacements?.[0]?.id || "";
+  const { data: stocks } = useStockEmplacementQuery(empId || undefined);
   const produits = produitsData?.data ?? [];
 
   const encaisser = useCallback(async (methode: string) => {
@@ -135,13 +137,14 @@ export default function PagePOS() {
           )}
         </header>
 
-        <GrilleProduits produits={produits} onAjouter={panier.ajouter} />
+        <GrilleProduits produits={produits} stocks={stocks} onAjouter={panier.ajouter} />
       </div>
 
       {!afficherPaiement ? (
         <PanierLateral
           articles={panier.articles}
           total={panier.total}
+          nombreArticles={panier.nombreArticles}
           onModifierQuantite={panier.modifierQuantite}
           onRetirer={panier.retirer}
           onVider={panier.vider}
@@ -149,7 +152,7 @@ export default function PagePOS() {
           onAttente={mettreEnAttente}
         />
       ) : (
-        <aside className="w-[360px] flex flex-col bg-surface border-l border-border shrink-0">
+        <aside className="w-[380px] flex flex-col bg-surface border-l border-border shrink-0">
           <div className="flex-1" />
           <div className="border-t border-border p-4 space-y-3">
             <div className="flex items-center justify-between px-4 py-3.5 rounded-lg bg-navy">

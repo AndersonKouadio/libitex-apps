@@ -20,6 +20,7 @@ export class CatalogueService {
       brand: dto.marque,
       barcodeEan13: dto.codeBarresEan13,
       taxRate: dto.tauxTva?.toString(),
+      images: dto.images ?? [],
     });
 
     const variantes: VarianteResponseDto[] = [];
@@ -105,6 +106,7 @@ export class CatalogueService {
       marque: raw.brand,
       categorieId: raw.categoryId,
       tauxTva: Number(raw.taxRate ?? 0),
+      images: Array.isArray(raw.images) ? raw.images : [],
       actif: raw.isActive,
       variantes,
       creeLe: raw.createdAt?.toISOString?.() ?? raw.createdAt,

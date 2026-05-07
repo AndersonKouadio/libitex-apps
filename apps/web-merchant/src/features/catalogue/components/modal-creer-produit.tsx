@@ -9,6 +9,7 @@ import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-act
 import { ChampsInfoProduit } from "./champs-info-produit";
 import { SectionVarianteUnique } from "./section-variante-unique";
 import { SectionVariantesAttributs } from "./section-variantes-attributs";
+import { SectionImages } from "./section-images";
 
 interface Props {
   ouvert: boolean;
@@ -36,7 +37,7 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
     }
   }
 
-  const { typeProduit, varianteUnique, axes, prefixeSku, variantesGenerees, erreur } = form.valeurs;
+  const { typeProduit, varianteUnique, axes, prefixeSku, variantesGenerees, images, erreur } = form.valeurs;
 
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(open) => { if (!open) onFermer(); }}>
@@ -75,6 +76,8 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
               onCodeBarresEan13={form.setCodeBarresEan13}
               onTauxTva={form.setTauxTva}
             />
+
+            <SectionImages images={images} onChange={form.setImages} />
 
             {typeProduit === "VARIANT" ? (
               <SectionVariantesAttributs

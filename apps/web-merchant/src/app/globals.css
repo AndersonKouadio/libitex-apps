@@ -18,6 +18,13 @@
   --radius: 0.625rem;
 }
 
+/* Modal: laisser respirer le focus ring des inputs lorsque le body
+   defile (overflow-y: auto coupe aussi en x sinon) */
+.modal__body {
+  padding-inline: 2px;
+  margin-inline: -2px;
+}
+
 body {
   font-family: "Inter", system-ui, -apple-system, sans-serif;
 }

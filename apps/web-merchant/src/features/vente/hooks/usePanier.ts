@@ -8,6 +8,7 @@ export interface ArticlePanier {
   nomProduit: string;
   nomVariante: string;
   sku: string;
+  image: string | null;
   quantite: number;
   prixUnitaire: number;
   totalLigne: number;
@@ -33,6 +34,7 @@ export function usePanier() {
           nomProduit: produit.nom,
           nomVariante: variante.nom || variante.sku,
           sku: variante.sku,
+          image: produit.images?.[0] ?? null,
           quantite: 1,
           prixUnitaire: variante.prixDetail,
           totalLigne: variante.prixDetail,

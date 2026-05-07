@@ -19,6 +19,7 @@ export const creerProduitSchema = z.object({
   marque: z.string().optional(),
   codeBarresEan13: z.string().optional(),
   tauxTva: z.number().min(0).optional(),
+  images: z.array(z.string().url("URL d'image invalide")).max(6, "6 images maximum").optional(),
   variantes: z.array(creerVarianteSchema).min(1, "Au moins une variante requise"),
 });
 

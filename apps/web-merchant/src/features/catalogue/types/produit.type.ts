@@ -25,6 +25,7 @@ export interface IProduit {
   marque: string | null;
   categorieId: string | null;
   tauxTva: number;
+  images: string[];
   actif: boolean;
   variantes: IVariante[];
   creeLe: string;

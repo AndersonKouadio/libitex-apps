@@ -15,6 +15,12 @@ export const stockAPI = {
   }) =>
     httpClient.post(`${BASE}/entree`, data, { token }),
 
+  transferer: (token: string, data: {
+    varianteId: string; depuisEmplacementId: string; versEmplacementId: string;
+    quantite: number; note?: string;
+  }) =>
+    httpClient.post(`${BASE}/transfert`, data, { token }),
+
   obtenirStockActuel: (token: string, varianteId: string, emplacementId: string) =>
     httpClient.get<IStockActuel>(`${BASE}/actuel/${varianteId}/${emplacementId}`, { token }),
 

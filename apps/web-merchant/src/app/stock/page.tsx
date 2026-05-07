@@ -8,8 +8,9 @@ import { stockAPI } from "@/features/stock/apis/stock.api";
 import type { IStockEmplacement } from "@/features/stock/types/stock.type";
 import { ModalEntreeStock } from "@/features/stock/components/modal-entree-stock";
 import { ModalCreerEmplacement } from "@/features/stock/components/modal-creer-emplacement";
+import { ModalTransfertStock } from "@/features/stock/components/modal-transfert-stock";
 import { Table, Chip, Card, Button } from "@heroui/react";
-import { MapPin, ArrowDownToLine, Package, PackagePlus, Plus } from "lucide-react";
+import { MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus, Plus } from "lucide-react";
 
 const LABELS_TYPE: Record<string, string> = {
   SIMPLE: "Standard", VARIANT: "Variantes", SERIALIZED: "Serialise", PERISHABLE: "Perissable",
@@ -22,6 +23,7 @@ export default function PageStock() {
   const [empSelectionne, setEmpSelectionne] = useState("");
   const [modalOuvert, setModalOuvert] = useState(false);
   const [modalEmpOuvert, setModalEmpOuvert] = useState(false);
+  const [modalTransfertOuvert, setModalTransfertOuvert] = useState(false);
 
   async function chargerStock(emplacementId: string) {
     if (!token) return;
@@ -41,10 +43,20 @@ export default function PageStock() {
           <p className="text-xs font-semibold text-muted uppercase tracking-wider">
             Emplacements ({emplacements?.length ?? 0})
           </p>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" className="gap-1.5" onPress={() => setModalEmpOuvert(true)}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="ghost" className="gap-1.5" onPress={() => setModalEmpOuvert(true)}>
               <Plus size={16} />
               Emplacement
+            </Button>
+            <Button
+              variant="secondary"
+              className="gap-1.5"
+              onPress={() => setModalTransfertOuvert(true)}
+              isDisabled={(emplacements?.length ?? 0) < 2}
+              aria-label="Transferer entre emplacements"
+            >
+              <ArrowRightLeft size={16} />
+              Transferer
             </Button>
             <Button variant="primary" className="gap-1.5" onPress={() => setModalOuvert(true)}>
               <PackagePlus size={16} />
@@ -149,6 +161,11 @@ export default function PageStock() {
       <ModalCreerEmplacement
         ouvert={modalEmpOuvert}
         onFermer={() => setModalEmpOuvert(false)}
+      />
+      <ModalTransfertStock
+        ouvert={modalTransfertOuvert}
+        onFermer={() => setModalTransfertOuvert(false)}
+        emplacementSourceParDefaut={empSelectionne}
       />
     </>
   );

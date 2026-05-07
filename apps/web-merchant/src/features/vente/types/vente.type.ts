@@ -42,8 +42,8 @@ export interface IRapportZ {
   emplacementId: string;
   resume: {
     totalTickets: number;
-    totalRevenu: number;
-    totalTaxe: number;
+    chiffreAffaires: number;
+    totalTva: number;
     totalRemise: number;
   };
   ventilationPaiements: {

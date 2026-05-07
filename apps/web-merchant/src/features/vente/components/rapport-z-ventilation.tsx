@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function RapportZVentilation({ rapport }: Props) {
-  const totalRevenu = rapport.resume.totalRevenu;
+  const totalRevenu = Number(rapport.resume.chiffreAffaires) || 0;
 
   return (
     <Card>

@@ -25,9 +25,10 @@ function CaseKpi({ libelle, valeur }: KpiProps) {
 
 export function RapportZResume({ rapport }: Props) {
   const { resume } = rapport;
-  const ticketMoyen = resume.totalTickets > 0
-    ? formatMontant(resume.totalRevenu / resume.totalTickets)
-    : "--";
+  const chiffreAffaires = Number(resume.chiffreAffaires) || 0;
+  const totalTva = Number(resume.totalTva) || 0;
+  const totalTickets = Number(resume.totalTickets) || 0;
+  const ticketMoyen = totalTickets > 0 ? formatMontant(chiffreAffaires / totalTickets) : "--";
 
   const dateLisible = new Date(rapport.date).toLocaleDateString("fr-FR", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -41,10 +42,10 @@ export function RapportZResume({ rapport }: Props) {
       </Card.Header>
       <Card.Content>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <CaseKpi libelle="Recettes" valeur={`${formatMontant(resume.totalRevenu)} F`} />
-          <CaseKpi libelle="Tickets" valeur={String(resume.totalTickets)} />
-          <CaseKpi libelle="TVA collectee" valeur={`${formatMontant(resume.totalTaxe)} F`} />
-          <CaseKpi libelle="Ticket moyen" valeur={`${ticketMoyen} F`} />
+          <CaseKpi libelle="Recettes" valeur={`${formatMontant(chiffreAffaires)} F`} />
+          <CaseKpi libelle="Tickets" valeur={String(totalTickets)} />
+          <CaseKpi libelle="TVA collectee" valeur={`${formatMontant(totalTva)} F`} />
+          <CaseKpi libelle="Ticket moyen" valeur={`${ticketMoyen}${totalTickets > 0 ? " F" : ""}`} />
         </div>
       </Card.Content>
     </Card>

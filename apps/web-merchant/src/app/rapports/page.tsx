@@ -52,7 +52,7 @@ export default function PageRapports() {
   return (
     <>
       <Topbar titre="Rapports" />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="flex flex-wrap items-end gap-3 mb-6">
           <Select
             selectedKey={empParDefaut}

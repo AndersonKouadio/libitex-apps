@@ -1,0 +1,85 @@
+"use client";
+
+import { Chip } from "@heroui/react";
+import { Package, AlertTriangle } from "lucide-react";
+import type { IProduit, IVariante } from "@/features/catalogue/types/produit.type";
+import { formatMontant } from "../utils/format";
+
+interface Props {
+  produit: IProduit;
+  variante: IVariante;
+  stock: number | null;
+  onAjouter: () => void;
+}
+
+export function CarteArticle({ produit, variante, stock, onAjouter }: Props) {
+  const enRupture = stock !== null && stock <= 0;
+  const stockBas = stock !== null && stock > 0 && stock < 5;
+  const image = produit.images?.[0];
+
+  return (
+    <button
+      type="button"
+      onClick={enRupture ? undefined : onAjouter}
+      disabled={enRupture}
+      className={`group relative w-full text-left bg-surface rounded-xl border border-border overflow-hidden transition-all ${
+        enRupture
+          ? "opacity-60 cursor-not-allowed"
+          : "hover:border-accent hover:shadow-md active:scale-[0.98]"
+      }`}
+    >
+      <div className="aspect-square w-full bg-surface-secondary relative overflow-hidden">
+        {image ? (
+          <img
+            src={image}
+            alt={produit.nom}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+            loading="lazy"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted/30">
+            <Package size={32} />
+          </div>
+        )}
+
+        {enRupture && (
+          <div className="absolute inset-0 bg-foreground/40 flex items-center justify-center">
+            <Chip className="bg-danger text-white text-xs font-semibold gap-1">
+              <AlertTriangle size={12} />
+              Rupture
+            </Chip>
+          </div>
+        )}
+
+        {!enRupture && stock !== null && (
+          <div className="absolute top-2 right-2">
+            <Chip
+              className={`text-[10px] font-semibold ${
+                stockBas ? "bg-warning/90 text-warning-foreground" : "bg-foreground/70 text-white"
+              }`}
+            >
+              {stock} en stock
+            </Chip>
+          </div>
+        )}
+      </div>
+
+      <div className="p-3">
+        <p className="text-sm font-medium text-foreground truncate leading-tight">
+          {produit.nom}
+        </p>
+        {variante.nom && (
+          <p className="text-xs text-muted truncate mt-0.5">{variante.nom}</p>
+        )}
+        <p className="text-[11px] text-muted/70 mt-0.5 font-mono truncate">{variante.sku}</p>
+        <p className="text-base font-semibold text-foreground mt-2 tabular-nums">
+          {formatMontant(variante.prixDetail)}
+          <span className="text-[11px] font-normal text-muted ml-1">F</span>
+        </p>
+      </div>
+    </button>
+  );
+}

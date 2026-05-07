@@ -1,6 +1,6 @@
 import {
   IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsArray,
-  ValidateNested, IsBoolean, Min,
+  ValidateNested, IsBoolean, Min, IsUrl, ArrayMaxSize,
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
@@ -94,6 +94,13 @@ export class CreerProduitDto {
   @Min(0)
   tauxTva?: number;
 
+  @ApiPropertyOptional({ description: "URLs des images du produit", type: [String] })
+  @IsArray()
+  @IsOptional()
+  @ArrayMaxSize(6)
+  @IsUrl({}, { each: true, message: "URL d'image invalide" })
+  images?: string[];
+
   @ApiProperty({ type: [CreerVarianteDto] })
   @ValidateNested({ each: true })
   @Type(() => CreerVarianteDto)
@@ -162,6 +169,7 @@ export class ProduitResponseDto {
   marque!: string | null;
   categorieId!: string | null;
   tauxTva!: number;
+  images!: string[];
   actif!: boolean;
   variantes!: VarianteResponseDto[];
   creeLe!: string;

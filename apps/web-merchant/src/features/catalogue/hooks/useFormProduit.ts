@@ -42,6 +42,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
   const [prefixeSku, setPrefixeSku] = useState("");
   const [axes, setAxes] = useState<AxeAttribut[]>(AXES_VIDES);
   const [varianteUnique, setVarianteUnique] = useState<CreerVarianteDTO>({ ...VARIANTE_VIDE });
+  const [images, setImages] = useState<string[]>([]);
   const [erreur, setErreur] = useState("");
 
   const variantesGenerees = useMemo(() => {
@@ -66,7 +67,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
   const reinitialiser = useCallback(() => {
     setNom(""); setDescription(""); setTypeProduit(typeParDefaut); setMarque("");
     setCategorieId(""); setCodeBarresEan13(""); setTauxTva("0"); setPrefixeSku("");
-    setAxes(AXES_VIDES); setVarianteUnique({ ...VARIANTE_VIDE }); setErreur("");
+    setAxes(AXES_VIDES); setVarianteUnique({ ...VARIANTE_VIDE }); setImages([]); setErreur("");
   }, [typeParDefaut]);
 
   const valider = useCallback((): CreerProduitDTO | null => {
@@ -84,6 +85,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
       categorieId: categorieId || undefined,
       codeBarresEan13: codeBarresEan13 || undefined,
       tauxTva: tauxTva ? Number(tauxTva) : undefined,
+      images: images.length > 0 ? images : undefined,
       variantes,
     };
 
@@ -94,15 +96,15 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
     }
     setErreur("");
     return validation.data;
-  }, [nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva, variantesGenerees]);
+  }, [nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva, images, variantesGenerees]);
 
   return {
     valeurs: {
       nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva,
-      prefixeSku, axes, varianteUnique, variantesGenerees, erreur,
+      prefixeSku, axes, varianteUnique, variantesGenerees, images, erreur,
     },
     setNom, setDescription, setTypeProduit, setMarque, setCategorieId,
-    setCodeBarresEan13, setTauxTva, setPrefixeSku, setVarianteUnique,
+    setCodeBarresEan13, setTauxTva, setPrefixeSku, setVarianteUnique, setImages,
     ajouterAxe, retirerAxe, modifierAxe,
     reinitialiser, valider, setErreur,
   };
