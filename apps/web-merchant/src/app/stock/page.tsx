@@ -6,8 +6,9 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import { stockAPI } from "@/features/stock/apis/stock.api";
 import type { IStockEmplacement } from "@/features/stock/types/stock.type";
-import { Table, Chip, Card } from "@heroui/react";
-import { Warehouse, MapPin, ArrowDownToLine, Package } from "lucide-react";
+import { ModalEntreeStock } from "@/features/stock/components/modal-entree-stock";
+import { Table, Chip, Card, Button } from "@heroui/react";
+import { Warehouse, MapPin, ArrowDownToLine, Package, PackagePlus } from "lucide-react";
 
 const LABELS_TYPE: Record<string, string> = {
   SIMPLE: "Standard", VARIANT: "Variantes", SERIALIZED: "Serialise", PERISHABLE: "Perissable",
@@ -18,6 +19,7 @@ export default function PageStock() {
   const { data: emplacements, isLoading } = useEmplacementListQuery();
   const [stockDetail, setStockDetail] = useState<IStockEmplacement[] | null>(null);
   const [empSelectionne, setEmpSelectionne] = useState("");
+  const [modalOuvert, setModalOuvert] = useState(false);
 
   async function chargerStock(emplacementId: string) {
     if (!token) return;
@@ -33,12 +35,19 @@ export default function PageStock() {
     <>
       <Topbar titre="Gestion du stock" />
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-5">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wider">
+            Emplacements ({emplacements?.length ?? 0})
+          </p>
+          <Button variant="primary" className="gap-1.5" onPress={() => setModalOuvert(true)}>
+            <PackagePlus size={16} />
+            Recevoir du stock
+          </Button>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Emplacements */}
           <div className="lg:col-span-1 space-y-2">
-            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-3">
-              Emplacements ({emplacements?.length ?? 0})
-            </p>
             {(emplacements ?? []).map((emp) => (
               <button
                 key={emp.id}
@@ -123,6 +132,11 @@ export default function PageStock() {
           </div>
         </div>
       </div>
+
+      <ModalEntreeStock
+        ouvert={modalOuvert}
+        onFermer={() => setModalOuvert(false)}
+      />
     </>
   );
 }
