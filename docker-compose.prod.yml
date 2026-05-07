@@ -1,0 +1,73 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: libitex-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - libitex
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web-merchant/Dockerfile
+    container_name: libitex-web
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - NEXT_PUBLIC_API_URL=https://api.libitex.app/api/v1
+    ports:
+      - "3001:3001"
+    networks:
+      - libitex
+
+  redis:
+    image: redis:7-alpine
+    container_name: libitex-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - libitex
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: libitex-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+      - web
+    networks:
+      - libitex
+
+volumes:
+  redis-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  libitex:
+    driver: bridge

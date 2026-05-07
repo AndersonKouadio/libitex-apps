@@ -1,0 +1,17 @@
+# ── LIBITEX Production ──
+# Remplacer les domaines par les vrais domaines
+
+# API Backend
+api.libitex.app {
+	reverse_proxy api:3000
+}
+
+# Frontend App Commercant
+app.libitex.app {
+	reverse_proxy web:3001
+}
+
+# Rediriger le domaine racine vers l'app
+libitex.app {
+	redir https://app.libitex.app{uri} permanent
+}
