@@ -26,7 +26,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - NEXT_PUBLIC_API_URL=/api/v1
+      - NEXT_PUBLIC_API_URL=https://libitex-api.lunion-lab.com/api/v1
     expose:
       - "3001"
     networks:

@@ -1,21 +1,12 @@
 # ── LIBITEX Production ──
+# SSL automatique via Let's Encrypt
 
-# Tout passe par libitex.lunion-lab.com
-# Caddy gere le SSL automatiquement via Let's Encrypt
+# API Backend
+libitex-api.lunion-lab.com {
+	reverse_proxy api:3000
+}
 
-libitex.lunion-lab.com {
-	# API — tout ce qui commence par /api/
-	handle /api/* {
-		reverse_proxy api:3000
-	}
-
-	# Swagger docs
-	handle /docs* {
-		reverse_proxy api:3000
-	}
-
-	# Frontend — tout le reste
-	handle {
-		reverse_proxy web:3001
-	}
+# Frontend App Commercant
+libitex-pro.lunion-lab.com {
+	reverse_proxy web:3001
 }
