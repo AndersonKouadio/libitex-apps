@@ -28,6 +28,7 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
           script: |
+            set -e
             cd /opt/libitex
             git pull origin main
 
@@ -37,9 +38,15 @@ jobs:
             echo "Composant: $COMPONENT"
             echo "Commit: ${{ github.sha }}"
 
-            # Build + restart
-            docker compose -f docker-compose.prod.yml build $COMPONENT
-            docker compose -f docker-compose.prod.yml up -d --force-recreate $COMPONENT
+            # Quand "all", on ne passe rien a docker compose pour qu'il traite tous les services
+            if [ "$COMPONENT" = "all" ]; then
+              SERVICES=""
+            else
+              SERVICES="$COMPONENT"
+            fi
+
+            docker compose -f docker-compose.prod.yml build $SERVICES
+            docker compose -f docker-compose.prod.yml up -d --force-recreate $SERVICES
 
             # Verify
             sleep 10
