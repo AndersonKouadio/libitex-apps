@@ -93,6 +93,13 @@ export default function PageConnexion() {
               {soumission ? "Connexion en cours..." : "Se connecter"}
             </button>
           </form>
+
+          <p className="mt-6 text-center text-sm text-neutral-500">
+            Pas encore de boutique ?{" "}
+            <a href="/inscription" className="font-medium" style={{ color: "oklch(0.55 0.17 175)" }}>
+              Creer un compte
+            </a>
+          </p>
         </div>
       </div>
     </div>
