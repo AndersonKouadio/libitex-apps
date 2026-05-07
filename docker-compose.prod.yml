@@ -9,8 +9,8 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-    expose:
-      - "3000"
+    ports:
+      - "127.0.0.1:3010:3000"
     depends_on:
       redis:
         condition: service_healthy
@@ -27,8 +27,8 @@ services:
       - NODE_ENV=production
       - PORT=3001
       - NEXT_PUBLIC_API_URL=https://libitex-api.lunion-lab.com/api/v1
-    expose:
-      - "3001"
+    ports:
+      - "127.0.0.1:3011:3001"
     networks:
       - libitex
 
@@ -46,27 +46,8 @@ services:
     networks:
       - libitex
 
-  caddy:
-    image: caddy:2-alpine
-    container_name: libitex-caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy-data:/data
-      - caddy-config:/config
-    depends_on:
-      - api
-      - web
-    networks:
-      - libitex
-
 volumes:
   redis-data:
-  caddy-data:
-  caddy-config:
 
 networks:
   libitex:

@@ -2,18 +2,7 @@
 set -e
 
 # ── LIBITEX Deploy Script ──
-# Usage: ./deploy.sh [api|web|all]
-#
-# Sur le VPS :
-#   cd /opt/libitex
-#   ./deploy.sh all
-#
-# Premier deploiement :
-#   git clone https://github.com/AndersonKouadio/libitex-apps.git /opt/libitex
-#   cd /opt/libitex
-#   cp .env.production.example .env
-#   nano .env  # configurer DATABASE_URL, JWT secrets
-#   ./deploy.sh all
+# Usage: ./deploy.sh [api|web|all|nginx|down|logs|status]
 
 COMPONENT=${1:-all}
 
@@ -25,7 +14,7 @@ echo ""
 git pull origin main
 
 # Check .env
-if [ ! -f .env ]; then
+if [ ! -f .env ] && [[ "$COMPONENT" != "nginx" && "$COMPONENT" != "status" && "$COMPONENT" != "logs" ]]; then
   echo "ERREUR: .env manquant."
   echo "  cp .env.production.example .env"
   echo "  nano .env"
@@ -51,34 +40,43 @@ case $COMPONENT in
     echo ">> Start all..."
     docker compose -f docker-compose.prod.yml up -d
     ;;
+  nginx)
+    echo ">> Installation des configs Nginx..."
+    sudo cp infra/nginx/libitex-api.lunion-lab.com /etc/nginx/sites-available/
+    sudo cp infra/nginx/libitex-pro.lunion-lab.com /etc/nginx/sites-available/
+    sudo ln -sf /etc/nginx/sites-available/libitex-api.lunion-lab.com /etc/nginx/sites-enabled/
+    sudo ln -sf /etc/nginx/sites-available/libitex-pro.lunion-lab.com /etc/nginx/sites-enabled/
+    echo ">> Test config Nginx..."
+    sudo nginx -t
+    echo ">> Reload Nginx..."
+    sudo systemctl reload nginx
+    echo ">> Generation SSL avec Certbot..."
+    sudo certbot --nginx -d libitex-api.lunion-lab.com -d libitex-pro.lunion-lab.com --non-interactive --agree-tos -m andersonkouadio0118@gmail.com
+    echo ">> Nginx OK"
+    ;;
   down)
-    echo ">> Stopping all..."
     docker compose -f docker-compose.prod.yml down
     ;;
   logs)
-    docker compose -f docker-compose.prod.yml logs -f --tail=50
+    docker compose -f docker-compose.prod.yml logs -f --tail=50 ${2:-}
     ;;
   status)
     docker compose -f docker-compose.prod.yml ps
     ;;
   *)
-    echo "Usage: ./deploy.sh [api|web|all|down|logs|status]"
+    echo "Usage: ./deploy.sh [api|web|all|nginx|down|logs|status]"
     exit 1
     ;;
 esac
 
-# Verify (sauf pour logs/down)
-if [[ "$COMPONENT" != "logs" && "$COMPONENT" != "down" ]]; then
+if [[ "$COMPONENT" == "all" || "$COMPONENT" == "api" || "$COMPONENT" == "web" ]]; then
   echo ""
   echo ">> Verification..."
   sleep 10
   docker compose -f docker-compose.prod.yml ps
   echo ""
-  echo ">> Test API..."
-  curl -sf http://localhost:3000/api/v1/auth/connexion -X POST -H "Content-Type: application/json" -d '{}' > /dev/null 2>&1 && echo "API: OK (repond)" || echo "API: en demarrage..."
-  echo ""
   echo "=== Deploy termine ==="
-  echo "Frontend: http://$(hostname -I | awk '{print $1}')"
-  echo "API:      http://$(hostname -I | awk '{print $1}')/api/v1"
-  echo "Swagger:  http://$(hostname -I | awk '{print $1}')/docs"
+  echo "Frontend : https://libitex-pro.lunion-lab.com"
+  echo "API      : https://libitex-api.lunion-lab.com"
+  echo "Swagger  : https://libitex-api.lunion-lab.com/docs"
 fi
