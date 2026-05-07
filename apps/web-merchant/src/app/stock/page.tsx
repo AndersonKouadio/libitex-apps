@@ -2,14 +2,12 @@
 
 import { useState } from "react";
 import { Topbar } from "@/components/layout/topbar";
-import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
-import { stockAPI } from "@/features/stock/apis/stock.api";
-import type { IStockEmplacement } from "@/features/stock/types/stock.type";
+import { useStockEmplacementQuery } from "@/features/stock/queries/stock-emplacement.query";
 import { ModalEntreeStock } from "@/features/stock/components/modal-entree-stock";
 import { ModalCreerEmplacement } from "@/features/stock/components/modal-creer-emplacement";
 import { ModalTransfertStock } from "@/features/stock/components/modal-transfert-stock";
-import { Table, Chip, Card, Button } from "@heroui/react";
+import { Table, Chip, Card, Button, Skeleton } from "@heroui/react";
 import { MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus, Plus } from "lucide-react";
 
 const LABELS_TYPE: Record<string, string> = {
@@ -17,23 +15,13 @@ const LABELS_TYPE: Record<string, string> = {
 };
 
 export default function PageStock() {
-  const { token } = useAuth();
   const { data: emplacements } = useEmplacementListQuery();
-  const [stockDetail, setStockDetail] = useState<IStockEmplacement[] | null>(null);
   const [empSelectionne, setEmpSelectionne] = useState("");
   const [modalOuvert, setModalOuvert] = useState(false);
   const [modalEmpOuvert, setModalEmpOuvert] = useState(false);
   const [modalTransfertOuvert, setModalTransfertOuvert] = useState(false);
 
-  async function chargerStock(emplacementId: string) {
-    if (!token) return;
-    setEmpSelectionne(emplacementId);
-    try {
-      setStockDetail(await stockAPI.stockParEmplacement(token, emplacementId));
-    } catch {
-      setStockDetail([]);
-    }
-  }
+  const { data: stockDetail, isLoading: chargementStock } = useStockEmplacementQuery(empSelectionne || undefined);
 
   return (
     <>
@@ -53,10 +41,10 @@ export default function PageStock() {
               className="gap-1.5"
               onPress={() => setModalTransfertOuvert(true)}
               isDisabled={(emplacements?.length ?? 0) < 2}
-              aria-label="Transferer entre emplacements"
+              aria-label="Transférer entre emplacements"
             >
               <ArrowRightLeft size={16} />
-              Transferer
+              Transférer
             </Button>
             <Button variant="primary" className="gap-1.5" onPress={() => setModalOuvert(true)}>
               <PackagePlus size={16} />
@@ -76,7 +64,7 @@ export default function PageStock() {
                   className={`w-full justify-start gap-3 px-4 py-3 h-auto bg-surface ${
                     actif ? "border-accent shadow-sm" : "border-border hover:border-foreground/20"
                   }`}
-                  onPress={() => chargerStock(emp.id)}
+                  onPress={() => setEmpSelectionne(emp.id)}
                 >
                   <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                     actif ? "bg-accent/10 text-accent" : "bg-surface-secondary text-muted"
@@ -92,23 +80,30 @@ export default function PageStock() {
             })}
           </div>
 
-          {/* Detail stock */}
           <div className="lg:col-span-3">
             {!empSelectionne ? (
               <Card>
                 <Card.Content className="py-20 text-center">
-                  <ArrowDownToLine size={28} className="text-neutral-200 mx-auto mb-3" />
-                  <p className="text-sm text-neutral-500">Sélectionnez un emplacement</p>
-                  <p className="text-xs text-neutral-400 mt-1">pour consulter le stock disponible</p>
+                  <ArrowDownToLine size={28} className="text-muted/30 mx-auto mb-3" />
+                  <p className="text-sm text-foreground">Sélectionnez un emplacement</p>
+                  <p className="text-xs text-muted mt-1">pour consulter le stock disponible</p>
                 </Card.Content>
               </Card>
-            ) : stockDetail === null ? (
-              <Card><Card.Content className="py-12 text-center"><p className="text-sm text-neutral-400">Chargement...</p></Card.Content></Card>
-            ) : stockDetail.length === 0 ? (
+            ) : chargementStock ? (
+              <div className="bg-surface rounded-xl border border-border p-4 space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-4 py-2">
+                    <Skeleton className="h-4 w-48 rounded" />
+                    <Skeleton className="h-4 w-20 rounded ml-auto" />
+                  </div>
+                ))}
+              </div>
+            ) : (stockDetail ?? []).length === 0 ? (
               <Card>
                 <Card.Content className="py-16 text-center">
-                  <Package size={28} className="text-neutral-200 mx-auto mb-3" />
-                  <p className="text-sm text-neutral-500">Aucun stock dans cet emplacement</p>
+                  <Package size={28} className="text-muted/30 mx-auto mb-3" />
+                  <p className="text-sm text-foreground">Aucun stock dans cet emplacement</p>
+                  <p className="text-xs text-muted mt-1">Cliquez sur « Recevoir du stock » pour réceptionner de la marchandise</p>
                 </Card.Content>
               </Card>
             ) : (
@@ -122,23 +117,23 @@ export default function PageStock() {
                       <Table.Column>Quantité</Table.Column>
                     </Table.Header>
                     <Table.Body>
-                      {stockDetail.map((s) => (
+                      {(stockDetail ?? []).map((s) => (
                         <Table.Row key={s.varianteId}>
                           <Table.Cell>
                             <div>
-                              <p className="text-sm font-medium text-neutral-800">{s.nomProduit}</p>
-                              {s.nomVariante && <p className="text-xs text-neutral-500">{s.nomVariante}</p>}
+                              <p className="text-sm font-medium text-foreground">{s.nomProduit}</p>
+                              {s.nomVariante && <p className="text-xs text-muted">{s.nomVariante}</p>}
                             </div>
                           </Table.Cell>
                           <Table.Cell>
-                            <span className="text-xs font-mono text-neutral-500">{s.sku}</span>
+                            <span className="text-xs font-mono text-muted">{s.sku}</span>
                           </Table.Cell>
                           <Table.Cell>
                             <Chip className="text-xs">{LABELS_TYPE[s.typeProduit] || s.typeProduit}</Chip>
                           </Table.Cell>
                           <Table.Cell>
                             <span className={`text-sm font-semibold tabular-nums ${
-                              s.quantite <= 0 ? "text-red-600" : s.quantite < 10 ? "text-amber-600" : "text-neutral-900"
+                              s.quantite <= 0 ? "text-danger" : s.quantite < 10 ? "text-warning" : "text-foreground"
                             }`}>
                               {s.quantite}
                             </span>
@@ -154,14 +149,8 @@ export default function PageStock() {
         </div>
       </div>
 
-      <ModalEntreeStock
-        ouvert={modalOuvert}
-        onFermer={() => setModalOuvert(false)}
-      />
-      <ModalCreerEmplacement
-        ouvert={modalEmpOuvert}
-        onFermer={() => setModalEmpOuvert(false)}
-      />
+      <ModalEntreeStock ouvert={modalOuvert} onFermer={() => setModalOuvert(false)} />
+      <ModalCreerEmplacement ouvert={modalEmpOuvert} onFermer={() => setModalEmpOuvert(false)} />
       <ModalTransfertStock
         ouvert={modalTransfertOuvert}
         onFermer={() => setModalTransfertOuvert(false)}

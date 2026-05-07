@@ -61,8 +61,34 @@ export function usePanier() {
 
   const vider = useCallback(() => setArticles([]), []);
 
+  const chargerDepuisTicket = useCallback((
+    lignes: Array<{
+      varianteId: string;
+      nomProduit: string;
+      nomVariante: string | null;
+      sku: string;
+      quantite: number;
+      prixUnitaire: number;
+      totalLigne: number;
+    }>,
+    images: Map<string, string | null>,
+  ) => {
+    setArticles(
+      lignes.map((l) => ({
+        varianteId: l.varianteId,
+        nomProduit: l.nomProduit,
+        nomVariante: l.nomVariante ?? l.sku,
+        sku: l.sku,
+        image: images.get(l.varianteId) ?? null,
+        quantite: l.quantite,
+        prixUnitaire: l.prixUnitaire,
+        totalLigne: l.totalLigne,
+      })),
+    );
+  }, []);
+
   const total = articles.reduce((s, a) => s + a.totalLigne, 0);
   const nombreArticles = articles.reduce((s, a) => s + a.quantite, 0);
 
-  return { articles, total, nombreArticles, ajouter, modifierQuantite, retirer, vider };
+  return { articles, total, nombreArticles, ajouter, modifierQuantite, retirer, vider, chargerDepuisTicket };
 }

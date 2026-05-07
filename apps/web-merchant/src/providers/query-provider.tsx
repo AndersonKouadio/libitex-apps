@@ -9,9 +9,20 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 30 * 1000,
+            // Donnees considerees stale immediatement: chaque mount refetch.
+            staleTime: 0,
+            // Garder en cache 5 min pour eviter le flash de loading
+            // entre navigations rapides.
+            gcTime: 5 * 60 * 1000,
             retry: 1,
-            refetchOnWindowFocus: false,
+            // Recharger au retour sur l'onglet, et a la reconnexion reseau.
+            refetchOnWindowFocus: true,
+            refetchOnReconnect: true,
+            refetchOnMount: true,
+          },
+          mutations: {
+            // Une mutation echouee ne se rejoue pas automatiquement.
+            retry: 0,
           },
         },
       }),

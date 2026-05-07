@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Select, ListBox, Label, toast } from "@heroui/react";
-import { ShoppingCart } from "lucide-react";
+import { Select, ListBox, Label, Button, Chip, toast } from "@heroui/react";
+import { ShoppingCart, PauseCircle } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
@@ -12,10 +12,13 @@ import { AucunEmplacement } from "@/components/empty-states/aucun-emplacement";
 import { venteAPI } from "@/features/vente/apis/vente.api";
 import { creerTicketSchema } from "@/features/vente/schemas/vente.schema";
 import { usePanier } from "@/features/vente/hooks/usePanier";
+import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
+import { useInvalidateVenteQuery } from "@/features/vente/queries/index.query";
 import { GrilleProduits } from "@/features/vente/components/grille-produits";
 import { PanierLateral } from "@/features/vente/components/panier-lateral";
 import { ModalPaiement } from "@/features/vente/components/modal-paiement";
 import { ConfirmationVente } from "@/features/vente/components/confirmation-vente";
+import { ModalTicketsAttente } from "@/features/vente/components/modal-tickets-attente";
 import { formatMontant } from "@/features/vente/utils/format";
 
 export default function PagePOS() {
@@ -28,6 +31,7 @@ export default function PagePOS() {
   const [afficherPaiement, setAfficherPaiement] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [modalEmpOuvert, setModalEmpOuvert] = useState(false);
+  const [modalAttenteOuvert, setModalAttenteOuvert] = useState(false);
   const [derniereVente, setDerniereVente] = useState<{
     numero: string; total: number; monnaie: number;
   } | null>(null);
@@ -36,6 +40,14 @@ export default function PagePOS() {
   const empId = emplacementId || emplacements?.[0]?.id || "";
   const { data: stocks } = useStockEmplacementQuery(empId || undefined);
   const produits = produitsData?.data ?? [];
+  const invalidateVente = useInvalidateVenteQuery();
+
+  const { data: ticketsAttenteData } = useTicketListQuery({
+    statut: "PARKED",
+    emplacementId: empId || undefined,
+    page: 1,
+  });
+  const nombreEnAttente = (ticketsAttenteData?.data ?? []).filter((t) => t.statut === "PARKED").length;
 
   const encaisser = useCallback(async (methode: string) => {
     if (!token || !empId || panier.articles.length === 0) return;
@@ -83,13 +95,14 @@ export default function PagePOS() {
       });
       await venteAPI.mettreEnAttente(token, ticket.id);
       panier.vider();
+      invalidateVente();
       toast.success(`Ticket ${ticket.numeroTicket} mis en attente`);
     } catch (err: unknown) {
       toast.danger(err instanceof Error ? err.message : "Erreur lors de la mise en attente");
     } finally {
       setEnCours(false);
     }
-  }, [token, empId, panier]);
+  }, [token, empId, panier, invalidateVente]);
 
   if (aucunEmplacement) {
     return (
@@ -112,7 +125,22 @@ export default function PagePOS() {
             <ShoppingCart size={20} className="text-accent" />
             <span className="font-semibold text-foreground">Point de vente</span>
           </div>
-          {(emplacements ?? []).length > 0 && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              className="gap-1.5 text-muted hover:text-warning relative"
+              onPress={() => setModalAttenteOuvert(true)}
+              aria-label="Tickets en attente"
+            >
+              <PauseCircle size={16} />
+              <span className="hidden sm:inline">Attente</span>
+              {nombreEnAttente > 0 && (
+                <Chip className="bg-warning text-warning-foreground text-[10px] h-4 min-w-4 px-1">
+                  {nombreEnAttente}
+                </Chip>
+              )}
+            </Button>
+            {(emplacements ?? []).length > 0 && (
             <Select
               selectedKey={empId}
               onSelectionChange={(key) => setEmplacementId(String(key))}
@@ -134,7 +162,8 @@ export default function PagePOS() {
                 </ListBox>
               </Select.Popover>
             </Select>
-          )}
+            )}
+          </div>
         </header>
 
         <GrilleProduits produits={produits} stocks={stocks} onAjouter={panier.ajouter} />
@@ -180,6 +209,14 @@ export default function PagePOS() {
           onNouvelle={() => setDerniereVente(null)}
         />
       )}
+
+      <ModalTicketsAttente
+        ouvert={modalAttenteOuvert}
+        onFermer={() => setModalAttenteOuvert(false)}
+        emplacementId={empId}
+        produits={produits}
+        onReprendre={(lignes, images) => panier.chargerDepuisTicket(lignes, images)}
+      />
     </div>
   );
 }
