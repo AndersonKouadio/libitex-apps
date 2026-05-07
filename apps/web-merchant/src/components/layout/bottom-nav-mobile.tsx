@@ -30,8 +30,7 @@ export function BottomNavMobile({ onPlus }: Props) {
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-30 bg-surface border-t border-border lg:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="fixed bottom-0 inset-x-0 z-30 bg-surface border-t border-border safe-bottom lg:hidden"
       aria-label="Navigation principale"
     >
       <ul className="flex items-stretch h-16">

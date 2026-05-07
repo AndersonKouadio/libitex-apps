@@ -19,10 +19,30 @@
 }
 
 /* Modal: laisser respirer le focus ring des inputs lorsque le body
-   defile (overflow-y: auto coupe aussi en x sinon) */
+   defile (overflow-y/x auto sinon coupe les box-shadow rings) */
 .modal__body {
   padding-inline: 2px;
   margin-inline: -2px;
+  padding-block: 2px;
+  margin-block: -2px;
+}
+
+/* Safe area iOS (notch / dynamic island / home indicator) */
+@utility safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@utility safe-x {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Toasts: respecter le notch iOS lorsqu'installe en PWA */
+[data-slot="toast-region"] {
+  padding-top: max(env(safe-area-inset-top), 8px) !important;
+  padding-right: max(env(safe-area-inset-right), 8px) !important;
 }
 
 body {

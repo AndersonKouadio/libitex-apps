@@ -2,15 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Button } from "@heroui/react";
-import { Menu } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Sidebar } from "./sidebar";
 import { BottomNavMobile } from "./bottom-nav-mobile";
 
 interface Props {
   children: React.ReactNode;
-  /** true pour les pages plein ecran (POS) — pas de bottom nav, pas de padding */
+  /** true pour les pages plein écran (POS) — pas de bottom nav, pas de padding */
   pleinEcran?: boolean;
 }
 
@@ -38,7 +36,8 @@ export function AppShell({ children, pleinEcran = false }: Props) {
   }
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen bg-background">
+      {/* Overlay mobile (clic en dehors pour fermer) */}
       {tiroirOuvert && (
         <button
           type="button"
@@ -48,29 +47,21 @@ export function AppShell({ children, pleinEcran = false }: Props) {
         />
       )}
 
-      <div
-        className={`fixed z-40 transition-transform duration-200 lg:translate-x-0 ${
+      {/* Sidebar — fixe a gauche */}
+      <aside
+        className={`fixed top-0 left-0 z-40 transition-transform duration-200 lg:translate-x-0 ${
           tiroirOuvert ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <Sidebar onNavigate={() => setTiroirOuvert(false)} />
-      </div>
+      </aside>
 
-      {!pleinEcran && (
-        <Button
-          variant="ghost"
-          className="fixed top-3.5 left-3 z-20 p-2 h-auto min-w-0 bg-surface border border-border shadow-sm lg:hidden"
-          onPress={() => setTiroirOuvert(true)}
-          aria-label="Ouvrir le menu"
-        >
-          <Menu size={20} className="text-foreground" />
-        </Button>
-      )}
-
-      <main className={`flex-1 lg:ml-[256px] min-h-screen ${pleinEcran ? "" : "pb-20 lg:pb-0"}`}>
-        <div className="w-full">{children}</div>
+      {/* Contenu principal */}
+      <main className={`min-h-screen lg:ml-[256px] ${pleinEcran ? "" : "pb-20 lg:pb-0"}`}>
+        {children}
       </main>
 
+      {/* Bottom nav mobile (sauf POS) */}
       {!pleinEcran && <BottomNavMobile onPlus={() => setTiroirOuvert(true)} />}
     </div>
   );

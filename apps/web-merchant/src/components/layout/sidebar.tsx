@@ -78,7 +78,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
 
   return (
     <aside
-      className={`fixed top-0 left-0 h-screen flex flex-col z-40 bg-sidebar transition-[width] duration-200 ${
+      className={`h-screen flex flex-col bg-sidebar transition-[width] duration-200 ${
         replie ? "w-[72px]" : "w-[256px]"
       }`}
     >

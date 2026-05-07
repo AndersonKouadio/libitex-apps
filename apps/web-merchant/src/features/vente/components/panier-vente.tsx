@@ -11,20 +11,28 @@ interface Props {
   total: number;
   nombreArticles: number;
   onModifierQuantite: (varianteId: string, delta: number) => void;
+  onDefinirQuantite: (varianteId: string, quantite: number) => void;
   onRetirer: (varianteId: string) => void;
   onVider: () => void;
   onEncaisser: () => void;
   onAttente: () => void;
+  /** Mode d'affichage. "lateral" = desktop fixe, "plein" = drawer mobile */
+  mode?: "lateral" | "plein";
 }
 
-export function PanierLateral({
+export function PanierVente({
   articles, total, nombreArticles,
-  onModifierQuantite, onRetirer, onVider, onEncaisser, onAttente,
+  onModifierQuantite, onDefinirQuantite, onRetirer, onVider, onEncaisser, onAttente,
+  mode = "lateral",
 }: Props) {
   const vide = articles.length === 0;
 
+  const wrapperCls = mode === "lateral"
+    ? "w-[380px] flex flex-col bg-surface border-l border-border shrink-0"
+    : "w-full h-full flex flex-col bg-surface";
+
   return (
-    <div className="w-[380px] flex flex-col bg-surface border-l border-border shrink-0">
+    <div className={wrapperCls}>
       <header className="px-4 py-3.5 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-7 h-7 rounded-lg bg-accent/10 text-accent flex items-center justify-center">
@@ -48,12 +56,12 @@ export function PanierLateral({
 
       <div className="flex-1 overflow-y-auto">
         {vide ? (
-          <div className="flex flex-col items-center justify-center h-full px-6 text-center">
+          <div className="flex flex-col items-center justify-center h-full px-6 text-center min-h-[240px]">
             <div className="w-16 h-16 rounded-2xl bg-surface-secondary flex items-center justify-center mb-3">
               <ShoppingCart size={28} className="text-muted/50" />
             </div>
             <p className="text-sm font-medium text-foreground">Panier vide</p>
-            <p className="text-xs text-muted mt-1 max-w-[200px]">
+            <p className="text-xs text-muted mt-1 max-w-[240px]">
               Cliquez sur un article ou scannez un code-barres
             </p>
           </div>
@@ -64,6 +72,7 @@ export function PanierLateral({
                 key={a.varianteId}
                 article={a}
                 onModifierQuantite={onModifierQuantite}
+                onDefinirQuantite={onDefinirQuantite}
                 onRetirer={onRetirer}
               />
             ))}
@@ -71,7 +80,7 @@ export function PanierLateral({
         )}
       </div>
 
-      <footer className="border-t border-border p-4 space-y-3 bg-surface">
+      <footer className="border-t border-border p-4 space-y-3 bg-surface safe-bottom">
         <div className="px-4 py-3.5 rounded-xl bg-navy">
           <div className="flex items-end justify-between gap-2">
             <span className="text-xs text-navy-foreground/60 uppercase tracking-wider">Total</span>
@@ -103,7 +112,7 @@ export function PanierLateral({
             aria-label="Mettre en attente"
           >
             <PauseCircle size={16} />
-            Attente
+            <span className="hidden sm:inline">Attente</span>
           </Button>
         </div>
       </footer>

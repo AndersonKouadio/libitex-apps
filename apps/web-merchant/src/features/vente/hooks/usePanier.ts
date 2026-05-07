@@ -55,6 +55,17 @@ export function usePanier() {
     );
   }, []);
 
+  const definirQuantite = useCallback((varianteId: string, quantite: number) => {
+    const valide = Math.max(1, Math.floor(Number(quantite) || 1));
+    setArticles((prev) =>
+      prev.map((a) =>
+        a.varianteId === varianteId
+          ? { ...a, quantite: valide, totalLigne: valide * a.prixUnitaire }
+          : a,
+      ),
+    );
+  }, []);
+
   const retirer = useCallback((varianteId: string) => {
     setArticles((prev) => prev.filter((a) => a.varianteId !== varianteId));
   }, []);
@@ -90,5 +101,8 @@ export function usePanier() {
   const total = articles.reduce((s, a) => s + a.totalLigne, 0);
   const nombreArticles = articles.reduce((s, a) => s + a.quantite, 0);
 
-  return { articles, total, nombreArticles, ajouter, modifierQuantite, retirer, vider, chargerDepuisTicket };
+  return {
+    articles, total, nombreArticles,
+    ajouter, modifierQuantite, definirQuantite, retirer, vider, chargerDepuisTicket,
+  };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Button } from "@heroui/react";
 import { Minus, Plus, Trash2, Package } from "lucide-react";
 import type { ArticlePanier } from "../hooks/usePanier";
@@ -8,10 +9,31 @@ import { formatMontant } from "../utils/format";
 interface Props {
   article: ArticlePanier;
   onModifierQuantite: (varianteId: string, delta: number) => void;
+  onDefinirQuantite: (varianteId: string, quantite: number) => void;
   onRetirer: (varianteId: string) => void;
 }
 
-export function LignePanier({ article, onModifierQuantite, onRetirer }: Props) {
+export function LignePanier({ article, onModifierQuantite, onDefinirQuantite, onRetirer }: Props) {
+  const [valeurInput, setValeurInput] = useState(String(article.quantite));
+
+  // Resynchroniser si la quantite change ailleurs (delta via +/-)
+  useEffect(() => {
+    setValeurInput(String(article.quantite));
+  }, [article.quantite]);
+
+  function commit() {
+    const n = Number(valeurInput);
+    if (!Number.isFinite(n) || n < 1) {
+      setValeurInput(String(article.quantite));
+      return;
+    }
+    if (Math.floor(n) !== article.quantite) {
+      onDefinirQuantite(article.varianteId, Math.floor(n));
+    } else {
+      setValeurInput(String(article.quantite));
+    }
+  }
+
   return (
     <li className="flex gap-3 p-3 group">
       <div className="w-12 h-12 rounded-lg bg-surface-secondary overflow-hidden shrink-0">
@@ -40,7 +62,7 @@ export function LignePanier({ article, onModifierQuantite, onRetirer }: Props) {
           </div>
           <Button
             variant="ghost"
-            className="text-muted hover:text-danger p-1 h-auto min-w-0 -mr-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="text-muted hover:text-danger p-1 h-auto min-w-0 -mr-1"
             onPress={() => onRetirer(article.varianteId)}
             aria-label={`Retirer ${article.nomProduit}`}
           >
@@ -48,20 +70,34 @@ export function LignePanier({ article, onModifierQuantite, onRetirer }: Props) {
           </Button>
         </div>
 
-        <div className="flex items-center justify-between mt-2">
-          <div className="flex items-center bg-surface-secondary rounded-lg">
+        <div className="flex items-center justify-between mt-2 gap-2">
+          <div className="flex items-center bg-surface-secondary rounded-lg overflow-hidden">
             <Button
               variant="ghost"
-              className="w-7 h-7 min-w-0 p-0 text-muted hover:text-foreground hover:bg-transparent"
+              className="w-7 h-7 min-w-0 p-0 text-muted hover:text-foreground hover:bg-foreground/5 rounded-none"
               onPress={() => onModifierQuantite(article.varianteId, -1)}
+              isDisabled={article.quantite <= 1}
               aria-label="Diminuer"
             >
               <Minus size={12} />
             </Button>
-            <span className="w-8 text-center text-sm font-semibold tabular-nums">{article.quantite}</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              value={valeurInput}
+              onChange={(e) => setValeurInput(e.target.value)}
+              onBlur={commit}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+                if (e.key === "Escape") setValeurInput(String(article.quantite));
+              }}
+              className="w-12 text-center text-sm font-semibold tabular-nums bg-transparent outline-none focus:bg-surface focus:ring-1 focus:ring-accent/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              aria-label={`Quantité de ${article.nomProduit}`}
+            />
             <Button
               variant="ghost"
-              className="w-7 h-7 min-w-0 p-0 text-muted hover:text-foreground hover:bg-transparent"
+              className="w-7 h-7 min-w-0 p-0 text-muted hover:text-foreground hover:bg-foreground/5 rounded-none"
               onPress={() => onModifierQuantite(article.varianteId, 1)}
               aria-label="Augmenter"
             >

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, CloseButton } from "@heroui/react";
+import { Button } from "@heroui/react";
 import { Banknote, Smartphone, CreditCard, Landmark, type LucideIcon } from "lucide-react";
 import { MethodePaiement } from "../types/vente.type";
 import { formatMontant } from "../utils/format";
@@ -9,7 +9,8 @@ interface Props {
   total: number;
   enCours: boolean;
   onPayer: (methode: string) => void;
-  onFermer: () => void;
+  /** Conserve pour API compatibilite — fermeture geree par le Modal.Backdrop */
+  onFermer?: () => void;
 }
 
 interface MethodeUI {
@@ -26,13 +27,9 @@ const METHODES: MethodeUI[] = [
   { code: MethodePaiement.BANK_TRANSFER, libelle: "Virement", icone: Landmark, classes: "bg-muted/10 text-muted" },
 ];
 
-export function ModalPaiement({ total, enCours, onPayer, onFermer }: Props) {
+export function ModalPaiement({ total, enCours, onPayer }: Props) {
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-sm font-semibold text-foreground">Mode de paiement</span>
-        <CloseButton onPress={onFermer} aria-label="Fermer le paiement" />
-      </div>
       {METHODES.map((m) => (
         <Button
           key={m.code}

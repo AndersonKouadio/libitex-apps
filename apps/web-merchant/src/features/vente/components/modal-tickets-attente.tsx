@@ -31,7 +31,6 @@ export function ModalTicketsAttente({ ouvert, onFermer, emplacementId, produits,
 
   const { data: ticketsData, isLoading } = useTicketListQuery({
     statut: "PARKED",
-    emplacementId: emplacementId || undefined,
     page: 1,
   });
 
