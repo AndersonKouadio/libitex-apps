@@ -1,0 +1,48 @@
+name: Deploy LIBITEX
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      component:
+        description: "Composant a deployer"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - api
+          - web
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          script: |
+            cd /opt/libitex
+            git pull origin main
+
+            COMPONENT="${{ github.event.inputs.component || 'all' }}"
+
+            echo "=== LIBITEX CI/CD Deploy ==="
+            echo "Composant: $COMPONENT"
+            echo "Commit: ${{ github.sha }}"
+
+            # Build + restart
+            docker compose -f docker-compose.prod.yml build $COMPONENT
+            docker compose -f docker-compose.prod.yml up -d --force-recreate $COMPONENT
+
+            # Verify
+            sleep 10
+            docker compose -f docker-compose.prod.yml ps
+
+            echo "=== Deploy termine ==="
