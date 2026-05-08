@@ -5,6 +5,8 @@ export const entreeStockSchema = z.object({
   emplacementId: z.string().min(1, "Sélectionnez un emplacement"),
   quantite: z.number().min(1, "La quantité doit etre au moins 1"),
   note: z.string().optional(),
+  numeroLot: z.string().optional(),
+  dateExpiration: z.string().optional(),
 });
 
 export const transfertStockSchema = z.object({

@@ -145,6 +145,24 @@
     padding-block: 2px;
     margin-block: -2px;
   }
+
+  /* Modal Header : icone + titre cote a cote (par defaut HeroUI les empile).
+     Plus lisible et plus dense pour les petites modales metier. */
+  .modal__header {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .modal__header > .modal__icon {
+    margin-bottom: 0;
+  }
+
+  /* Toast close button : toujours visible (HeroUI le cache hors hover sur sm).
+     Sur mobile/touch sans hover, l'utilisateur n'avait aucun moyen de fermer. */
+  .toast__close-button {
+    pointer-events: auto !important;
+    opacity: 1 !important;
+  }
 }
 
 /* Safe area iOS (notch / dynamic island / home indicator) */

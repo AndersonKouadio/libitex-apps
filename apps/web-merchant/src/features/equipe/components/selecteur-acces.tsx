@@ -1,7 +1,7 @@
 "use client";
 
-import { Switch, CheckboxGroup, Checkbox } from "@heroui/react";
-import { MapPin } from "lucide-react";
+import { RadioGroup, Radio, CheckboxGroup, Checkbox } from "@heroui/react";
+import { MapPin, Globe } from "lucide-react";
 import type { IEmplacement } from "@/features/stock/types/stock.type";
 
 interface Props {
@@ -15,8 +15,12 @@ interface Props {
 export function SelecteurAcces({
   accessAllLocations, locationIds, emplacements, onChange, disabled,
 }: Props) {
-  function toggleAll(active: boolean) {
-    onChange({ accessAllLocations: active, locationIds: active ? [] : locationIds });
+  function setMode(mode: string) {
+    if (mode === "tous") {
+      onChange({ accessAllLocations: true, locationIds: [] });
+    } else {
+      onChange({ accessAllLocations: false, locationIds });
+    }
   }
 
   function setLocations(ids: string[]) {
@@ -25,26 +29,43 @@ export function SelecteurAcces({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-start justify-between gap-3 p-3 rounded-lg bg-surface-secondary border border-border">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-foreground">Accès à tous les emplacements</p>
-          <p className="text-xs text-muted mt-0.5">
-            Le membre peut consulter et opérer sur tous vos points de vente actuels et futurs.
-          </p>
-        </div>
-        <Switch
-          isSelected={accessAllLocations}
-          onChange={toggleAll}
-          isDisabled={disabled}
-          aria-label="Accès à tous les emplacements"
-        />
-      </div>
+      <p className="text-sm font-medium text-foreground">Accès aux emplacements</p>
+
+      <RadioGroup
+        value={accessAllLocations ? "tous" : "specifiques"}
+        onChange={setMode}
+        isDisabled={disabled}
+        aria-label="Type d'accès aux emplacements"
+        className="gap-2"
+      >
+        <Radio value="tous">
+          <div className="flex items-start gap-2 ml-2">
+            <Globe size={14} className="text-accent shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-foreground">Tous les emplacements</p>
+              <p className="text-xs text-muted mt-0.5">
+                Accès à tous vos points de vente actuels et futurs.
+              </p>
+            </div>
+          </div>
+        </Radio>
+
+        <Radio value="specifiques" isDisabled={emplacements.length === 0 || disabled}>
+          <div className="flex items-start gap-2 ml-2">
+            <MapPin size={14} className="text-warning shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-foreground">Emplacements spécifiques</p>
+              <p className="text-xs text-muted mt-0.5">
+                Limiter l'accès à un ou plusieurs points de vente.
+              </p>
+            </div>
+          </div>
+        </Radio>
+      </RadioGroup>
 
       {!accessAllLocations && (
-        <div className="space-y-2 pl-1">
-          <p className="text-xs font-medium text-muted">
-            Sélectionnez les emplacements autorisés
-          </p>
+        <div className="ml-6 pl-3 border-l-2 border-warning/30 space-y-2">
+          <p className="text-xs font-medium text-muted">Cochez les emplacements autorisés</p>
           {emplacements.length === 0 ? (
             <p className="text-sm text-muted italic">Aucun emplacement créé</p>
           ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal, Button, Spinner, toast } from "@heroui/react";
 import { PauseCircle, RotateCcw, Trash2, Receipt } from "lucide-react";
 import { useTicketListQuery } from "../queries/ticket-list.query";
@@ -29,10 +29,16 @@ export function ModalTicketsAttente({ ouvert, onFermer, emplacementId, produits,
   const invalidate = useInvalidateVenteQuery();
   const [enChargement, setEnChargement] = useState<string | null>(null);
 
-  const { data: ticketsData, isLoading } = useTicketListQuery({
+  const { data: ticketsData, isLoading, refetch } = useTicketListQuery({
     statut: "PARKED",
     page: 1,
   });
+
+  // Toujours refetch a l'ouverture: l'utilisateur peut avoir parke un ticket
+  // depuis un autre onglet ou une autre boutique apres le dernier fetch.
+  useEffect(() => {
+    if (ouvert) refetch();
+  }, [ouvert, refetch]);
 
   const tickets = (ticketsData?.data ?? []).filter((t) => t.statut === "PARKED");
 

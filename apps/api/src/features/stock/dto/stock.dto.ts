@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, Min } from "class-validator";
+import { IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, Min, IsDateString } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreerEmplacementDto {
@@ -36,6 +36,18 @@ export class EntreeStockDto {
   @IsString()
   @IsOptional()
   note?: string;
+
+  /** Numero de lot — obligatoire pour les produits PERISHABLE. */
+  @ApiPropertyOptional({ example: "LOT-2026-042" })
+  @IsString()
+  @IsOptional()
+  numeroLot?: string;
+
+  /** Date d'expiration (ISO) — obligatoire pour les produits PERISHABLE. */
+  @ApiPropertyOptional({ example: "2026-09-15" })
+  @IsDateString({}, { message: "Date d'expiration invalide" })
+  @IsOptional()
+  dateExpiration?: string;
 }
 
 export class AjustementStockDto {

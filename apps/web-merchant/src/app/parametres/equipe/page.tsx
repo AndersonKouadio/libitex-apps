@@ -34,11 +34,14 @@ export default function PageEquipe() {
     <>
       <Topbar titre="Équipe" />
       <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-        <div className="flex items-start justify-between gap-3 mb-5 flex-wrap">
-          <div>
-            <p className="text-sm text-muted max-w-2xl">
-              Invitez les membres de votre équipe et donnez-leur accès aux bons points de vente
-              avec le rôle adapté à leur fonction.
+        <header className="flex items-start justify-between gap-3 mb-6 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base font-semibold text-foreground">
+              {(membres ?? []).length} membre{(membres ?? []).length > 1 ? "s" : ""}
+            </h1>
+            <p className="text-xs text-muted mt-0.5 max-w-2xl">
+              Invitez vos collaborateurs, attribuez-leur un rôle et limitez leur accès
+              aux bons points de vente.
             </p>
           </div>
           <Button
@@ -49,7 +52,7 @@ export default function PageEquipe() {
             <UserPlus size={16} />
             Inviter un membre
           </Button>
-        </div>
+        </header>
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

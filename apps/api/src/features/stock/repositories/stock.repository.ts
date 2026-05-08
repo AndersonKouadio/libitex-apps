@@ -1,7 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 import { eq, and, sql, isNull } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
-import { type Database, locations, stockMovements, variants, products } from "@libitex/db";
+import { type Database, locations, stockMovements, variants, products, batches } from "@libitex/db";
 
 @Injectable()
 export class StockRepository {
@@ -75,6 +75,32 @@ export class StockRepository {
         products.name,
         products.productType,
       );
+  }
+
+  async creerLot(data: {
+    variantId: string;
+    batchNumber: string;
+    expiryDate: string;
+    quantityRemaining: number;
+  }) {
+    const [lot] = await this.db.insert(batches).values(data).returning();
+    return lot;
+  }
+
+  async obtenirVarianteAvecProduit(variantId: string) {
+    return this.db
+      .select({
+        variantId: variants.id,
+        productId: products.id,
+        productType: products.productType,
+        productName: products.name,
+        tenantId: products.tenantId,
+      })
+      .from(variants)
+      .innerJoin(products, eq(variants.productId, products.id))
+      .where(eq(variants.id, variantId))
+      .limit(1)
+      .then((rows) => rows[0]);
   }
 
   async obtenirHistorique(tenantId: string, opts: {

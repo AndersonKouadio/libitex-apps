@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, BadRequestException } from "@nestjs/common";
 import { StockRepository } from "./repositories/stock.repository";
 import { StockInsuffisantException } from "../../common/exceptions/metier.exception";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
@@ -27,9 +27,30 @@ export class StockService {
   }
 
   async entreeStock(tenantId: string, userId: string, dto: EntreeStockDto): Promise<MouvementResponseDto> {
+    // Pour les produits PERISHABLE, un lot doit etre cree a la reception
+    // (numero + date d'expiration). Sinon le POS ne peut pas vendre (FEFO).
+    const variante = await this.stockRepo.obtenirVarianteAvecProduit(dto.varianteId);
+    let batchId: string | undefined;
+
+    if (variante?.productType === "PERISHABLE") {
+      if (!dto.numeroLot || !dto.dateExpiration) {
+        throw new BadRequestException(
+          `${variante.productName} est un produit périssable : numéro de lot et date d'expiration requis a la réception.`,
+        );
+      }
+      const lot = await this.stockRepo.creerLot({
+        variantId: dto.varianteId,
+        batchNumber: dto.numeroLot,
+        expiryDate: dto.dateExpiration,
+        quantityRemaining: dto.quantite,
+      });
+      batchId = lot.id;
+    }
+
     const mvt = await this.stockRepo.enregistrerMouvement({
       tenantId, variantId: dto.varianteId, locationId: dto.emplacementId,
       movementType: "STOCK_IN", quantity: dto.quantite.toString(), userId, note: dto.note,
+      batchId,
     });
     await this.audit.log({
       tenantId, userId, action: AUDIT_ACTIONS.STOCK_IN,
@@ -39,6 +60,7 @@ export class StockService {
         emplacementId: dto.emplacementId,
         quantite: dto.quantite,
         note: dto.note,
+        ...(batchId ? { numeroLot: dto.numeroLot, dateExpiration: dto.dateExpiration } : {}),
       },
     });
     return this.mapMouvement(mvt);
