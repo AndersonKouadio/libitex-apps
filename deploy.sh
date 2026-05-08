@@ -44,14 +44,22 @@ case $COMPONENT in
     echo ">> Installation des configs Nginx..."
     sudo cp infra/nginx/libitex-api.lunion-lab.com /etc/nginx/sites-available/
     sudo cp infra/nginx/libitex-pro.lunion-lab.com /etc/nginx/sites-available/
+    sudo cp infra/nginx/libitex-storage.lunion-lab.com /etc/nginx/sites-available/
     sudo ln -sf /etc/nginx/sites-available/libitex-api.lunion-lab.com /etc/nginx/sites-enabled/
     sudo ln -sf /etc/nginx/sites-available/libitex-pro.lunion-lab.com /etc/nginx/sites-enabled/
+    sudo ln -sf /etc/nginx/sites-available/libitex-storage.lunion-lab.com /etc/nginx/sites-enabled/
     echo ">> Test config Nginx..."
     sudo nginx -t
     echo ">> Reload Nginx..."
     sudo systemctl reload nginx
     echo ">> Generation SSL avec Certbot..."
-    sudo certbot --nginx -d libitex-api.lunion-lab.com -d libitex-pro.lunion-lab.com --non-interactive --agree-tos -m andersonkouadio0118@gmail.com
+    # On enchaine les domaines : si le DNS d'un domaine n'est pas pret, certbot
+    # echoue mais les autres sont quand meme certifies (--non-interactive).
+    sudo certbot --nginx \
+      -d libitex-api.lunion-lab.com \
+      -d libitex-pro.lunion-lab.com \
+      -d libitex-storage.lunion-lab.com \
+      --non-interactive --agree-tos -m andersonkouadio0118@gmail.com
     echo ">> Nginx OK"
     ;;
   down)
