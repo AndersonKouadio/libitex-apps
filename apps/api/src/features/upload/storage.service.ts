@@ -28,13 +28,20 @@ export class StorageService implements OnModuleInit {
   private readonly publicEndpoint: string;
   private readonly disponible: boolean;
 
+  private readonly variablesManquantes: string[];
+
   constructor(private readonly config: ConfigService) {
     const endpoint = this.config.get<string>("STORAGE_ENDPOINT");
     const accessKey = this.config.get<string>("STORAGE_ACCESS_KEY");
     const secretKey = this.config.get<string>("STORAGE_SECRET_KEY");
     this.bucket = this.config.get<string>("STORAGE_BUCKET", "libitex-public");
     this.publicEndpoint = this.config.get<string>("STORAGE_PUBLIC_ENDPOINT", endpoint ?? "");
-    this.disponible = Boolean(endpoint && accessKey && secretKey);
+
+    this.variablesManquantes = [];
+    if (!endpoint) this.variablesManquantes.push("STORAGE_ENDPOINT");
+    if (!accessKey) this.variablesManquantes.push("STORAGE_ACCESS_KEY");
+    if (!secretKey) this.variablesManquantes.push("STORAGE_SECRET_KEY");
+    this.disponible = this.variablesManquantes.length === 0;
 
     this.client = new S3Client({
       endpoint,
@@ -48,7 +55,10 @@ export class StorageService implements OnModuleInit {
 
   async onModuleInit() {
     if (!this.disponible) {
-      this.logger.warn("Stockage objet non configure (STORAGE_ENDPOINT manquant). Les uploads sont desactives.");
+      this.logger.warn(
+        `Stockage objet non configure. Variables manquantes: ${this.variablesManquantes.join(", ")}. ` +
+          `Ajoutez-les dans le .env du serveur puis redemarrez l'API.`,
+      );
       return;
     }
     await this.assurerBucket();
@@ -64,7 +74,10 @@ export class StorageService implements OnModuleInit {
     sousChemin: string;
   }): Promise<{ url: string; cle: string }> {
     if (!this.disponible) {
-      throw new BadRequestException("Le service d'upload n'est pas configure sur ce serveur");
+      throw new BadRequestException(
+        `Le service d'upload n'est pas configure sur ce serveur. ` +
+          `Variables manquantes : ${this.variablesManquantes.join(", ")}.`,
+      );
     }
     const { fichier, tenantId, sousChemin } = params;
 
