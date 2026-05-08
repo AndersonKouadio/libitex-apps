@@ -1,7 +1,7 @@
 "use client";
 
-import { TextField, Label, Input } from "@heroui/react";
-import { Info } from "lucide-react";
+import { TextField, Label, Input, Button } from "@heroui/react";
+import { Info, RefreshCw } from "lucide-react";
 import type { CreerVarianteDTO } from "../schemas/produit.schema";
 import type { TypeProduit } from "../hooks/useFormProduit";
 import { UniteMesure, UNITE_LABELS } from "@/features/unite/types/unite.type";
@@ -11,6 +11,7 @@ interface Props {
   type: Exclude<TypeProduit, "VARIANT">;
   variante: CreerVarianteDTO;
   onChange: (data: Partial<CreerVarianteDTO>) => void;
+  onRegenererSku?: () => void;
 }
 
 const NOTES: Record<Exclude<TypeProduit, "VARIANT">, string | null> = {
@@ -20,7 +21,7 @@ const NOTES: Record<Exclude<TypeProduit, "VARIANT">, string | null> = {
   MENU: "Le stock du menu est géré via les ingrédients de la recette ci-dessous, pas par SKU.",
 };
 
-export function SectionVarianteUnique({ type, variante, onChange }: Props) {
+export function SectionVarianteUnique({ type, variante, onChange, onRegenererSku }: Props) {
   const note = NOTES[type];
   const uniteVente = variante.uniteVente ?? UniteMesure.PIECE;
   const labelPrix = variante.prixParUnite
@@ -43,8 +44,21 @@ export function SectionVarianteUnique({ type, variante, onChange }: Props) {
           value={variante.sku}
           onChange={(v) => onChange({ sku: v })}
         >
-          <Label>SKU / Reference</Label>
-          <Input placeholder="REF-001" />
+          <Label className="flex items-center justify-between">
+            <span>SKU / Référence</span>
+            {onRegenererSku && (
+              <Button
+                variant="ghost"
+                className="text-[10px] gap-1 px-1.5 py-0.5 h-auto min-w-0 text-muted hover:text-accent"
+                onPress={onRegenererSku}
+                aria-label="Regénérer le SKU automatiquement"
+              >
+                <RefreshCw size={11} />
+                Auto
+              </Button>
+            )}
+          </Label>
+          <Input placeholder="Auto-généré depuis le nom" />
         </TextField>
 
         <TextField

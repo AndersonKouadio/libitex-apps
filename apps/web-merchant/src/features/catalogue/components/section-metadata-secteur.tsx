@@ -1,6 +1,9 @@
 "use client";
 
-import { TextField, Label, Input, FieldError, Switch } from "@heroui/react";
+import {
+  TextField, Label, Input, FieldError, Switch,
+  Select, ListBox,
+} from "@heroui/react";
 import { Pill, Gem, BookOpen } from "lucide-react";
 import type { SecteurActivite } from "@/features/auth/types/auth.type";
 
@@ -38,6 +41,33 @@ const CONFIGS: Partial<Record<SecteurActivite, ConfigSection>> = {
   },
 };
 
+const FORMES_GALENIQUES = [
+  "Comprimé", "Comprimé effervescent", "Gélule", "Capsule", "Sirop",
+  "Solution buvable", "Suspension", "Pommade", "Crème", "Gel",
+  "Suppositoire", "Injection", "Collyre", "Aérosol", "Autre",
+] as const;
+
+const MATIERES_BIJOU = [
+  "Or jaune", "Or blanc", "Or rose", "Argent", "Plaqué or",
+  "Plaqué argent", "Acier inoxydable", "Acier chirurgical",
+  "Cuivre", "Laiton", "Autre",
+] as const;
+
+const CARATS = [
+  "24K (999)", "22K (916)", "21K (875)", "18K (750)", "14K (583)", "9K (375)",
+  "925 (Argent)", "950 (Argent)", "Plaqué", "Non précisé",
+] as const;
+
+const PIERRES = [
+  "Sans pierre", "Diamant", "Saphir", "Rubis", "Émeraude",
+  "Topaze", "Améthyste", "Perle", "Zircon", "Autre",
+] as const;
+
+const LANGUES = [
+  "Français", "Anglais", "Arabe", "Wolof", "Bambara",
+  "Lingala", "Espagnol", "Allemand", "Autre",
+] as const;
+
 export function SectionMetadataSecteur({ secteur, metadata, onChange }: Props) {
   const config = secteur ? CONFIGS[secteur] : undefined;
   if (!config) return null;
@@ -67,10 +97,44 @@ export function SectionMetadataSecteur({ secteur, metadata, onChange }: Props) {
   );
 }
 
-function ChampsPharmacie({ metadata, maj }: {
+interface ChampsProps {
   metadata: Record<string, unknown>;
   maj: (cle: string, valeur: unknown) => void;
+}
+
+function SelectChamp({
+  label, valeur, options, onChange,
+}: {
+  label: string;
+  valeur: string;
+  options: readonly string[];
+  onChange: (v: string) => void;
 }) {
+  return (
+    <Select
+      selectedKey={valeur || null}
+      onSelectionChange={(k) => onChange(k ? String(k) : "")}
+      aria-label={label}
+    >
+      <Label>{label}</Label>
+      <Select.Trigger>
+        <Select.Value />
+        <Select.Indicator />
+      </Select.Trigger>
+      <Select.Popover>
+        <ListBox>
+          {options.map((opt) => (
+            <ListBox.Item key={opt} id={opt} textValue={opt}>
+              {opt}
+            </ListBox.Item>
+          ))}
+        </ListBox>
+      </Select.Popover>
+    </Select>
+  );
+}
+
+function ChampsPharmacie({ metadata, maj }: ChampsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <TextField value={String(metadata.dci ?? "")} onChange={(v) => maj("dci", v)}>
@@ -83,11 +147,12 @@ function ChampsPharmacie({ metadata, maj }: {
         <Input placeholder="500 mg" />
         <FieldError />
       </TextField>
-      <TextField value={String(metadata.formeGalenique ?? "")} onChange={(v) => maj("formeGalenique", v)}>
-        <Label>Forme galénique</Label>
-        <Input placeholder="Comprimé, sirop, gélule..." />
-        <FieldError />
-      </TextField>
+      <SelectChamp
+        label="Forme galénique"
+        valeur={String(metadata.formeGalenique ?? "")}
+        options={FORMES_GALENIQUES}
+        onChange={(v) => maj("formeGalenique", v)}
+      />
       <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border">
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground">Sur ordonnance</p>
@@ -103,22 +168,21 @@ function ChampsPharmacie({ metadata, maj }: {
   );
 }
 
-function ChampsBijouterie({ metadata, maj }: {
-  metadata: Record<string, unknown>;
-  maj: (cle: string, valeur: unknown) => void;
-}) {
+function ChampsBijouterie({ metadata, maj }: ChampsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <TextField value={String(metadata.matiere ?? "")} onChange={(v) => maj("matiere", v)}>
-        <Label>Matière</Label>
-        <Input placeholder="Or jaune, argent, plaqué or..." />
-        <FieldError />
-      </TextField>
-      <TextField value={String(metadata.carat ?? "")} onChange={(v) => maj("carat", v)}>
-        <Label>Carat / titre</Label>
-        <Input placeholder="18K, 925, 750..." />
-        <FieldError />
-      </TextField>
+      <SelectChamp
+        label="Matière"
+        valeur={String(metadata.matiere ?? "")}
+        options={MATIERES_BIJOU}
+        onChange={(v) => maj("matiere", v)}
+      />
+      <SelectChamp
+        label="Carat / titre"
+        valeur={String(metadata.carat ?? "")}
+        options={CARATS}
+        onChange={(v) => maj("carat", v)}
+      />
       <TextField
         value={String(metadata.poidsGrammes ?? "")}
         onChange={(v) => maj("poidsGrammes", v ? Number(v) : undefined)}
@@ -127,19 +191,17 @@ function ChampsBijouterie({ metadata, maj }: {
         <Input type="number" inputMode="decimal" placeholder="3.50" />
         <FieldError />
       </TextField>
-      <TextField value={String(metadata.pierre ?? "")} onChange={(v) => maj("pierre", v)}>
-        <Label>Pierre / gemme</Label>
-        <Input placeholder="Diamant 0.20ct, sans pierre..." />
-        <FieldError />
-      </TextField>
+      <SelectChamp
+        label="Pierre / gemme"
+        valeur={String(metadata.pierre ?? "")}
+        options={PIERRES}
+        onChange={(v) => maj("pierre", v)}
+      />
     </div>
   );
 }
 
-function ChampsLibrairie({ metadata, maj }: {
-  metadata: Record<string, unknown>;
-  maj: (cle: string, valeur: unknown) => void;
-}) {
+function ChampsLibrairie({ metadata, maj }: ChampsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <TextField value={String(metadata.isbn ?? "")} onChange={(v) => maj("isbn", v)}>
@@ -157,11 +219,12 @@ function ChampsLibrairie({ metadata, maj }: {
         <Input placeholder="Présence Africaine" />
         <FieldError />
       </TextField>
-      <TextField value={String(metadata.langue ?? "")} onChange={(v) => maj("langue", v)}>
-        <Label>Langue</Label>
-        <Input placeholder="Français, anglais, wolof..." />
-        <FieldError />
-      </TextField>
+      <SelectChamp
+        label="Langue"
+        valeur={String(metadata.langue ?? "")}
+        options={LANGUES}
+        onChange={(v) => maj("langue", v)}
+      />
     </div>
   );
 }

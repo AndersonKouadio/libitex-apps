@@ -2,6 +2,10 @@ server {
     listen 80;
     server_name libitex-api.lunion-lab.com;
 
+    # Upload d'images : 5 Mo cote applicatif, on prevoit 10 Mo pour les headers
+    # multipart et la marge. Sinon nginx rejette avec 413 avant d'atteindre l'API.
+    client_max_body_size 10M;
+
     location / {
         proxy_pass http://127.0.0.1:3010;
         proxy_http_version 1.1;

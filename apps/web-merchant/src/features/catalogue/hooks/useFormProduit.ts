@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { creerProduitSchema, type CreerProduitDTO, type CreerVarianteDTO } from "../schemas/produit.schema";
 import { genererVariantesParCombinaison, type AxeAttribut } from "../utils/generer-variantes";
+import { genererSku, genererPrefixeSku } from "../utils/generer-sku";
 import type { LigneRecetteDTO } from "@/features/ingredient/schemas/ingredient.schema";
 import { UniteMesure } from "@/features/unite/types/unite.type";
 
@@ -51,6 +52,22 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
   const [metadataSecteur, setMetadataSecteur] = useState<Record<string, unknown>>({});
   const [lignesRecette, setLignesRecette] = useState<LigneRecetteDTO[]>([]);
   const [erreur, setErreur] = useState("");
+  // Suivi de l'edition manuelle du SKU. Si l'utilisateur modifie le SKU
+  // a la main, on cesse de l'auto-regenerer quand le nom change.
+  const [skuManuel, setSkuManuel] = useState(false);
+  const [prefixeSkuManuel, setPrefixeSkuManuel] = useState(false);
+
+  // Auto-generation du SKU (et du prefixe pour les variantes)
+  // a chaque changement de nom ou de type, tant que l'utilisateur
+  // n'a pas pris la main dessus.
+  useEffect(() => {
+    if (!nom || nom.length < 2) return;
+    if (typeProduit === "VARIANT") {
+      if (!prefixeSkuManuel) setPrefixeSku(genererPrefixeSku(nom));
+    } else if (!skuManuel) {
+      setVarianteUnique((prev) => ({ ...prev, sku: genererSku(nom, typeProduit) }));
+    }
+  }, [nom, typeProduit, skuManuel, prefixeSkuManuel]);
 
   const variantesGenerees = useMemo(() => {
     if (typeProduit === "VARIANT") {
@@ -83,7 +100,36 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
     setCategorieId(""); setCodeBarresEan13(""); setTauxTva("0"); setPrefixeSku("");
     setAxes(AXES_VIDES); setVarianteUnique({ ...VARIANTE_VIDE }); setImages([]);
     setMetadataSecteur({}); setLignesRecette([]); setErreur("");
+    setSkuManuel(false); setPrefixeSkuManuel(false);
   }, [typeParDefaut]);
+
+  // Wrapper qui marque le SKU comme manuel quand l'utilisateur le modifie
+  // (et permet de revenir en mode automatique en vidant le champ).
+  const setVarianteUniqueAvecSkuTracking = useCallback((data: CreerVarianteDTO) => {
+    setVarianteUnique((prev) => {
+      if (data.sku !== prev.sku) {
+        setSkuManuel(data.sku.length > 0);
+      }
+      return data;
+    });
+  }, []);
+
+  const setPrefixeSkuAvecTracking = useCallback((p: string) => {
+    setPrefixeSku(p);
+    setPrefixeSkuManuel(p.length > 0 && p !== genererPrefixeSku(nom));
+  }, [nom]);
+
+  /** Force la regeneration du SKU et reactive le mode auto. */
+  const regenererSku = useCallback(() => {
+    if (!nom) return;
+    if (typeProduit === "VARIANT") {
+      setPrefixeSkuManuel(false);
+      setPrefixeSku(genererPrefixeSku(nom));
+    } else {
+      setSkuManuel(false);
+      setVarianteUnique((prev) => ({ ...prev, sku: genererSku(nom, typeProduit) }));
+    }
+  }, [nom, typeProduit]);
 
   const valider = useCallback((): CreerProduitDTO | null => {
     const variantes = variantesGenerees.filter((v) => v.sku && v.prixDetail > 0);
@@ -125,9 +171,12 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
       lignesRecette, erreur,
     },
     setNom, setDescription, setTypeProduit, setMarque, setCategorieId,
-    setCodeBarresEan13, setTauxTva, setPrefixeSku, setVarianteUnique, setImages,
-    setMetadataSecteur, setLignesRecette,
+    setCodeBarresEan13, setTauxTva,
+    setPrefixeSku: setPrefixeSkuAvecTracking,
+    setVarianteUnique: setVarianteUniqueAvecSkuTracking,
+    setImages, setMetadataSecteur, setLignesRecette,
     ajouterAxe, retirerAxe, modifierAxe,
+    regenererSku,
     reinitialiser, valider, setErreur,
   };
 }

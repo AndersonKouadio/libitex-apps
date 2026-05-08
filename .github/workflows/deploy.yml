@@ -48,6 +48,26 @@ jobs:
             docker compose -f docker-compose.prod.yml build $SERVICES
             docker compose -f docker-compose.prod.yml up -d --force-recreate $SERVICES
 
+            # Sync des configs nginx versionnees (sans-effet si rien n'a change).
+            # Permet de pousser des ajustements (client_max_body_size, headers...)
+            # sans intervention manuelle sur le VPS.
+            for fichier in /opt/libitex/infra/nginx/libitex-*.lunion-lab.com; do
+              nom=$(basename "$fichier")
+              if [ -f "$fichier" ] && ! cmp -s "$fichier" "/etc/nginx/sites-available/$nom"; then
+                echo ">> Mise a jour nginx: $nom"
+                sudo cp "$fichier" "/etc/nginx/sites-available/$nom"
+                NGINX_CHANGED=1
+              fi
+            done
+            if [ -n "$NGINX_CHANGED" ]; then
+              if sudo nginx -t; then
+                sudo systemctl reload nginx
+                echo ">> Nginx recharge"
+              else
+                echo ">> ATTENTION: nginx -t a echoue, configuration non appliquee"
+              fi
+            fi
+
             # Verify
             sleep 10
             docker compose -f docker-compose.prod.yml ps

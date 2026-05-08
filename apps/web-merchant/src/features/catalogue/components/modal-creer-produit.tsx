@@ -67,7 +67,7 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(open) => { if (!open) onFermer(); }}>
       <Modal.Container size="lg" scroll="inside">
-        <Modal.Dialog>
+        <Modal.Dialog className="!max-w-3xl">
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Icon className="bg-accent/10 text-accent">
@@ -123,6 +123,7 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
                 type={typeProduit}
                 variante={varianteUnique}
                 onChange={(data) => form.setVarianteUnique({ ...varianteUnique, ...data })}
+                onRegenererSku={form.regenererSku}
               />
             )}
 
