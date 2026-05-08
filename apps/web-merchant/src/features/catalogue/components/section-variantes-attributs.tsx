@@ -5,17 +5,20 @@ import { Plus, Sparkles } from "lucide-react";
 import type { CreerVarianteDTO } from "../schemas/produit.schema";
 import type { AxeAttribut } from "../utils/generer-variantes";
 import { LigneAxeAttribut } from "./ligne-axe-attribut";
+import { BlocUniteVente } from "./bloc-unite-vente";
 
 interface Props {
   prefixeSku: string;
   axes: AxeAttribut[];
   variantesGenerees: CreerVarianteDTO[];
   prixDetailReference: string;
+  varianteReference: CreerVarianteDTO;
   onPrefixe: (v: string) => void;
   onPrixReference: (v: string) => void;
   onAjouterAxe: () => void;
   onRetirerAxe: (i: number) => void;
   onModifierAxe: (i: number, data: Partial<AxeAttribut>) => void;
+  onModifierVarianteReference: (data: Partial<CreerVarianteDTO>) => void;
 }
 
 function formatMontant(n: number): string {
@@ -23,8 +26,9 @@ function formatMontant(n: number): string {
 }
 
 export function SectionVariantesAttributs({
-  prefixeSku, axes, variantesGenerees, prixDetailReference,
+  prefixeSku, axes, variantesGenerees, prixDetailReference, varianteReference,
   onPrefixe, onPrixReference, onAjouterAxe, onRetirerAxe, onModifierAxe,
+  onModifierVarianteReference,
 }: Props) {
   return (
     <div className="space-y-4">
@@ -38,6 +42,8 @@ export function SectionVariantesAttributs({
           <Input placeholder="15 000" min="0" />
         </TextField>
       </div>
+
+      <BlocUniteVente variante={varianteReference} onChange={onModifierVarianteReference} />
 
       <div>
         <div className="flex items-center justify-between mb-3">

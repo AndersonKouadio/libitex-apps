@@ -1,9 +1,10 @@
 "use client";
 
 import { Chip } from "@heroui/react";
-import { Package, AlertTriangle } from "lucide-react";
+import { Package, AlertTriangle, Scale } from "lucide-react";
 import type { IProduit, IVariante } from "@/features/catalogue/types/produit.type";
 import { formatMontant } from "../utils/format";
+import { UniteMesure, UNITE_LABELS, uniteAccepteDecimal } from "@/features/unite/types/unite.type";
 
 interface Props {
   produit: IProduit;
@@ -16,6 +17,8 @@ export function CarteArticle({ produit, variante, stock, onAjouter }: Props) {
   const enRupture = stock !== null && stock <= 0;
   const stockBas = stock !== null && stock > 0 && stock < 5;
   const image = produit.images?.[0];
+  const unite = variante.uniteVente ?? UniteMesure.PIECE;
+  const peseur = uniteAccepteDecimal(unite);
 
   return (
     <button
@@ -41,14 +44,14 @@ export function CarteArticle({ produit, variante, stock, onAjouter }: Props) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted/30">
-            <Package size={32} />
+            <Package size={32} strokeWidth={2} />
           </div>
         )}
 
         {enRupture && (
           <div className="absolute inset-0 bg-foreground/40 flex items-center justify-center">
             <Chip className="bg-danger text-white text-xs font-semibold gap-1">
-              <AlertTriangle size={12} />
+              <AlertTriangle size={12} strokeWidth={2} />
               Rupture
             </Chip>
           </div>
@@ -61,7 +64,16 @@ export function CarteArticle({ produit, variante, stock, onAjouter }: Props) {
                 stockBas ? "bg-warning/90 text-warning-foreground" : "bg-foreground/70 text-white"
               }`}
             >
-              {stock} en stock
+              {stock} {peseur ? UNITE_LABELS[unite] : "en stock"}
+            </Chip>
+          </div>
+        )}
+
+        {peseur && (
+          <div className="absolute top-2 left-2">
+            <Chip className="bg-accent/90 text-white text-[10px] font-semibold gap-1">
+              <Scale size={10} strokeWidth={2} />
+              {variante.prixParUnite ? `Au ${UNITE_LABELS[unite]}` : UNITE_LABELS[unite]}
             </Chip>
           </div>
         )}
@@ -77,7 +89,9 @@ export function CarteArticle({ produit, variante, stock, onAjouter }: Props) {
         <p className="text-[11px] text-muted/70 mt-0.5 font-mono truncate">{variante.sku}</p>
         <p className="text-base font-semibold text-foreground mt-2 tabular-nums">
           {formatMontant(variante.prixDetail)}
-          <span className="text-[11px] font-normal text-muted ml-1">F</span>
+          <span className="text-[11px] font-normal text-muted ml-1">
+            F{variante.prixParUnite && <> / {UNITE_LABELS[unite]}</>}
+          </span>
         </p>
       </div>
     </button>

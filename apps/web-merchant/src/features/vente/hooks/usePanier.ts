@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from "react";
 import type { IVariante, IProduit } from "@/features/catalogue/types/produit.type";
+import { UniteMesure, uniteAccepteDecimal } from "@/features/unite/types/unite.type";
+import { arrondirAuPas } from "@/features/unite/utils/unite";
 
 export interface ArticlePanier {
   varianteId: string;
@@ -12,57 +14,87 @@ export interface ArticlePanier {
   quantite: number;
   prixUnitaire: number;
   totalLigne: number;
+  uniteVente: UniteMesure;
+  pasMin: number | null;
+  prixParUnite: boolean;
+}
+
+/**
+ * Pas effectif a appliquer a +/-/incrementation initiale.
+ * - Si pasMin defini, on l'utilise (ex: 0.1 kg).
+ * - Sinon, 1 pour les unites UNITAIRE et 0.1 pour les unites continues.
+ */
+function pasEffectif(unite: UniteMesure, pasMin: number | null): number {
+  if (pasMin && pasMin > 0) return pasMin;
+  return uniteAccepteDecimal(unite) ? 0.1 : 1;
+}
+
+/** Recalcule le total ligne selon le mode tarifaire (forfait vs au kg/m). */
+function recalculerTotalLigne(article: Omit<ArticlePanier, "totalLigne">): number {
+  return Number((article.prixUnitaire * article.quantite).toFixed(2));
 }
 
 export function usePanier() {
   const [articles, setArticles] = useState<ArticlePanier[]>([]);
 
-  const ajouter = useCallback((produit: IProduit, variante: IVariante) => {
-    setArticles((prev) => {
-      const existant = prev.find((a) => a.varianteId === variante.id);
-      if (existant) {
-        return prev.map((a) =>
-          a.varianteId === variante.id
-            ? { ...a, quantite: a.quantite + 1, totalLigne: (a.quantite + 1) * a.prixUnitaire }
-            : a,
-        );
-      }
-      return [
-        ...prev,
-        {
+  const ajouter = useCallback(
+    (produit: IProduit, variante: IVariante, quantiteInitiale?: number) => {
+      const unite = variante.uniteVente ?? UniteMesure.PIECE;
+      const pas = pasEffectif(unite, variante.pasMin);
+      const qInit = quantiteInitiale ?? pas;
+
+      setArticles((prev) => {
+        const existant = prev.find((a) => a.varianteId === variante.id);
+        if (existant) {
+          const q = arrondirAuPas(existant.quantite + (quantiteInitiale ?? pas), variante.pasMin);
+          return prev.map((a) =>
+            a.varianteId === variante.id
+              ? { ...a, quantite: q, totalLigne: recalculerTotalLigne({ ...a, quantite: q }) }
+              : a,
+          );
+        }
+        const nouveau: Omit<ArticlePanier, "totalLigne"> = {
           varianteId: variante.id,
           nomProduit: produit.nom,
           nomVariante: variante.nom || variante.sku,
           sku: variante.sku,
           image: produit.images?.[0] ?? null,
-          quantite: 1,
+          quantite: arrondirAuPas(qInit, variante.pasMin),
           prixUnitaire: variante.prixDetail,
-          totalLigne: variante.prixDetail,
-        },
-      ];
-    });
-  }, []);
+          uniteVente: unite,
+          pasMin: variante.pasMin,
+          prixParUnite: variante.prixParUnite,
+        };
+        return [...prev, { ...nouveau, totalLigne: recalculerTotalLigne(nouveau) }];
+      });
+    },
+    [],
+  );
 
-  const modifierQuantite = useCallback((varianteId: string, delta: number) => {
+  const modifierQuantite = useCallback((varianteId: string, deltaSigned: number) => {
     setArticles((prev) =>
       prev
-        .map((a) =>
-          a.varianteId === varianteId
-            ? { ...a, quantite: a.quantite + delta, totalLigne: (a.quantite + delta) * a.prixUnitaire }
-            : a,
-        )
+        .map((a) => {
+          if (a.varianteId !== varianteId) return a;
+          const pas = pasEffectif(a.uniteVente, a.pasMin);
+          // deltaSigned vaut +1/-1 dans l'UI : on le multiplie par le pas effectif.
+          const delta = Math.sign(deltaSigned) * pas;
+          const q = arrondirAuPas(Math.max(0, a.quantite + delta), a.pasMin);
+          return { ...a, quantite: q, totalLigne: recalculerTotalLigne({ ...a, quantite: q }) };
+        })
         .filter((a) => a.quantite > 0),
     );
   }, []);
 
   const definirQuantite = useCallback((varianteId: string, quantite: number) => {
-    const valide = Math.max(1, Math.floor(Number(quantite) || 1));
     setArticles((prev) =>
-      prev.map((a) =>
-        a.varianteId === varianteId
-          ? { ...a, quantite: valide, totalLigne: valide * a.prixUnitaire }
-          : a,
-      ),
+      prev
+        .map((a) => {
+          if (a.varianteId !== varianteId) return a;
+          const q = arrondirAuPas(Math.max(0, quantite), a.pasMin);
+          return { ...a, quantite: q, totalLigne: recalculerTotalLigne({ ...a, quantite: q }) };
+        })
+        .filter((a) => a.quantite > 0),
     );
   }, []);
 
@@ -81,6 +113,9 @@ export function usePanier() {
       quantite: number;
       prixUnitaire: number;
       totalLigne: number;
+      uniteVente?: UniteMesure;
+      pasMin?: number | null;
+      prixParUnite?: boolean;
     }>,
     images: Map<string, string | null>,
   ) => {
@@ -94,6 +129,9 @@ export function usePanier() {
         quantite: l.quantite,
         prixUnitaire: l.prixUnitaire,
         totalLigne: l.totalLigne,
+        uniteVente: l.uniteVente ?? UniteMesure.PIECE,
+        pasMin: l.pasMin ?? null,
+        prixParUnite: l.prixParUnite ?? false,
       })),
     );
   }, []);

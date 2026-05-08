@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UniteMesure } from "@/features/unite/types/unite.type";
 
 export const creerVarianteSchema = z.object({
   sku: z.string().min(1, "SKU requis"),
@@ -9,6 +10,9 @@ export const creerVarianteSchema = z.object({
   prixDetail: z.number().min(0, "Prix de détail requis"),
   prixGros: z.number().min(0).optional(),
   prixVip: z.number().min(0).optional(),
+  uniteVente: z.nativeEnum(UniteMesure).optional(),
+  pasMin: z.number().min(0, "Pas minimum invalide").optional(),
+  prixParUnite: z.boolean().optional(),
 });
 
 export const creerProduitSchema = z.object({

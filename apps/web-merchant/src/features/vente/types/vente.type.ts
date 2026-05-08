@@ -1,3 +1,5 @@
+import type { UniteMesure } from "@/features/unite/types/unite.type";
+
 export interface ILigneTicket {
   id: string;
   varianteId: string;
@@ -10,6 +12,12 @@ export interface ILigneTicket {
   tauxTva: number;
   montantTva: number;
   totalLigne: number;
+  /** Unite de la quantite. Utilisee a l'affichage et au scellement du ticket. */
+  uniteVente?: UniteMesure;
+  /** Pas minimum a la saisie (recopie depuis la variante a la reprise). */
+  pasMin?: number | null;
+  /** Vrai si le prix unitaire est par unite de mesure. */
+  prixParUnite?: boolean;
   numeroSerie?: string;
   numeroLot?: string;
 }

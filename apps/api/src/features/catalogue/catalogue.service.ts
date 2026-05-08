@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { ProduitRepository } from "./repositories/produit.repository";
 import { RessourceIntrouvableException } from "../../common/exceptions/metier.exception";
+import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import {
   CreerProduitDto, ModifierProduitDto, CreerCategorieDto,
   ProduitResponseDto, VarianteResponseDto, CategorieResponseDto,
@@ -9,9 +10,12 @@ import { PaginatedResponseDto } from "../../common/dto/api-response.dto";
 
 @Injectable()
 export class CatalogueService {
-  constructor(private readonly produitRepo: ProduitRepository) {}
+  constructor(
+    private readonly produitRepo: ProduitRepository,
+    private readonly audit: AuditService,
+  ) {}
 
-  async creerProduit(tenantId: string, dto: CreerProduitDto): Promise<ProduitResponseDto> {
+  async creerProduit(tenantId: string, userId: string, dto: CreerProduitDto): Promise<ProduitResponseDto> {
     const produit = await this.produitRepo.creerProduit(tenantId, {
       name: dto.nom,
       description: dto.description,
@@ -34,9 +38,18 @@ export class CatalogueService {
         priceRetail: v.prixDetail.toString(),
         priceWholesale: v.prixGros?.toString(),
         priceVip: v.prixVip?.toString(),
+        saleUnit: v.uniteVente,
+        saleStep: v.pasMin?.toString(),
+        pricePerUnit: v.prixParUnite,
       });
       variantes.push(this.mapVariante(variante));
     }
+
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.PRODUIT_CREATED,
+      entityType: "PRODUIT", entityId: produit.id,
+      after: { nom: produit.name, type: produit.productType, nbVariantes: variantes.length },
+    });
 
     return this.mapProduit(produit, variantes);
   }
@@ -65,8 +78,8 @@ export class CatalogueService {
     return PaginatedResponseDto.create(produits, total, page, limit);
   }
 
-  async modifierProduit(tenantId: string, id: string, dto: ModifierProduitDto): Promise<ProduitResponseDto> {
-    await this.obtenirProduit(tenantId, id); // verifie existence
+  async modifierProduit(tenantId: string, userId: string, id: string, dto: ModifierProduitDto): Promise<ProduitResponseDto> {
+    const avant = await this.obtenirProduit(tenantId, id); // verifie existence
 
     const updated = await this.produitRepo.modifier(tenantId, id, {
       name: dto.nom,
@@ -76,13 +89,22 @@ export class CatalogueService {
       isActive: dto.actif,
     });
 
+    await this.audit.logUpdate(
+      tenantId, userId, "PRODUIT", id,
+      { nom: avant.nom, marque: avant.marque, actif: avant.actif },
+      { nom: updated.name, marque: updated.brand, actif: updated.isActive },
+    );
+
     const rawVariantes = await this.produitRepo.obtenirVariantes(id);
     return this.mapProduit(updated, rawVariantes.map((v) => this.mapVariante(v)));
   }
 
-  async supprimerProduit(tenantId: string, id: string): Promise<void> {
-    await this.obtenirProduit(tenantId, id);
+  async supprimerProduit(tenantId: string, userId: string, id: string): Promise<void> {
+    const avant = await this.obtenirProduit(tenantId, id);
     await this.produitRepo.supprimer(tenantId, id);
+    await this.audit.logDelete(tenantId, userId, "PRODUIT", id, {
+      nom: avant.nom, type: avant.typeProduit,
+    });
   }
 
   async creerCategorie(tenantId: string, dto: CreerCategorieDto): Promise<CategorieResponseDto> {
@@ -124,6 +146,9 @@ export class CatalogueService {
       prixDetail: Number(raw.priceRetail),
       prixGros: raw.priceWholesale ? Number(raw.priceWholesale) : null,
       prixVip: raw.priceVip ? Number(raw.priceVip) : null,
+      uniteVente: raw.saleUnit,
+      pasMin: raw.saleStep != null ? Number(raw.saleStep) : null,
+      prixParUnite: Boolean(raw.pricePerUnit),
     };
   }
 }

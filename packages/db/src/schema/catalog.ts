@@ -3,6 +3,7 @@ import {
   integer, numeric, jsonb, date, index,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
+import { uniteMesureEnum } from "./_shared";
 
 // ─── Enums ───
 
@@ -79,6 +80,15 @@ export const variants = pgTable("variants", {
   priceWholesale: numeric("price_wholesale", { precision: 15, scale: 2 }),
   priceVip: numeric("price_vip", { precision: 15, scale: 2 }),
   weight: numeric("weight", { precision: 10, scale: 3 }),
+  // Unite de vente (defaut: PIECE pour rester compatible avec l'existant).
+  // Quincaillerie -> M / CM, alimentaire vrac -> KG / G, boissons en vrac -> L / ML.
+  saleUnit: uniteMesureEnum("sale_unit").notNull().default("PIECE"),
+  // Pas minimum pour la saisie au POS (ex: 0.1 kg, 5 cm, 0.5 m).
+  // Null = entiers seulement (cas typique des unites UNITAIRE).
+  saleStep: numeric("sale_step", { precision: 10, scale: 3 }),
+  // Si true, priceRetail est le prix par unite de mesure (au kg, au metre).
+  // Si false, prix forfaitaire pour 1 piece/lot/douzaine.
+  pricePerUnit: boolean("price_per_unit").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

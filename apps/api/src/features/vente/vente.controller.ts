@@ -39,14 +39,14 @@ export class VenteController {
   @ApiOperation({ summary: "Mettre un ticket en attente" })
   @Roles("ADMIN", "MANAGER", "CASHIER")
   mettreEnAttente(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
-    return this.venteService.mettreEnAttente(user.tenantId, id);
+    return this.venteService.mettreEnAttente(user.tenantId, user.userId, id);
   }
 
   @Patch("tickets/:id/annuler")
   @ApiOperation({ summary: "Annuler un ticket" })
   @Roles("ADMIN", "MANAGER")
   annuler(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
-    return this.venteService.annuler(user.tenantId, id);
+    return this.venteService.annuler(user.tenantId, user.userId, id);
   }
 
   @Get("tickets/:id")

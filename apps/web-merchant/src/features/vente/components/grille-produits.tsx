@@ -42,7 +42,7 @@ export function GrilleProduits({ produits, stocks, onAjouter }: Props) {
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         {filtres.length === 0 && produits.length === 0 ? (
           <div className="py-20 text-center">
-            <Package size={36} className="text-muted/30 mx-auto mb-3" />
+            <Package size={36} strokeWidth={2} className="text-muted/30 mx-auto mb-3" />
             <p className="text-sm font-medium text-foreground">Aucun article disponible</p>
             <p className="text-sm text-muted mt-1">
               Ajoutez des produits dans le catalogue et recevez du stock pour commencer a vendre
@@ -53,7 +53,7 @@ export function GrilleProduits({ produits, stocks, onAjouter }: Props) {
           </div>
         ) : filtres.length === 0 ? (
           <div className="py-16 text-center">
-            <Search size={28} className="text-muted/30 mx-auto mb-2" />
+            <Search size={28} strokeWidth={2} className="text-muted/30 mx-auto mb-2" />
             <p className="text-sm text-muted">Aucun article ne correspond a la recherche</p>
           </div>
         ) : (

@@ -4,7 +4,7 @@ import {
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IngredientUnit } from "@libitex/shared";
+import { UniteMesure } from "@libitex/shared";
 
 // --- Requete ---
 
@@ -19,9 +19,9 @@ export class CreerIngredientDto {
   @IsOptional()
   description?: string;
 
-  @ApiProperty({ enum: IngredientUnit, example: IngredientUnit.KG })
-  @IsEnum(IngredientUnit)
-  unite!: IngredientUnit;
+  @ApiProperty({ enum: UniteMesure, example: UniteMesure.KG })
+  @IsEnum(UniteMesure)
+  unite!: UniteMesure;
 
   @ApiPropertyOptional({ description: "Cout d'achat unitaire (par 1 kg, 1 L, 1 piece...)", example: 850 })
   @IsNumber()
@@ -47,10 +47,10 @@ export class ModifierIngredientDto {
   @IsOptional()
   description?: string;
 
-  @ApiPropertyOptional({ enum: IngredientUnit })
-  @IsEnum(IngredientUnit)
+  @ApiPropertyOptional({ enum: UniteMesure })
+  @IsEnum(UniteMesure)
   @IsOptional()
-  unite?: IngredientUnit;
+  unite?: UniteMesure;
 
   @ApiPropertyOptional()
   @IsNumber()
@@ -79,10 +79,10 @@ export class EntreeIngredientDto {
   @Min(0.001, { message: "La quantite doit etre superieure a 0" })
   quantite!: number;
 
-  @ApiPropertyOptional({ enum: IngredientUnit, description: "Unite saisie (sera convertie vers l'unite de base de l'ingredient)" })
-  @IsEnum(IngredientUnit)
+  @ApiPropertyOptional({ enum: UniteMesure, description: "Unite saisie (sera convertie vers l'unite de base de l'ingredient)" })
+  @IsEnum(UniteMesure)
   @IsOptional()
-  unite?: IngredientUnit;
+  unite?: UniteMesure;
 
   @ApiPropertyOptional({ description: "Cout total de la reception" })
   @IsNumber()
@@ -133,9 +133,9 @@ export class LigneRecetteDto {
   @Min(0.001)
   quantite!: number;
 
-  @ApiProperty({ enum: IngredientUnit, example: IngredientUnit.KG })
-  @IsEnum(IngredientUnit)
-  unite!: IngredientUnit;
+  @ApiProperty({ enum: UniteMesure, example: UniteMesure.KG })
+  @IsEnum(UniteMesure)
+  unite!: UniteMesure;
 }
 
 export class DefinirRecetteDto {

@@ -1,8 +1,9 @@
 "use client";
 
-import { Table, Chip } from "@heroui/react";
+import { Table } from "@heroui/react";
 import type { ITicket } from "../types/vente.type";
 import { formatMontant, formatDate } from "../utils/format";
+import { StatutChip, type VarianteStatut } from "@/components/statut-chip";
 
 const LIBELLE_STATUT: Record<string, string> = {
   EN_ATTENTE: "En attente",
@@ -14,13 +15,14 @@ const LIBELLE_STATUT: Record<string, string> = {
   OPEN: "Ouvert",
 };
 
-const CLASSES_STATUT: Record<string, string> = {
-  EN_ATTENTE: "bg-warning/10 text-warning",
-  COMPLETE: "bg-success/10 text-success",
-  PARKED: "bg-warning/10 text-warning",
-  COMPLETED: "bg-success/10 text-success",
-  ANNULE: "bg-danger/10 text-danger",
-  VOIDED: "bg-danger/10 text-danger",
+const VARIANTE_STATUT: Record<string, VarianteStatut> = {
+  EN_ATTENTE: "pending",
+  PARKED: "pending",
+  COMPLETE: "active",
+  COMPLETED: "active",
+  ANNULE: "failed",
+  VOIDED: "failed",
+  OPEN: "draft",
 };
 
 interface Props {
@@ -40,7 +42,7 @@ export function HistoriqueTickets({ tickets }: Props) {
     <Table>
       <Table.ScrollContainer>
         <Table.Content aria-label="Historique des tickets">
-          <Table.Header>
+          <Table.Header className="table-header-libitex">
             <Table.Column isRowHeader>Ticket</Table.Column>
             <Table.Column>Client</Table.Column>
             <Table.Column>Statut</Table.Column>
@@ -57,9 +59,9 @@ export function HistoriqueTickets({ tickets }: Props) {
                   <span className="text-sm text-muted">{t.nomClient || "—"}</span>
                 </Table.Cell>
                 <Table.Cell>
-                  <Chip className={`text-xs ${CLASSES_STATUT[t.statut] ?? "bg-muted/10 text-muted"}`}>
+                  <StatutChip variante={VARIANTE_STATUT[t.statut] ?? "draft"}>
                     {LIBELLE_STATUT[t.statut] ?? t.statut}
-                  </Chip>
+                  </StatutChip>
                 </Table.Cell>
                 <Table.Cell>
                   <span className="text-sm font-semibold tabular-nums">{formatMontant(t.total)} F</span>

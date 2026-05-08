@@ -37,7 +37,7 @@ export function RapportZResume({ rapport }: Props) {
   return (
     <Card>
       <Card.Header>
-        <BarChart3 size={18} className="text-accent" />
+        <BarChart3 size={18} strokeWidth={2} className="text-accent" />
         <Card.Title className="text-sm">Z de caisse du {dateLisible}</Card.Title>
       </Card.Header>
       <Card.Content>

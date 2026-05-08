@@ -36,10 +36,16 @@ export function ModalTicketsAttente({ ouvert, onFermer, emplacementId, produits,
 
   const tickets = (ticketsData?.data ?? []).filter((t) => t.statut === "PARKED");
 
+  // Index par varianteId pour enrichir les lignes du ticket avec
+  // l'image et les reglages d'unite (qui ne sont pas stockes sur ticket_lines).
   const imagesParVariante = new Map<string, string | null>();
+  const variantesParId = new Map<string, IProduit["variantes"][number]>();
   for (const p of produits) {
     const img = p.images?.[0] ?? null;
-    for (const v of p.variantes) imagesParVariante.set(v.id, img);
+    for (const v of p.variantes) {
+      imagesParVariante.set(v.id, img);
+      variantesParId.set(v.id, v);
+    }
   }
 
   async function reprendre(ticket: ITicket) {
@@ -48,7 +54,20 @@ export function ModalTicketsAttente({ ouvert, onFermer, emplacementId, produits,
     try {
       const detail = await venteAPI.obtenirTicket(token, ticket.id);
       await venteAPI.annuler(token, ticket.id);
-      onReprendre(detail.lignes, imagesParVariante);
+
+      // Recopie les reglages de vente depuis la variante actuelle :
+      // ticket_lines ne stocke pas uniteVente/pasMin/prixParUnite.
+      const lignesEnrichies: ILigneTicket[] = detail.lignes.map((l) => {
+        const v = variantesParId.get(l.varianteId);
+        return {
+          ...l,
+          uniteVente: v?.uniteVente ?? l.uniteVente,
+          pasMin: v?.pasMin ?? null,
+          prixParUnite: v?.prixParUnite ?? false,
+        };
+      });
+
+      onReprendre(lignesEnrichies, imagesParVariante);
       invalidate();
       onFermer();
       toast.success(`Ticket ${detail.numeroTicket} repris`);
@@ -75,7 +94,7 @@ export function ModalTicketsAttente({ ouvert, onFermer, emplacementId, produits,
               <div className="py-12 flex justify-center"><Spinner /></div>
             ) : tickets.length === 0 ? (
               <div className="py-12 text-center">
-                <Receipt size={32} className="text-muted/30 mx-auto mb-3" />
+                <Receipt size={32} strokeWidth={2} className="text-muted/30 mx-auto mb-3" />
                 <p className="text-sm text-foreground">Aucun ticket en attente</p>
                 <p className="text-xs text-muted mt-1">
                   Quand vous mettez un panier en attente, vous le retrouverez ici
@@ -98,23 +117,23 @@ export function ModalTicketsAttente({ ouvert, onFermer, emplacementId, produits,
                         <span className="text-[10px] font-normal text-muted ml-0.5">F</span>
                       </p>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <Button
                         variant="ghost"
-                        className="text-muted hover:text-danger hover:bg-danger/5 p-2 h-auto min-w-0"
+                        className="text-muted hover:text-danger hover:bg-danger/5 w-11 h-11 min-w-0 p-0"
                         onPress={() => annuler.mutate(t.id)}
                         isDisabled={enChargement === t.id || annuler.isPending}
                         aria-label="Annuler le ticket"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 size={16} strokeWidth={2} />
                       </Button>
                       <Button
                         variant="primary"
-                        className="gap-1.5"
+                        className="h-11 px-4 gap-2"
                         onPress={() => reprendre(t)}
                         isDisabled={enChargement !== null}
                       >
-                        {enChargement === t.id ? <Spinner size="sm" /> : <RotateCcw size={14} />}
+                        {enChargement === t.id ? <Spinner size="sm" /> : <RotateCcw size={16} strokeWidth={2} />}
                         Reprendre
                       </Button>
                     </div>

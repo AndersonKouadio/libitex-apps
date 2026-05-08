@@ -1,14 +1,22 @@
 import type { CreerVarianteDTO } from "../schemas/produit.schema";
+import type { UniteMesure } from "@/features/unite/types/unite.type";
 
 export interface AxeAttribut {
   nom: string;
   valeurs: string[];
 }
 
+export interface DefautsVariante {
+  uniteVente?: UniteMesure;
+  pasMin?: number;
+  prixParUnite?: boolean;
+}
+
 export function genererVariantesParCombinaison(
   axes: AxeAttribut[],
   prefixeSku: string,
   prixDetail: number,
+  defauts: DefautsVariante = {},
 ): CreerVarianteDTO[] {
   const axesValides = axes.filter((a) => a.nom.trim() && a.valeurs.length > 0);
   if (axesValides.length === 0) return [];
@@ -30,6 +38,9 @@ export function genererVariantesParCombinaison(
     nom: Object.values(attributs).join(" / "),
     attributs,
     prixDetail,
+    uniteVente: defauts.uniteVente,
+    pasMin: defauts.pasMin,
+    prixParUnite: defauts.prixParUnite,
   }));
 }
 

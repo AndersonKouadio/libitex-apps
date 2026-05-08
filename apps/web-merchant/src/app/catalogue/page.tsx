@@ -76,7 +76,7 @@ export default function PageCatalogue() {
           <Table>
             <Table.ScrollContainer>
               <Table.Content aria-label="Catalogue produits">
-                <Table.Header>
+                <Table.Header className="table-header-libitex">
                   <Table.Column isRowHeader>Produit</Table.Column>
                   <Table.Column>Type</Table.Column>
                   <Table.Column>Variantes</Table.Column>

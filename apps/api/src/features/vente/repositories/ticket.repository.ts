@@ -64,7 +64,8 @@ export class TicketRepository {
 
   async creerLigne(data: {
     ticketId: string; variantId: string; productName: string; variantName?: string | null;
-    sku: string; quantity: number; unitPrice: string; discount: string;
+    // numeric(15, 3) cote DB : drizzle attend une string pour preserver la precision
+    sku: string; quantity: string; unitPrice: string; discount: string;
     taxRate: string; taxAmount: string; lineTotal: string;
     serialNumber?: string; serialId?: string; batchId?: string; batchNumber?: string;
   }) {
@@ -130,9 +131,12 @@ export class TicketRepository {
   }
 
   async decrementerLot(batchId: string, quantite: number) {
+    // batches.quantityRemaining reste integer (peremption au lot, pas au gramme).
+    // On arrondit la quantite vendue pour rester compatible avec le typage entier.
+    const entier = Math.round(quantite);
     await this.db
       .update(batches)
-      .set({ quantityRemaining: sql`${batches.quantityRemaining} - ${quantite}` })
+      .set({ quantityRemaining: sql`${batches.quantityRemaining} - ${entier}` })
       .where(eq(batches.id, batchId));
   }
 

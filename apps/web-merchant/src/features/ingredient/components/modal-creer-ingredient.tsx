@@ -1,18 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Modal, Button, TextField, Label, Input, Select, ListBox, TextArea } from "@heroui/react";
+import { Modal, Button, TextField, Label, Input, TextArea } from "@heroui/react";
 import { Wheat } from "lucide-react";
 import { creerIngredientSchema, type CreerIngredientDTO } from "../schemas/ingredient.schema";
 import { useAjouterIngredientMutation } from "../queries/ingredient-mutations";
-import { UNITES_ORDONNEES, UNITE_LABELS, type UniteIngredient } from "../types/ingredient.type";
+import { UniteMesure, UNITE_LABELS } from "@/features/unite/types/unite.type";
+import { SelectUnite } from "@/features/unite/components/select-unite";
 
 interface Props {
   ouvert: boolean;
   onFermer: () => void;
 }
 
-const VIDE: CreerIngredientDTO = { nom: "", description: "", unite: "KG", prixUnitaire: 0, seuilAlerte: 0 };
+const VIDE: CreerIngredientDTO = {
+  nom: "", description: "", unite: UniteMesure.KG, prixUnitaire: 0, seuilAlerte: 0,
+};
 
 export function ModalCreerIngredient({ ouvert, onFermer }: Props) {
   const mutation = useAjouterIngredientMutation();
@@ -57,23 +60,12 @@ export function ModalCreerIngredient({ ouvert, onFermer }: Props) {
             </TextField>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Select
+              <SelectUnite
                 isRequired
-                selectedKey={form.unite}
-                onSelectionChange={(k) => maj("unite", String(k) as UniteIngredient)}
-              >
-                <Label>Unité de mesure</Label>
-                <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
-                <Select.Popover>
-                  <ListBox>
-                    {UNITES_ORDONNEES.map((u) => (
-                      <ListBox.Item key={u} id={u} textValue={UNITE_LABELS[u]}>
-                        {UNITE_LABELS[u]}
-                      </ListBox.Item>
-                    ))}
-                  </ListBox>
-                </Select.Popover>
-              </Select>
+                label="Unité de mesure"
+                valeur={form.unite}
+                onChange={(u) => maj("unite", u)}
+              />
 
               <TextField
                 name="prixUnitaire"
@@ -81,7 +73,7 @@ export function ModalCreerIngredient({ ouvert, onFermer }: Props) {
                 value={form.prixUnitaire ? String(form.prixUnitaire) : ""}
                 onChange={(v) => maj("prixUnitaire", v ? Number(v) : 0)}
               >
-                <Label>Prix d'achat par {UNITE_LABELS[form.unite as UniteIngredient]} (F CFA)</Label>
+                <Label>Prix d'achat par {UNITE_LABELS[form.unite]} (F CFA)</Label>
                 <Input placeholder="850" min="0" />
               </TextField>
             </div>
@@ -92,7 +84,7 @@ export function ModalCreerIngredient({ ouvert, onFermer }: Props) {
               value={form.seuilAlerte ? String(form.seuilAlerte) : ""}
               onChange={(v) => maj("seuilAlerte", v ? Number(v) : 0)}
             >
-              <Label>Seuil d'alerte stock bas (en {UNITE_LABELS[form.unite as UniteIngredient]})</Label>
+              <Label>Seuil d'alerte stock bas (en {UNITE_LABELS[form.unite]})</Label>
               <Input placeholder="5" min="0" />
             </TextField>
 

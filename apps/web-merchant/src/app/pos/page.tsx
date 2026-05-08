@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import {
-  Select, ListBox, Label, Button, Chip, Drawer, Modal, toast,
+  Select, ListBox, Label, Button, Chip, Drawer, Modal,
 } from "@heroui/react";
 import { ShoppingCart, PauseCircle, X } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -11,16 +11,16 @@ import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-li
 import { useStockEmplacementQuery } from "@/features/stock/queries/stock-emplacement.query";
 import { ModalCreerEmplacement } from "@/features/stock/components/modal-creer-emplacement";
 import { AucunEmplacement } from "@/components/empty-states/aucun-emplacement";
-import { venteAPI } from "@/features/vente/apis/vente.api";
-import { creerTicketSchema } from "@/features/vente/schemas/vente.schema";
 import { usePanier } from "@/features/vente/hooks/usePanier";
 import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
-import { useInvalidateVenteQuery } from "@/features/vente/queries/index.query";
 import { GrilleProduits } from "@/features/vente/components/grille-produits";
 import { PanierVente } from "@/features/vente/components/panier-vente";
 import { ModalPaiement } from "@/features/vente/components/modal-paiement";
 import { ConfirmationVente } from "@/features/vente/components/confirmation-vente";
 import { ModalTicketsAttente } from "@/features/vente/components/modal-tickets-attente";
+import { ModalSaisirQuantite } from "@/features/vente/components/modal-saisir-quantite";
+import { useSaisieQuantite } from "@/features/vente/hooks/useSaisieQuantite";
+import { useEncaissement } from "@/features/vente/hooks/useEncaissement";
 import { formatMontant } from "@/features/vente/utils/format";
 
 export default function PagePOS() {
@@ -32,81 +32,30 @@ export default function PagePOS() {
   const [emplacementId, setEmplacementId] = useState("");
   const [paiementOuvert, setPaiementOuvert] = useState(false);
   const [panierMobileOuvert, setPanierMobileOuvert] = useState(false);
-  const [enCours, setEnCours] = useState(false);
   const [modalEmpOuvert, setModalEmpOuvert] = useState(false);
   const [modalAttenteOuvert, setModalAttenteOuvert] = useState(false);
-  const [derniereVente, setDerniereVente] = useState<{
-    numero: string; total: number; monnaie: number;
-  } | null>(null);
 
   const aucunEmplacement = emplacements !== undefined && emplacements.length === 0;
   const empId = emplacementId || emplacements?.[0]?.id || "";
   const { data: stocks } = useStockEmplacementQuery(empId || undefined);
   const produits = produitsData?.data ?? [];
-  const invalidateVente = useInvalidateVenteQuery();
 
-  const { data: ticketsAttenteData } = useTicketListQuery({
-    statut: "PARKED",
-    page: 1,
-  });
+  const { data: ticketsAttenteData } = useTicketListQuery({ statut: "PARKED", page: 1 });
   const nombreEnAttente = (ticketsAttenteData?.data ?? []).filter((t) => t.statut === "PARKED").length;
 
-  const encaisser = useCallback(async (methode: string) => {
-    if (!token || !empId || panier.articles.length === 0) return;
+  const saisieQuantite = useSaisieQuantite(panier, produits);
+  const encaissement = useEncaissement(panier, empId, token);
 
-    const payload = creerTicketSchema.safeParse({
-      emplacementId: empId,
-      lignes: panier.articles.map((a) => ({ varianteId: a.varianteId, quantite: a.quantite })),
-    });
-    if (!payload.success) {
-      toast.danger(payload.error.issues[0]?.message ?? "Panier invalide");
-      return;
-    }
+  async function lancerEncaissement(methode: string) {
+    await encaissement.encaisser(methode);
+    setPaiementOuvert(false);
+    setPanierMobileOuvert(false);
+  }
 
-    setEnCours(true);
-    try {
-      const ticket = await venteAPI.creerTicket(token, payload.data);
-      const resultat = await venteAPI.completerTicket(token, ticket.id, {
-        paiements: [{ methode, montant: ticket.total }],
-      });
-
-      setDerniereVente({
-        numero: resultat.numeroTicket,
-        total: resultat.total,
-        monnaie: resultat.monnaie ?? 0,
-      });
-      panier.vider();
-      setPaiementOuvert(false);
-      setPanierMobileOuvert(false);
-    } catch (err: unknown) {
-      toast.danger(err instanceof Error ? err.message : "Erreur lors de la vente");
-    } finally {
-      setEnCours(false);
-    }
-  }, [token, empId, panier]);
-
-  const mettreEnAttente = useCallback(async () => {
-    if (!token || !empId || panier.articles.length === 0) return;
-    setEnCours(true);
-    try {
-      const ticket = await venteAPI.creerTicket(token, {
-        emplacementId: empId,
-        lignes: panier.articles.map((a) => ({
-          varianteId: a.varianteId,
-          quantite: a.quantite,
-        })),
-      });
-      await venteAPI.mettreEnAttente(token, ticket.id);
-      panier.vider();
-      setPanierMobileOuvert(false);
-      invalidateVente();
-      toast.success(`Ticket ${ticket.numeroTicket} mis en attente`);
-    } catch (err: unknown) {
-      toast.danger(err instanceof Error ? err.message : "Erreur lors de la mise en attente");
-    } finally {
-      setEnCours(false);
-    }
-  }, [token, empId, panier, invalidateVente]);
+  async function lancerMiseEnAttente() {
+    await encaissement.mettreEnAttente();
+    setPanierMobileOuvert(false);
+  }
 
   if (aucunEmplacement) {
     return (
@@ -141,7 +90,7 @@ export default function PagePOS() {
               onPress={() => setModalAttenteOuvert(true)}
               aria-label="Tickets en attente"
             >
-              <PauseCircle size={16} />
+              <PauseCircle size={18} strokeWidth={2} />
               <span className="hidden sm:inline">Attente</span>
               {nombreEnAttente > 0 && (
                 <Chip className="bg-warning text-warning-foreground text-[10px] h-4 min-w-4 px-1">
@@ -176,7 +125,7 @@ export default function PagePOS() {
         </header>
 
         <div className="flex-1 overflow-hidden flex flex-col pb-20 lg:pb-0">
-          <GrilleProduits produits={produits} stocks={stocks} onAjouter={panier.ajouter} />
+          <GrilleProduits produits={produits} stocks={stocks} onAjouter={saisieQuantite.ajouterDepuisGrille} />
         </div>
       </div>
 
@@ -192,7 +141,8 @@ export default function PagePOS() {
           onRetirer={panier.retirer}
           onVider={panier.vider}
           onEncaisser={() => setPaiementOuvert(true)}
-          onAttente={mettreEnAttente}
+          onAttente={lancerMiseEnAttente}
+          onSaisirQuantite={saisieQuantite.ouvrirPourLigne}
         />
       </div>
 
@@ -248,7 +198,8 @@ export default function PagePOS() {
               onRetirer={panier.retirer}
               onVider={panier.vider}
               onEncaisser={ouvrirEncaissement}
-              onAttente={mettreEnAttente}
+              onAttente={lancerMiseEnAttente}
+              onSaisirQuantite={saisieQuantite.ouvrirPourLigne}
             />
           </Drawer.Dialog>
         </Drawer.Content>
@@ -265,8 +216,8 @@ export default function PagePOS() {
             <Modal.Body>
               <ModalPaiement
                 total={panier.total}
-                enCours={enCours}
-                onPayer={encaisser}
+                enCours={encaissement.enCours}
+                onPayer={lancerEncaissement}
                 onFermer={() => setPaiementOuvert(false)}
               />
             </Modal.Body>
@@ -274,12 +225,12 @@ export default function PagePOS() {
         </Modal.Container>
       </Modal.Backdrop>
 
-      {derniereVente && (
+      {encaissement.derniereVente && (
         <ConfirmationVente
-          numeroTicket={derniereVente.numero}
-          total={derniereVente.total}
-          monnaie={derniereVente.monnaie}
-          onNouvelle={() => setDerniereVente(null)}
+          numeroTicket={encaissement.derniereVente.numero}
+          total={encaissement.derniereVente.total}
+          monnaie={encaissement.derniereVente.monnaie}
+          onNouvelle={encaissement.fermerDerniereVente}
         />
       )}
 
@@ -290,6 +241,21 @@ export default function PagePOS() {
         produits={produits}
         onReprendre={(lignes, images) => panier.chargerDepuisTicket(lignes, images)}
       />
+
+      {saisieQuantite.saisie && (
+        <ModalSaisirQuantite
+          ouvert
+          onFermer={saisieQuantite.fermer}
+          onConfirmer={saisieQuantite.confirmer}
+          nomProduit={saisieQuantite.saisie.produit.nom}
+          nomVariante={saisieQuantite.saisie.variante.nom || saisieQuantite.saisie.variante.sku}
+          uniteVente={saisieQuantite.saisie.variante.uniteVente}
+          pasMin={saisieQuantite.saisie.variante.pasMin}
+          prixUnitaire={saisieQuantite.saisie.variante.prixDetail}
+          prixParUnite={saisieQuantite.saisie.variante.prixParUnite}
+          quantiteCourante={saisieQuantite.saisie.quantiteCourante}
+        />
+      )}
     </div>
   );
 }

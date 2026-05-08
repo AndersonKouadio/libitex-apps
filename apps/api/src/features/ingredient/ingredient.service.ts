@@ -1,39 +1,36 @@
 import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
-import { IngredientUnit, INGREDIENT_UNIT_BASE } from "@libitex/shared";
+import { UniteMesure, convertirVersUnite } from "@libitex/shared";
 import { IngredientRepository } from "./repositories/ingredient.repository";
+import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import {
   CreerIngredientDto, ModifierIngredientDto, EntreeIngredientDto, AjustementIngredientDto,
   DefinirRecetteDto, IngredientResponseDto, StockIngredientDto, LigneRecetteResponseDto,
 } from "./dto/ingredient.dto";
 
 /**
- * Convertit une quantite + unite saisie vers l'unite de base de l'ingredient.
- * Ex: ingredient stocké en KG, on saisit 250 G → 0.25 KG.
- *     ingredient stocké en L, on saisit 500 ML → 0.5 L.
+ * Convertit une quantite saisie vers l'unite de base de l'ingredient.
+ * Wrapper qui transforme l'erreur generique en BadRequestException Nest.
  */
-function convertirVersUniteCible(
+function convertirOuRejeter(
   quantite: number,
-  uniteSource: IngredientUnit,
-  uniteCible: IngredientUnit,
+  source: UniteMesure,
+  cible: UniteMesure,
 ): number {
-  const baseSource = INGREDIENT_UNIT_BASE[uniteSource];
-  const baseCible = INGREDIENT_UNIT_BASE[uniteCible];
-
-  if (baseSource.unit !== baseCible.unit) {
-    throw new BadRequestException(
-      `Conversion impossible entre ${uniteSource} et ${uniteCible}`,
-    );
+  try {
+    return convertirVersUnite(quantite, source, cible);
+  } catch (e) {
+    throw new BadRequestException((e as Error).message);
   }
-
-  const enBase = quantite * baseSource.factor;
-  return enBase / baseCible.factor;
 }
 
 @Injectable()
 export class IngredientService {
-  constructor(private readonly repo: IngredientRepository) {}
+  constructor(
+    private readonly repo: IngredientRepository,
+    private readonly audit: AuditService,
+  ) {}
 
-  async creer(tenantId: string, dto: CreerIngredientDto): Promise<IngredientResponseDto> {
+  async creer(tenantId: string, userId: string, dto: CreerIngredientDto): Promise<IngredientResponseDto> {
     const ing = await this.repo.creer({
       tenantId,
       name: dto.nom,
@@ -41,6 +38,11 @@ export class IngredientService {
       unit: dto.unite,
       pricePerUnit: dto.prixUnitaire?.toString(),
       lowStockThreshold: dto.seuilAlerte?.toString(),
+    });
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.INGREDIENT_CREATED,
+      entityType: "INGREDIENT", entityId: ing.id,
+      after: { nom: ing.name, unite: ing.unit },
     });
     return this.toResponse(ing);
   }
@@ -50,7 +52,10 @@ export class IngredientService {
     return list.map((i) => this.toResponse(i));
   }
 
-  async modifier(tenantId: string, id: string, dto: ModifierIngredientDto): Promise<IngredientResponseDto> {
+  async modifier(tenantId: string, userId: string, id: string, dto: ModifierIngredientDto): Promise<IngredientResponseDto> {
+    const avant = await this.repo.obtenir(tenantId, id);
+    if (!avant) throw new NotFoundException("Ingrédient introuvable");
+
     const data: Record<string, unknown> = {};
     if (dto.nom !== undefined) data.name = dto.nom;
     if (dto.description !== undefined) data.description = dto.description;
@@ -60,11 +65,25 @@ export class IngredientService {
 
     const ing = await this.repo.modifier(tenantId, id, data);
     if (!ing) throw new NotFoundException("Ingrédient introuvable");
+
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.INGREDIENT_UPDATED,
+      entityType: "INGREDIENT", entityId: id,
+      before: { nom: avant.name, unite: avant.unit, prix: avant.pricePerUnit },
+      after: { nom: ing.name, unite: ing.unit, prix: ing.pricePerUnit },
+    });
     return this.toResponse(ing);
   }
 
-  async supprimer(tenantId: string, id: string): Promise<void> {
+  async supprimer(tenantId: string, userId: string, id: string): Promise<void> {
+    const avant = await this.repo.obtenir(tenantId, id);
+    if (!avant) throw new NotFoundException("Ingrédient introuvable");
     await this.repo.supprimer(tenantId, id);
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.INGREDIENT_DELETED,
+      entityType: "INGREDIENT", entityId: id,
+      before: { nom: avant.name, unite: avant.unit },
+    });
   }
 
   // --- Stock ---
@@ -73,11 +92,11 @@ export class IngredientService {
     const ingredient = await this.repo.obtenir(tenantId, dto.ingredientId);
     if (!ingredient) throw new NotFoundException("Ingrédient introuvable");
 
-    const uniteSaisie = (dto.unite ?? ingredient.unit) as IngredientUnit;
-    const quantiteCible = convertirVersUniteCible(
+    const uniteSaisie = (dto.unite ?? ingredient.unit) as UniteMesure;
+    const quantiteCible = convertirOuRejeter(
       dto.quantite,
       uniteSaisie,
-      ingredient.unit as IngredientUnit,
+      ingredient.unit as UniteMesure,
     );
 
     const unitCost = dto.coutTotal !== undefined && dto.quantite > 0
@@ -90,11 +109,24 @@ export class IngredientService {
       locationId: dto.emplacementId,
       type: "STOCK_IN",
       quantityDelta: quantiteCible.toString(),
-      unit: ingredient.unit as "G" | "KG" | "ML" | "L" | "PIECE",
+      unit: ingredient.unit as UniteMesure,
       unitCost,
       reference: dto.reference,
       note: dto.note,
       userId,
+    });
+
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.INGREDIENT_RECEIVED,
+      entityType: "INGREDIENT", entityId: dto.ingredientId,
+      after: {
+        emplacementId: dto.emplacementId,
+        quantiteSaisie: dto.quantite,
+        uniteSaisie: uniteSaisie,
+        quantiteEnUniteIngredient: quantiteCible,
+        coutTotal: dto.coutTotal,
+        reference: dto.reference,
+      },
     });
   }
 
@@ -102,14 +134,28 @@ export class IngredientService {
     const ingredient = await this.repo.obtenir(tenantId, dto.ingredientId);
     if (!ingredient) throw new NotFoundException("Ingrédient introuvable");
 
+    const stockAvant = await this.repo.stockActuel(tenantId, dto.ingredientId, dto.emplacementId);
+
     await this.repo.definirStockExact({
       tenantId,
       ingredientId: dto.ingredientId,
       locationId: dto.emplacementId,
       quantite: dto.quantiteReelle.toString(),
-      unit: ingredient.unit as "G" | "KG" | "ML" | "L" | "PIECE",
+      unit: ingredient.unit as UniteMesure,
       note: dto.note,
       userId,
+    });
+
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.INGREDIENT_ADJUSTED,
+      entityType: "INGREDIENT", entityId: dto.ingredientId,
+      before: { quantiteAvant: stockAvant },
+      after: {
+        emplacementId: dto.emplacementId,
+        quantiteApres: dto.quantiteReelle,
+        unite: ingredient.unit,
+        note: dto.note,
+      },
     });
   }
 
@@ -174,10 +220,10 @@ export class IngredientService {
       if (!ingredient) continue;
 
       const aConsommer = Number(ligne.quantite) * params.quantiteVendue;
-      const enUniteCible = convertirVersUniteCible(
+      const enUniteCible = convertirOuRejeter(
         aConsommer,
-        ligne.unite as IngredientUnit,
-        ingredient.unit as IngredientUnit,
+        ligne.unite as UniteMesure,
+        ingredient.unit as UniteMesure,
       );
 
       await this.repo.appliquerMouvement({
@@ -186,7 +232,7 @@ export class IngredientService {
         locationId: params.locationId,
         type: "CONSUMPTION",
         quantityDelta: (-enUniteCible).toString(),
-        unit: ingredient.unit as "G" | "KG" | "ML" | "L" | "PIECE",
+        unit: ingredient.unit as UniteMesure,
         reference: params.reference,
         userId: params.userId,
       });

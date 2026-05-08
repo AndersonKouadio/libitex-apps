@@ -6,6 +6,7 @@ import { ActivitySector, ACTIVITY_SECTOR_PRODUCT_TYPES } from "@libitex/shared";
 import { UtilisateurRepository } from "./repositories/utilisateur.repository";
 import { MembershipRepository } from "./repositories/membership.repository";
 import { StockService } from "../stock/stock.service";
+import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import {
   IdentifiantsInvalidesException,
   EmailDejaUtiliseException,
@@ -26,6 +27,7 @@ export class AuthService {
     private readonly stockService: StockService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly audit: AuditService,
   ) {}
 
   async inscrire(dto: InscriptionDto): Promise<AuthResponseDto> {
@@ -74,15 +76,36 @@ export class AuthService {
       );
     }
 
+    await this.audit.log({
+      tenantId: tenant.id, userId: user.id,
+      action: AUDIT_ACTIONS.TENANT_CREATED,
+      entityType: "TENANT", entityId: tenant.id,
+      after: { nom: tenant.name, slug: tenant.slug, secteurActivite: tenant.activitySector },
+    });
+
     return this.construireReponseAuth(user, tenant.id);
   }
 
   async connecter(dto: ConnexionDto): Promise<AuthResponseDto> {
     const user = await this.utilisateurRepo.trouverParEmail(dto.email);
-    if (!user) throw new IdentifiantsInvalidesException();
+    if (!user) {
+      // On ne peut pas auditer (pas de tenantId/userId), juste lever l'exception.
+      throw new IdentifiantsInvalidesException();
+    }
 
     const motDePasseValide = await bcrypt.compare(dto.motDePasse, user.passwordHash);
-    if (!motDePasseValide) throw new IdentifiantsInvalidesException();
+    if (!motDePasseValide) {
+      // L'utilisateur existe mais le mot de passe est mauvais : auditable.
+      if (user.tenantId) {
+        await this.audit.log({
+          tenantId: user.tenantId, userId: user.id,
+          action: AUDIT_ACTIONS.USER_LOGIN_FAILED,
+          entityType: "USER", entityId: user.id,
+          after: { email: dto.email },
+        });
+      }
+      throw new IdentifiantsInvalidesException();
+    }
 
     await this.assurerMembership(user.id, user.tenantId, user.role);
     await this.utilisateurRepo.mettreAJourDerniereConnexion(user.id);
@@ -92,6 +115,13 @@ export class AuthService {
     if (!tenantActifId) {
       throw new ForbiddenException("Aucune boutique associee a ce compte");
     }
+
+    await this.audit.log({
+      tenantId: tenantActifId, userId: user.id,
+      action: AUDIT_ACTIONS.USER_LOGIN,
+      entityType: "USER", entityId: user.id,
+      after: { email: user.email },
+    });
 
     return this.construireReponseAuth(user, tenantActifId);
   }

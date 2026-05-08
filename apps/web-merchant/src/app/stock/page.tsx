@@ -110,7 +110,7 @@ export default function PageStock() {
               <Table>
                 <Table.ScrollContainer>
                   <Table.Content aria-label="Stock par emplacement">
-                    <Table.Header>
+                    <Table.Header className="table-header-libitex">
                       <Table.Column isRowHeader>Produit</Table.Column>
                       <Table.Column>SKU</Table.Column>
                       <Table.Column>Type</Table.Column>

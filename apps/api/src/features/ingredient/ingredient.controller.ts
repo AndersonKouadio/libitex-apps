@@ -28,7 +28,7 @@ export class IngredientController {
   @ApiOperation({ summary: "Créer un nouvel ingrédient" })
   @Roles("ADMIN", "MANAGER")
   creer(@CurrentUser() user: CurrentUserData, @Body() dto: CreerIngredientDto) {
-    return this.service.creer(user.tenantId, dto);
+    return this.service.creer(user.tenantId, user.userId, dto);
   }
 
   @Patch(":id")
@@ -39,14 +39,14 @@ export class IngredientController {
     @Param("id") id: string,
     @Body() dto: ModifierIngredientDto,
   ) {
-    return this.service.modifier(user.tenantId, id, dto);
+    return this.service.modifier(user.tenantId, user.userId, id, dto);
   }
 
   @Delete(":id")
   @ApiOperation({ summary: "Supprimer un ingrédient (soft delete)" })
   @Roles("ADMIN", "MANAGER")
   supprimer(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
-    return this.service.supprimer(user.tenantId, id);
+    return this.service.supprimer(user.tenantId, user.userId, id);
   }
 
   @Post("reception")

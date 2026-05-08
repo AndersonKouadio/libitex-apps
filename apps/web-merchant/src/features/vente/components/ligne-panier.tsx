@@ -2,18 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@heroui/react";
-import { Minus, Plus, Trash2, Package } from "lucide-react";
+import { Minus, Plus, Trash2, Package, Pencil } from "lucide-react";
 import type { ArticlePanier } from "../hooks/usePanier";
 import { formatMontant } from "../utils/format";
+import { formaterQuantite, UNITE_LABELS, uniteAccepteDecimal } from "@/features/unite/types/unite.type";
 
 interface Props {
   article: ArticlePanier;
   onModifierQuantite: (varianteId: string, delta: number) => void;
   onDefinirQuantite: (varianteId: string, quantite: number) => void;
   onRetirer: (varianteId: string) => void;
+  /** Optionnel : ouvre une saisie directe (utile pour produits pesés). */
+  onSaisirQuantite?: (varianteId: string) => void;
 }
 
-export function LignePanier({ article, onModifierQuantite, onDefinirQuantite, onRetirer }: Props) {
+export function LignePanier({
+  article,
+  onModifierQuantite,
+  onDefinirQuantite,
+  onRetirer,
+  onSaisirQuantite,
+}: Props) {
+  const decimal = uniteAccepteDecimal(article.uniteVente);
   const [valeurInput, setValeurInput] = useState(String(article.quantite));
 
   // Resynchroniser si la quantite change ailleurs (delta via +/-)
@@ -46,7 +56,7 @@ export function LignePanier({ article, onModifierQuantite, onDefinirQuantite, on
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted/30">
-            <Package size={20} />
+            <Package size={20} strokeWidth={2} />
           </div>
         )}
       </div>
@@ -66,7 +76,7 @@ export function LignePanier({ article, onModifierQuantite, onDefinirQuantite, on
             onPress={() => onRetirer(article.varianteId)}
             aria-label={`Retirer ${article.nomProduit}`}
           >
-            <Trash2 size={14} />
+            <Trash2 size={16} strokeWidth={2} />
           </Button>
         </div>
 
@@ -79,29 +89,41 @@ export function LignePanier({ article, onModifierQuantite, onDefinirQuantite, on
               isDisabled={article.quantite <= 1}
               aria-label="Diminuer"
             >
-              <Minus size={12} />
+              <Minus size={16} strokeWidth={2} />
             </Button>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              value={valeurInput}
-              onChange={(e) => setValeurInput(e.target.value)}
-              onBlur={commit}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
-                if (e.key === "Escape") setValeurInput(String(article.quantite));
-              }}
-              className="w-12 text-center text-sm font-semibold tabular-nums bg-transparent outline-none focus:bg-surface focus:ring-1 focus:ring-accent/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              aria-label={`Quantité de ${article.nomProduit}`}
-            />
+            {decimal && onSaisirQuantite ? (
+              <Button
+                variant="ghost"
+                className="px-3 h-7 min-w-0 text-sm font-semibold tabular-nums hover:text-accent hover:bg-transparent gap-1.5 rounded-none"
+                onPress={() => onSaisirQuantite(article.varianteId)}
+                aria-label="Saisir une quantité"
+              >
+                {formaterQuantite(article.quantite, article.uniteVente)}
+                <Pencil size={12} strokeWidth={2} className="text-muted/70" />
+              </Button>
+            ) : (
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                value={valeurInput}
+                onChange={(e) => setValeurInput(e.target.value)}
+                onBlur={commit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+                  if (e.key === "Escape") setValeurInput(String(article.quantite));
+                }}
+                className="w-12 text-center text-sm font-semibold tabular-nums bg-transparent outline-none focus:bg-surface focus:ring-1 focus:ring-accent/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                aria-label={`Quantité de ${article.nomProduit}`}
+              />
+            )}
             <Button
               variant="ghost"
               className="w-7 h-7 min-w-0 p-0 text-muted hover:text-foreground hover:bg-foreground/5 rounded-none"
               onPress={() => onModifierQuantite(article.varianteId, 1)}
               aria-label="Augmenter"
             >
-              <Plus size={12} />
+              <Plus size={16} strokeWidth={2} />
             </Button>
           </div>
           <div className="text-right">
@@ -109,11 +131,11 @@ export function LignePanier({ article, onModifierQuantite, onDefinirQuantite, on
               {formatMontant(article.totalLigne)}
               <span className="text-[10px] font-normal text-muted ml-0.5">F</span>
             </p>
-            {article.quantite > 1 && (
-              <p className="text-[10px] text-muted/70 tabular-nums mt-0.5">
-                {formatMontant(article.prixUnitaire)} F × {article.quantite}
-              </p>
-            )}
+            <p className="text-[10px] text-muted/70 tabular-nums mt-0.5">
+              {formatMontant(article.prixUnitaire)} F
+              {article.prixParUnite && <> / {UNITE_LABELS[article.uniteVente]}</>}
+              {!article.prixParUnite && article.quantite > 1 && <> × {article.quantite}</>}
+            </p>
           </div>
         </div>
       </div>

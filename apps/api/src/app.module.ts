@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { DatabaseModule } from "./database/database.module";
+import { AuditModule } from "./common/audit/audit.module";
 import { AuthModule } from "./features/auth/auth.module";
 import { CatalogueModule } from "./features/catalogue/catalogue.module";
 import { StockModule } from "./features/stock/stock.module";
@@ -18,6 +19,7 @@ import { EquipeModule } from "./features/equipe/equipe.module";
       envFilePath: [".env", "../../.env"],
     }),
     DatabaseModule,
+    AuditModule,
     AuthModule,
     CatalogueModule,
     StockModule,

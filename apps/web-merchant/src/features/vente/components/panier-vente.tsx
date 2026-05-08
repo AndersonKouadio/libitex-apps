@@ -5,6 +5,7 @@ import { ShoppingCart, PauseCircle, Receipt } from "lucide-react";
 import type { ArticlePanier } from "../hooks/usePanier";
 import { formatMontant } from "../utils/format";
 import { LignePanier } from "./ligne-panier";
+import { BoutonPOS } from "./bouton-pos";
 
 interface Props {
   articles: ArticlePanier[];
@@ -18,12 +19,14 @@ interface Props {
   onAttente: () => void;
   /** Mode d'affichage. "lateral" = desktop fixe, "plein" = drawer mobile */
   mode?: "lateral" | "plein";
+  /** Optionnel : ouvre la modale de saisie pour les unites continues (kg, m). */
+  onSaisirQuantite?: (varianteId: string) => void;
 }
 
 export function PanierVente({
   articles, total, nombreArticles,
   onModifierQuantite, onDefinirQuantite, onRetirer, onVider, onEncaisser, onAttente,
-  mode = "lateral",
+  onSaisirQuantite, mode = "lateral",
 }: Props) {
   const vide = articles.length === 0;
 
@@ -36,7 +39,7 @@ export function PanierVente({
       <header className="px-4 py-3.5 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-7 h-7 rounded-lg bg-accent/10 text-accent flex items-center justify-center">
-            <Receipt size={14} />
+            <Receipt size={14} strokeWidth={2} />
           </span>
           <div>
             <p className="text-sm font-semibold text-foreground leading-none">Panier</p>
@@ -58,7 +61,7 @@ export function PanierVente({
         {vide ? (
           <div className="flex flex-col items-center justify-center h-full px-6 text-center min-h-[240px]">
             <div className="w-16 h-16 rounded-2xl bg-surface-secondary flex items-center justify-center mb-3">
-              <ShoppingCart size={28} className="text-muted/50" />
+              <ShoppingCart size={28} strokeWidth={2} className="text-muted/50" />
             </div>
             <p className="text-sm font-medium text-foreground">Panier vide</p>
             <p className="text-xs text-muted mt-1 max-w-[240px]">
@@ -74,6 +77,7 @@ export function PanierVente({
                 onModifierQuantite={onModifierQuantite}
                 onDefinirQuantite={onDefinirQuantite}
                 onRetirer={onRetirer}
+                onSaisirQuantite={onSaisirQuantite}
               />
             ))}
           </ul>
@@ -84,36 +88,36 @@ export function PanierVente({
         <div className="px-4 py-3.5 rounded-xl bg-navy">
           <div className="flex items-end justify-between gap-2">
             <span className="text-xs text-navy-foreground/60 uppercase tracking-wider">Total</span>
-            <span className="text-2xl font-bold text-navy-foreground tabular-nums tracking-tight leading-none">
+            <span className="text-5xl font-bold text-navy-foreground tabular-nums tracking-tight leading-none">
               {formatMontant(total)}
-              <span className="text-sm font-normal text-navy-foreground/50 ml-1">F</span>
+              <span className="text-base font-normal text-navy-foreground/50 ml-1.5">F</span>
             </span>
           </div>
           {!vide && (
-            <p className="text-[10px] text-navy-foreground/40 mt-1">
+            <p className="text-[10px] text-navy-foreground/55 mt-1">
               {nombreArticles} article{nombreArticles > 1 ? "s" : ""}
             </p>
           )}
         </div>
         <div className="flex gap-2">
-          <Button
+          <BoutonPOS
             variant="primary"
-            className="flex-1 h-11 font-semibold"
+            className="flex-1"
             onPress={onEncaisser}
             isDisabled={vide}
           >
             Encaisser
-          </Button>
-          <Button
+          </BoutonPOS>
+          <BoutonPOS
             variant="outline"
-            className="h-11 px-4 gap-1.5 border-warning/40 text-warning hover:bg-warning/5"
+            className="px-5 border-warning/40 text-warning hover:bg-warning/5"
             onPress={onAttente}
             isDisabled={vide}
             aria-label="Mettre en attente"
           >
-            <PauseCircle size={16} />
+            <PauseCircle size={18} strokeWidth={2} />
             <span className="hidden sm:inline">Attente</span>
-          </Button>
+          </BoutonPOS>
         </div>
       </footer>
     </div>

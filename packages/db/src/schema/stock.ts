@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, varchar, text, integer, boolean, timestamp, pgEnum, index,
+  pgTable, uuid, varchar, text, numeric, boolean, timestamp, pgEnum, index,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
 import { variants } from "./catalog";
@@ -42,7 +42,9 @@ export const stockMovements = pgTable("stock_movements", {
   variantId: uuid("variant_id").references(() => variants.id).notNull(),
   locationId: uuid("location_id").references(() => locations.id).notNull(),
   movementType: stockMovementTypeEnum("movement_type").notNull(),
-  quantity: integer("quantity").notNull(),
+  // Numeric signe pour permettre les mouvements decimaux (vente au poids,
+  // au metre...). Negatif pour les sorties, positif pour les entrees.
+  quantity: numeric("quantity", { precision: 15, scale: 3 }).notNull(),
   referenceType: varchar("reference_type", { length: 50 }),
   referenceId: uuid("reference_id"),
   batchId: uuid("batch_id"),

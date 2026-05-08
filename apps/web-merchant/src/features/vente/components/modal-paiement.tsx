@@ -1,9 +1,9 @@
 "use client";
 
-import { Button } from "@heroui/react";
 import { Banknote, Smartphone, CreditCard, Landmark, type LucideIcon } from "lucide-react";
 import { MethodePaiement } from "../types/vente.type";
 import { formatMontant } from "../utils/format";
+import { BoutonPOS } from "./bouton-pos";
 
 interface Props {
   total: number;
@@ -31,21 +31,21 @@ export function ModalPaiement({ total, enCours, onPayer }: Props) {
   return (
     <div className="space-y-2">
       {METHODES.map((m) => (
-        <Button
+        <BoutonPOS
           key={m.code}
           variant="outline"
-          className="w-full justify-start gap-3 px-4 py-3.5 h-auto hover:border-accent/50 hover:shadow-sm"
+          className="w-full justify-start px-4 hover:border-accent/50 hover:shadow-sm"
           onPress={() => onPayer(m.code)}
           isDisabled={enCours}
         >
-          <span className={`w-9 h-9 rounded-lg flex items-center justify-center ${m.classes}`}>
-            <m.icone size={18} strokeWidth={1.8} />
+          <span className={`w-10 h-10 rounded-lg flex items-center justify-center ${m.classes}`}>
+            <m.icone size={20} strokeWidth={2} />
           </span>
           <span className="text-sm font-medium text-foreground">{m.libelle}</span>
-          <span className="ml-auto text-sm font-semibold text-foreground tabular-nums">
+          <span className="ml-auto text-base font-semibold text-foreground tabular-nums">
             {formatMontant(total)} F
           </span>
-        </Button>
+        </BoutonPOS>
       ))}
     </div>
   );

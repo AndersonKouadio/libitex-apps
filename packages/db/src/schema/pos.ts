@@ -61,7 +61,9 @@ export const ticketLines = pgTable("ticket_lines", {
   productName: varchar("product_name", { length: 500 }).notNull(),
   variantName: varchar("variant_name", { length: 500 }),
   sku: varchar("sku", { length: 100 }).notNull(),
-  quantity: integer("quantity").notNull().default(1),
+  // Numeric pour permettre les ventes au poids/longueur/volume (ex: 1.250 kg).
+  // Pour les variantes en PIECE, la quantite reste un entier en pratique.
+  quantity: numeric("quantity", { precision: 15, scale: 3 }).notNull().default("1"),
   unitPrice: numeric("unit_price", { precision: 15, scale: 2 }).notNull(),
   discount: numeric("discount", { precision: 15, scale: 2 }).default("0"),
   taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).default("0"),

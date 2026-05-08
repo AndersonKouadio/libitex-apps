@@ -25,7 +25,10 @@ export class StockRepository {
 
   async enregistrerMouvement(data: {
     tenantId: string; variantId: string; locationId: string;
-    movementType: string; quantity: number; userId: string;
+    movementType: string;
+    // numeric(15, 3) cote DB : drizzle attend une string pour preserver la precision.
+    quantity: string;
+    userId: string;
     note?: string; referenceType?: string; referenceId?: string;
     batchId?: string; serialId?: string;
   }) {

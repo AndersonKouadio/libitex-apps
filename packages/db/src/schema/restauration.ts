@@ -6,16 +6,9 @@ import { tenants } from "./tenants";
 import { locations } from "./stock";
 import { variants } from "./catalog";
 import { users } from "./users";
+import { uniteMesureEnum } from "./_shared";
 
 // ─── Enums ───
-
-export const ingredientUnitEnum = pgEnum("ingredient_unit", [
-  "G",      // gramme
-  "KG",     // kilogramme
-  "ML",     // millilitre
-  "L",      // litre
-  "PIECE",  // unite (oeufs, citrons...)
-]);
 
 export const ingredientMovementTypeEnum = pgEnum("ingredient_movement_type", [
   "STOCK_IN",       // reception
@@ -33,7 +26,7 @@ export const ingredients = pgTable("ingredients", {
   tenantId: uuid("tenant_id").references(() => tenants.id).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  unit: ingredientUnitEnum("unit").notNull(),
+  unit: uniteMesureEnum("unit").notNull(),
   // Coût d'achat moyen pour 1 unité (1 kg, 1 L, 1 piece...)
   pricePerUnit: numeric("price_per_unit", { precision: 15, scale: 4 }).default("0"),
   // Niveau d'alerte stock bas
@@ -71,7 +64,7 @@ export const ingredientMovements = pgTable("ingredient_movements", {
   type: ingredientMovementTypeEnum("type").notNull(),
   // Quantite signee: negatif pour les sorties, positif pour les entrees
   quantity: numeric("quantity", { precision: 15, scale: 3 }).notNull(),
-  unit: ingredientUnitEnum("unit").notNull(),
+  unit: uniteMesureEnum("unit").notNull(),
   // Cout unitaire au moment du mouvement (FIFO/moyenne ponderee)
   unitCost: numeric("unit_cost", { precision: 15, scale: 4 }),
   reference: varchar("reference", { length: 255 }), // numero ticket, reference fournisseur...
@@ -96,7 +89,7 @@ export const recipeLines = pgTable("recipe_lines", {
   ingredientId: uuid("ingredient_id").references(() => ingredients.id).notNull(),
   // Quantite consommee pour 1 vente du menu (ex: 0.250 kg de farine)
   quantity: numeric("quantity", { precision: 15, scale: 3 }).notNull(),
-  unit: ingredientUnitEnum("unit").notNull(),
+  unit: uniteMesureEnum("unit").notNull(),
   // Position dans la liste (ordre d'affichage)
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

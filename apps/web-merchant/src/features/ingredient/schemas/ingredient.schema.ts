@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { UniteMesure } from "@/features/unite/types/unite.type";
 
-export const UNITES_VALIDES = ["G", "KG", "ML", "L", "PIECE"] as const;
+const uniteSchema = z.nativeEnum(UniteMesure);
 
 export const creerIngredientSchema = z.object({
   nom: z.string().min(2, "Nom requis (2 caractères min.)"),
   description: z.string().optional(),
-  unite: z.enum(UNITES_VALIDES),
+  unite: uniteSchema,
   prixUnitaire: z.number().min(0, "Prix invalide").optional(),
   seuilAlerte: z.number().min(0, "Seuil invalide").optional(),
 });
@@ -14,7 +15,7 @@ export const entreeIngredientSchema = z.object({
   ingredientId: z.string().min(1, "Sélectionnez un ingrédient"),
   emplacementId: z.string().min(1, "Sélectionnez un emplacement"),
   quantite: z.number().min(0.001, "La quantité doit être supérieure à 0"),
-  unite: z.enum(UNITES_VALIDES).optional(),
+  unite: uniteSchema.optional(),
   coutTotal: z.number().min(0).optional(),
   reference: z.string().optional(),
   note: z.string().optional(),
@@ -30,7 +31,7 @@ export const ajustementIngredientSchema = z.object({
 export const ligneRecetteSchema = z.object({
   ingredientId: z.string().min(1),
   quantite: z.number().min(0.001, "Quantité requise"),
-  unite: z.enum(UNITES_VALIDES),
+  unite: uniteSchema,
 });
 
 export const definirRecetteSchema = z.object({

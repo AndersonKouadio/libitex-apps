@@ -4,12 +4,13 @@ import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
   type Database, ingredients, ingredientInventory, ingredientMovements, recipeLines,
 } from "@libitex/db";
+import type { UniteMesure } from "@libitex/shared";
 
 interface CreerIngredientData {
   tenantId: string;
   name: string;
   description?: string;
-  unit: "G" | "KG" | "ML" | "L" | "PIECE";
+  unit: UniteMesure;
   pricePerUnit?: string;
   lowStockThreshold?: string;
 }
@@ -89,7 +90,7 @@ export class IngredientRepository {
     locationId: string;
     type: "STOCK_IN" | "CONSUMPTION" | "ADJUSTMENT" | "WASTE" | "TRANSFER_IN" | "TRANSFER_OUT";
     quantityDelta: string;  // signed: negative for outbound
-    unit: "G" | "KG" | "ML" | "L" | "PIECE";
+    unit: UniteMesure;
     unitCost?: string;
     reference?: string;
     note?: string;
@@ -142,7 +143,7 @@ export class IngredientRepository {
     quantite: string;
     note?: string;
     userId?: string;
-    unit: "G" | "KG" | "ML" | "L" | "PIECE";
+    unit: UniteMesure;
   }) {
     const actuel = await this.stockActuel(data.tenantId, data.ingredientId, data.locationId);
     const delta = (Number(data.quantite) - actuel).toString();
@@ -186,7 +187,7 @@ export class IngredientRepository {
   async definirRecette(variantId: string, lignes: Array<{
     ingredientId: string;
     quantity: string;
-    unit: "G" | "KG" | "ML" | "L" | "PIECE";
+    unit: UniteMesure;
   }>) {
     await this.db.delete(recipeLines).where(eq(recipeLines.variantId, variantId));
     if (lignes.length === 0) return;

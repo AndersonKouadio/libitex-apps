@@ -5,9 +5,8 @@ import { Button, Select, ListBox, Label, Input } from "@heroui/react";
 import { Plus, X, Wheat } from "lucide-react";
 import Link from "next/link";
 import { useIngredientListQuery } from "@/features/ingredient/queries/ingredient-list.query";
-import {
-  UNITES_ORDONNEES, UNITE_LABELS, type UniteIngredient,
-} from "@/features/ingredient/types/ingredient.type";
+import { UniteMesure, UNITE_LABELS } from "@/features/unite/types/unite.type";
+import { SelectUnite } from "@/features/unite/components/select-unite";
 import type { LigneRecetteDTO } from "@/features/ingredient/schemas/ingredient.schema";
 
 interface Props {
@@ -19,7 +18,7 @@ export function SectionRecetteMenu({ lignes, onChange }: Props) {
   const { data: ingredients } = useIngredientListQuery();
   const [ingredientId, setIngredientId] = useState("");
   const [quantite, setQuantite] = useState("");
-  const [unite, setUnite] = useState<UniteIngredient>("G");
+  const [unite, setUnite] = useState<UniteMesure>(UniteMesure.G);
 
   function ajouter() {
     const id = ingredientId.trim();
@@ -119,23 +118,9 @@ export function SectionRecetteMenu({ lignes, onChange }: Props) {
                   min="0"
                   step="0.001"
                 />
-                <Select
-                  selectedKey={unite}
-                  onSelectionChange={(k) => setUnite(String(k) as UniteIngredient)}
-                  className="min-w-[80px]"
-                >
-                  <Label className="sr-only">Unité</Label>
-                  <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
-                  <Select.Popover>
-                    <ListBox>
-                      {UNITES_ORDONNEES.map((u) => (
-                        <ListBox.Item key={u} id={u} textValue={UNITE_LABELS[u]}>
-                          {UNITE_LABELS[u]}
-                        </ListBox.Item>
-                      ))}
-                    </ListBox>
-                  </Select.Popover>
-                </Select>
+                <div className="min-w-[120px]">
+                  <SelectUnite label="Unité" valeur={unite} onChange={setUnite} />
+                </div>
                 <Button
                   variant="secondary"
                   className="gap-1"

@@ -4,6 +4,8 @@ import { TextField, Label, Input } from "@heroui/react";
 import { Info } from "lucide-react";
 import type { CreerVarianteDTO } from "../schemas/produit.schema";
 import type { TypeProduit } from "../hooks/useFormProduit";
+import { UniteMesure, UNITE_LABELS } from "@/features/unite/types/unite.type";
+import { BlocUniteVente } from "./bloc-unite-vente";
 
 interface Props {
   type: Exclude<TypeProduit, "VARIANT">;
@@ -20,6 +22,10 @@ const NOTES: Record<Exclude<TypeProduit, "VARIANT">, string | null> = {
 
 export function SectionVarianteUnique({ type, variante, onChange }: Props) {
   const note = NOTES[type];
+  const uniteVente = variante.uniteVente ?? UniteMesure.PIECE;
+  const labelPrix = variante.prixParUnite
+    ? `Prix de détail au ${UNITE_LABELS[uniteVente]} (F CFA)`
+    : "Prix de détail (F CFA)";
 
   return (
     <div className="space-y-4">
@@ -51,6 +57,8 @@ export function SectionVarianteUnique({ type, variante, onChange }: Props) {
         </TextField>
       </div>
 
+      <BlocUniteVente variante={variante} onChange={onChange} />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <TextField
           name="prixAchat"
@@ -69,7 +77,7 @@ export function SectionVarianteUnique({ type, variante, onChange }: Props) {
           value={variante.prixDetail ? String(variante.prixDetail) : ""}
           onChange={(v) => onChange({ prixDetail: Number(v) || 0 })}
         >
-          <Label>Prix de détail (F CFA)</Label>
+          <Label>{labelPrix}</Label>
           <Input placeholder="15 000" min="0" />
         </TextField>
       </div>

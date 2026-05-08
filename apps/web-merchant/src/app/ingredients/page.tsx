@@ -12,7 +12,7 @@ import {
 } from "@/features/ingredient/queries/ingredient-list.query";
 import { ModalCreerIngredient } from "@/features/ingredient/components/modal-creer-ingredient";
 import { ModalReceptionIngredient } from "@/features/ingredient/components/modal-reception-ingredient";
-import { UNITE_LABELS, type UniteIngredient } from "@/features/ingredient/types/ingredient.type";
+import { UNITE_LABELS } from "@/features/unite/types/unite.type";
 
 export default function PageIngredients() {
   const { data: boutique } = useBoutiqueActiveQuery();
@@ -119,7 +119,7 @@ export default function PageIngredients() {
           <Table>
             <Table.ScrollContainer>
               <Table.Content aria-label="Ingrédients">
-                <Table.Header>
+                <Table.Header className="table-header-libitex">
                   <Table.Column isRowHeader>Ingrédient</Table.Column>
                   <Table.Column>Unité</Table.Column>
                   <Table.Column>Stock actuel</Table.Column>
@@ -146,7 +146,7 @@ export default function PageIngredients() {
                           </div>
                         </Table.Cell>
                         <Table.Cell>
-                          <Chip className="text-xs">{UNITE_LABELS[i.unite as UniteIngredient]}</Chip>
+                          <Chip className="text-xs">{UNITE_LABELS[i.unite]}</Chip>
                         </Table.Cell>
                         <Table.Cell>
                           <span className={`text-sm font-semibold tabular-nums flex items-center gap-1 ${
@@ -155,19 +155,19 @@ export default function PageIngredients() {
                             {enAlerte && <AlertTriangle size={12} />}
                             {stock?.quantite.toLocaleString("fr-FR", { maximumFractionDigits: 3 }) ?? "0"}
                             <span className="text-[10px] font-normal text-muted ml-0.5">
-                              {UNITE_LABELS[i.unite as UniteIngredient]}
+                              {UNITE_LABELS[i.unite]}
                             </span>
                           </span>
                         </Table.Cell>
                         <Table.Cell>
                           <span className="text-xs text-muted tabular-nums">
-                            {i.seuilAlerte > 0 ? `${i.seuilAlerte} ${UNITE_LABELS[i.unite as UniteIngredient]}` : "—"}
+                            {i.seuilAlerte > 0 ? `${i.seuilAlerte} ${UNITE_LABELS[i.unite]}` : "—"}
                           </span>
                         </Table.Cell>
                         <Table.Cell>
                           <span className="text-sm font-medium tabular-nums">
                             {i.prixUnitaire > 0
-                              ? `${i.prixUnitaire.toLocaleString("fr-FR")} F / ${UNITE_LABELS[i.unite as UniteIngredient]}`
+                              ? `${i.prixUnitaire.toLocaleString("fr-FR")} F / ${UNITE_LABELS[i.unite]}`
                               : "—"}
                           </span>
                         </Table.Cell>

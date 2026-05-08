@@ -1,10 +1,16 @@
-export type UniteIngredient = "G" | "KG" | "ML" | "L" | "PIECE";
+import type { UniteMesure } from "@/features/unite/types/unite.type";
+
+/**
+ * @deprecated Utiliser UniteMesure depuis @/features/unite. Cet alias sera
+ * supprime apres migration des consommateurs en place.
+ */
+export type UniteIngredient = UniteMesure;
 
 export interface IIngredient {
   id: string;
   nom: string;
   description: string | null;
-  unite: UniteIngredient;
+  unite: UniteMesure;
   prixUnitaire: number;
   seuilAlerte: number;
   actif: boolean;
@@ -14,7 +20,7 @@ export interface IIngredient {
 export interface IStockIngredient {
   ingredientId: string;
   nomIngredient: string;
-  unite: UniteIngredient;
+  unite: UniteMesure;
   emplacementId: string;
   quantite: number;
   enAlerte: boolean;
@@ -25,16 +31,6 @@ export interface ILigneRecette {
   ingredientId: string;
   nomIngredient: string;
   quantite: number;
-  unite: UniteIngredient;
+  unite: UniteMesure;
   ordre: number;
 }
-
-export const UNITE_LABELS: Record<UniteIngredient, string> = {
-  G: "g",
-  KG: "kg",
-  ML: "mL",
-  L: "L",
-  PIECE: "pièce",
-};
-
-export const UNITES_ORDONNEES: UniteIngredient[] = ["KG", "G", "L", "ML", "PIECE"];

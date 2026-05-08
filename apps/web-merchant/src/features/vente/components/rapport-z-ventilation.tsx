@@ -28,7 +28,7 @@ export function RapportZVentilation({ rapport }: Props) {
               return (
                 <div key={p.methode} className="flex items-center gap-4 py-2">
                   <span className="w-9 h-9 rounded-lg bg-surface-secondary flex items-center justify-center text-muted shrink-0">
-                    <Icone size={18} />
+                    <Icone size={18} strokeWidth={2} />
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">

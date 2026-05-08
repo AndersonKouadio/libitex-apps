@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { TicketRepository } from "./repositories/ticket.repository";
 import { StockService } from "../stock/stock.service";
 import { IngredientService } from "../ingredient/ingredient.service";
+import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import {
   RessourceIntrouvableException,
   PaiementInsuffisantException,
@@ -21,6 +22,7 @@ export class VenteService {
     private readonly ticketRepo: TicketRepository,
     private readonly stockService: StockService,
     private readonly ingredientService: IngredientService,
+    private readonly audit: AuditService,
   ) {}
 
   // --- Creer un ticket (ouvert) ---
@@ -72,7 +74,7 @@ export class VenteService {
       const ligneCree = await this.ticketRepo.creerLigne({
         ticketId: ticket.id, variantId: variant.id,
         productName: product.name, variantName: variant.name, sku: variant.sku,
-        quantity: ligne.quantite, unitPrice: prixUnitaire.toString(),
+        quantity: ligne.quantite.toString(), unitPrice: prixUnitaire.toString(),
         discount: remise.toString(), taxRate: tauxTva.toString(),
         taxAmount: tvaLigne.toFixed(2), lineTotal: totalLigne.toFixed(2),
         serialNumber, serialId, batchId, batchNumber,
@@ -86,6 +88,12 @@ export class VenteService {
     const total = sousTotal + totalTva;
     const ticketMaj = await this.ticketRepo.mettreAJourTotaux(ticket.id, {
       subtotal: sousTotal.toFixed(2), taxAmount: totalTva.toFixed(2), total: total.toFixed(2),
+    });
+
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.TICKET_CREATED,
+      entityType: "TICKET", entityId: ticket.id,
+      after: { numeroTicket: ticket.ticketNumber, total: total.toFixed(2), nbLignes: lignesCrees.length },
     });
 
     return this.mapTicket(ticketMaj, lignesCrees.map(this.mapLigne), []);
@@ -116,31 +124,44 @@ export class VenteService {
     for (const ligne of lignes) {
       const resolved = await this.ticketRepo.obtenirVarianteAvecProduit(ligne.variantId);
       const estMenu = resolved?.product.productType === "MENU";
+      // ticketLines.quantity est numeric(15, 3) -> string cote drizzle.
+      const quantiteVendue = Number(ligne.quantity);
 
       if (estMenu) {
-        // Pour un menu: pas de stock variant à décrémenter, on consomme
-        // les ingrédients de la recette.
+        // Pour un menu: pas de stock variant a decrementer, on consomme
+        // les ingredients de la recette.
         await this.ingredientService.consommerRecette({
           tenantId,
           userId,
           variantId: ligne.variantId,
           locationId: ticket.locationId,
-          quantiteVendue: ligne.quantity,
+          quantiteVendue,
           reference: ticket.id,
         });
       } else {
         await this.stockService.sortieStock(
           tenantId, userId, ligne.variantId, ticket.locationId,
-          ligne.quantity, "TICKET", ticket.id,
+          quantiteVendue, "TICKET", ticket.id,
           ligne.serialId ?? undefined, ligne.batchId ?? undefined,
         );
         if (ligne.serialId) await this.ticketRepo.marquerSerieVendue(ligne.serialId, ticket.id);
-        if (ligne.batchId) await this.ticketRepo.decrementerLot(ligne.batchId, ligne.quantity);
+        if (ligne.batchId) await this.ticketRepo.decrementerLot(ligne.batchId, quantiteVendue);
       }
     }
 
     const complete = await this.ticketRepo.changerStatut(tenantId, ticketId, "COMPLETED", {
       completedAt: new Date(),
+    });
+
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.TICKET_COMPLETED,
+      entityType: "TICKET", entityId: ticket.id,
+      after: {
+        numeroTicket: ticket.ticketNumber,
+        total: totalTicket,
+        totalPaye,
+        methodes: dto.paiements.map((p) => p.methode),
+      },
     });
 
     const paiements = await this.ticketRepo.obtenirPaiements(ticket.id);
@@ -151,24 +172,39 @@ export class VenteService {
 
   // --- Mettre en attente ---
 
-  async mettreEnAttente(tenantId: string, ticketId: string): Promise<TicketResponseDto> {
+  async mettreEnAttente(tenantId: string, userId: string, ticketId: string): Promise<TicketResponseDto> {
     const ticket = await this.ticketRepo.obtenirParId(tenantId, ticketId);
     if (!ticket) throw new RessourceIntrouvableException("Ticket", ticketId);
     if (ticket.status !== "OPEN") throw new TicketNonModifiableException(ticket.status);
 
     const parked = await this.ticketRepo.changerStatut(tenantId, ticketId, "PARKED");
+
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.TICKET_PARKED,
+      entityType: "TICKET", entityId: ticketId,
+      before: { statut: ticket.status }, after: { statut: "PARKED", numeroTicket: ticket.ticketNumber },
+    });
+
     const lignes = await this.ticketRepo.obtenirLignes(ticketId);
     return this.mapTicket(parked, lignes.map(this.mapLigne), []);
   }
 
   // --- Annuler ---
 
-  async annuler(tenantId: string, ticketId: string): Promise<TicketResponseDto> {
+  async annuler(tenantId: string, userId: string, ticketId: string): Promise<TicketResponseDto> {
     const ticket = await this.ticketRepo.obtenirParId(tenantId, ticketId);
     if (!ticket) throw new RessourceIntrouvableException("Ticket", ticketId);
     if (ticket.status === "COMPLETED") throw new TicketNonModifiableException(ticket.status);
 
     const voided = await this.ticketRepo.changerStatut(tenantId, ticketId, "VOIDED");
+
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.TICKET_VOIDED,
+      entityType: "TICKET", entityId: ticketId,
+      before: { statut: ticket.status, total: ticket.total },
+      after: { statut: "VOIDED", numeroTicket: ticket.ticketNumber },
+    });
+
     const lignes = await this.ticketRepo.obtenirLignes(ticketId);
     return this.mapTicket(voided, lignes.map(this.mapLigne), []);
   }
@@ -257,7 +293,7 @@ export class VenteService {
       nomProduit: raw.productName,
       nomVariante: raw.variantName,
       sku: raw.sku,
-      quantite: raw.quantity,
+      quantite: Number(raw.quantity),
       prixUnitaire: Number(raw.unitPrice),
       remise: Number(raw.discount ?? 0),
       tauxTva: Number(raw.taxRate ?? 0),

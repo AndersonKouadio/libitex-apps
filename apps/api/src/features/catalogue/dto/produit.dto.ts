@@ -4,6 +4,7 @@ import {
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { UniteMesure } from "@libitex/shared";
 
 export enum TypeProduit {
   SIMPLE = "SIMPLE",
@@ -57,6 +58,31 @@ export class CreerVarianteDto {
   @IsOptional()
   @Min(0)
   prixVip?: number;
+
+  @ApiPropertyOptional({
+    enum: UniteMesure, example: UniteMesure.PIECE,
+    description: "Unite de vente (PIECE par defaut). KG/G pour le vrac, M/CM pour le metre, L/ML pour le volume.",
+  })
+  @IsEnum(UniteMesure)
+  @IsOptional()
+  uniteVente?: UniteMesure;
+
+  @ApiPropertyOptional({
+    example: 0.1,
+    description: "Pas minimum a la saisie au POS (ex: 0.1 kg, 5 cm). Null = entiers seulement.",
+  })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  pasMin?: number;
+
+  @ApiPropertyOptional({
+    example: false,
+    description: "Vrai si le prix de detail est par unite de mesure (au kg, au metre). Faux = prix forfaitaire.",
+  })
+  @IsBoolean()
+  @IsOptional()
+  prixParUnite?: boolean;
 }
 
 export class CreerProduitDto {
@@ -160,6 +186,9 @@ export class VarianteResponseDto {
   prixDetail!: number;
   prixGros!: number | null;
   prixVip!: number | null;
+  uniteVente!: UniteMesure;
+  pasMin!: number | null;
+  prixParUnite!: boolean;
 }
 
 export class ProduitResponseDto {

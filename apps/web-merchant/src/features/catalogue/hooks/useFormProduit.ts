@@ -4,8 +4,12 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { creerProduitSchema, type CreerProduitDTO, type CreerVarianteDTO } from "../schemas/produit.schema";
 import { genererVariantesParCombinaison, type AxeAttribut } from "../utils/generer-variantes";
 import type { LigneRecetteDTO } from "@/features/ingredient/schemas/ingredient.schema";
+import { UniteMesure } from "@/features/unite/types/unite.type";
 
-const VARIANTE_VIDE: CreerVarianteDTO = { sku: "", prixDetail: 0 };
+const VARIANTE_VIDE: CreerVarianteDTO = {
+  sku: "", prixDetail: 0,
+  uniteVente: UniteMesure.PIECE, prixParUnite: false,
+};
 
 export type TypeProduit = "SIMPLE" | "VARIANT" | "SERIALIZED" | "PERISHABLE" | "MENU";
 
@@ -49,7 +53,14 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
 
   const variantesGenerees = useMemo(() => {
     if (typeProduit === "VARIANT") {
-      return genererVariantesParCombinaison(axes, prefixeSku, varianteUnique.prixDetail);
+      // Les attributs definissent uniquement la combinatoire ; les reglages
+      // de vente (unite, pasMin, prix par unite) sont partages entre toutes
+      // les variantes generees, on les copie depuis la variante de reference.
+      return genererVariantesParCombinaison(axes, prefixeSku, varianteUnique.prixDetail, {
+        uniteVente: varianteUnique.uniteVente,
+        pasMin: varianteUnique.pasMin,
+        prixParUnite: varianteUnique.prixParUnite,
+      });
     }
     return [varianteUnique];
   }, [typeProduit, axes, prefixeSku, varianteUnique]);

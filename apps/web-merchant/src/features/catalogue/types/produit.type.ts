@@ -1,3 +1,5 @@
+import type { UniteMesure } from "@/features/unite/types/unite.type";
+
 export enum TypeProduit {
   SIMPLE = "SIMPLE",
   VARIANT = "VARIANT",
@@ -15,6 +17,11 @@ export interface IVariante {
   prixDetail: number;
   prixGros: number | null;
   prixVip: number | null;
+  uniteVente: UniteMesure;
+  /** Pas minimum a la saisie au POS. Null = entiers seulement. */
+  pasMin: number | null;
+  /** Vrai si le prix est au kg/metre/litre, faux si forfaitaire a la piece/lot. */
+  prixParUnite: boolean;
 }
 
 export interface IProduit {

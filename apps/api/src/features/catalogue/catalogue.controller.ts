@@ -25,7 +25,7 @@ export class CatalogueController {
   @ApiOperation({ summary: "Créer un produit avec ses variantes" })
   @Roles("ADMIN", "MANAGER")
   creerProduit(@CurrentUser() user: CurrentUserData, @Body() dto: CreerProduitDto) {
-    return this.catalogueService.creerProduit(user.tenantId, dto);
+    return this.catalogueService.creerProduit(user.tenantId, user.userId, dto);
   }
 
   @Get("produits")
@@ -54,7 +54,7 @@ export class CatalogueController {
     @Param("id") id: string,
     @Body() dto: ModifierProduitDto,
   ) {
-    return this.catalogueService.modifierProduit(user.tenantId, id, dto);
+    return this.catalogueService.modifierProduit(user.tenantId, user.userId, id, dto);
   }
 
   @Delete("produits/:id")
@@ -62,7 +62,7 @@ export class CatalogueController {
   @ApiOperation({ summary: "Supprimer un produit (soft delete)" })
   @Roles("ADMIN", "MANAGER")
   supprimerProduit(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
-    return this.catalogueService.supprimerProduit(user.tenantId, id);
+    return this.catalogueService.supprimerProduit(user.tenantId, user.userId, id);
   }
 
   // --- Categories ---

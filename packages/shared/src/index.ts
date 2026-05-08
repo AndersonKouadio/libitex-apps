@@ -8,12 +8,32 @@ export enum ProductType {
   MENU = "MENU",
 }
 
-export enum IngredientUnit {
+/**
+ * Unite de mesure utilisee a la fois par le catalogue (vente d'un produit
+ * au poids/volume/longueur ou a l'unite) et par la restauration (ingredients,
+ * recettes). Couvre les 4 categories : POIDS, VOLUME, LONGUEUR, UNITAIRE.
+ */
+export enum UniteMesure {
+  // Poids
   G = "G",
   KG = "KG",
+  // Volume
   ML = "ML",
   L = "L",
+  // Longueur
+  CM = "CM",
+  M = "M",
+  // Unitaire / dénombrable
   PIECE = "PIECE",
+  DOUZAINE = "DOUZAINE",
+  LOT = "LOT",
+}
+
+export enum UniteCategorie {
+  POIDS = "POIDS",
+  VOLUME = "VOLUME",
+  LONGUEUR = "LONGUEUR",
+  UNITAIRE = "UNITAIRE",
 }
 
 export enum StockMovementType {
@@ -114,26 +134,105 @@ export const SECTORS_AVEC_INGREDIENTS: ActivitySector[] = [
   ActivitySector.RESTAURATION,
 ];
 
-export const INGREDIENT_UNIT_LABELS: Record<IngredientUnit, string> = {
-  [IngredientUnit.G]: "g",
-  [IngredientUnit.KG]: "kg",
-  [IngredientUnit.ML]: "mL",
-  [IngredientUnit.L]: "L",
-  [IngredientUnit.PIECE]: "pièce",
+/** Libelle court d'une unite (ex: "kg", "mL", "piece"). Pour affichage compact. */
+export const UNITE_LABELS: Record<UniteMesure, string> = {
+  [UniteMesure.G]: "g",
+  [UniteMesure.KG]: "kg",
+  [UniteMesure.ML]: "mL",
+  [UniteMesure.L]: "L",
+  [UniteMesure.CM]: "cm",
+  [UniteMesure.M]: "m",
+  [UniteMesure.PIECE]: "pièce",
+  [UniteMesure.DOUZAINE]: "douzaine",
+  [UniteMesure.LOT]: "lot",
+};
+
+/** Libelle long (ex: "kilogramme"). Pour formulaires et libelles d'aide. */
+export const UNITE_LABELS_LONGS: Record<UniteMesure, string> = {
+  [UniteMesure.G]: "gramme",
+  [UniteMesure.KG]: "kilogramme",
+  [UniteMesure.ML]: "millilitre",
+  [UniteMesure.L]: "litre",
+  [UniteMesure.CM]: "centimètre",
+  [UniteMesure.M]: "mètre",
+  [UniteMesure.PIECE]: "pièce",
+  [UniteMesure.DOUZAINE]: "douzaine",
+  [UniteMesure.LOT]: "lot",
+};
+
+/** Categorie d'une unite. Determine la compatibilite des conversions. */
+export const UNITE_CATEGORIE: Record<UniteMesure, UniteCategorie> = {
+  [UniteMesure.G]: UniteCategorie.POIDS,
+  [UniteMesure.KG]: UniteCategorie.POIDS,
+  [UniteMesure.ML]: UniteCategorie.VOLUME,
+  [UniteMesure.L]: UniteCategorie.VOLUME,
+  [UniteMesure.CM]: UniteCategorie.LONGUEUR,
+  [UniteMesure.M]: UniteCategorie.LONGUEUR,
+  [UniteMesure.PIECE]: UniteCategorie.UNITAIRE,
+  [UniteMesure.DOUZAINE]: UniteCategorie.UNITAIRE,
+  [UniteMesure.LOT]: UniteCategorie.UNITAIRE,
 };
 
 /**
- * Conversion vers l'unite de base (g, mL ou pieces) pour faire les
- * calculs de stock. Les ingredients stockes en kg sont convertis en g
- * dans les calculs internes.
+ * Conversion vers l'unite de base de la categorie (g, mL, cm, piece).
+ * Les calculs de stock se font tous en unite de base pour eviter les pertes
+ * de precision. Ex: 1.5 KG -> 1500 G ; 0.25 L -> 250 ML ; 2 M -> 200 CM.
  */
-export const INGREDIENT_UNIT_BASE: Record<IngredientUnit, { unit: IngredientUnit; factor: number }> = {
-  [IngredientUnit.G]: { unit: IngredientUnit.G, factor: 1 },
-  [IngredientUnit.KG]: { unit: IngredientUnit.G, factor: 1000 },
-  [IngredientUnit.ML]: { unit: IngredientUnit.ML, factor: 1 },
-  [IngredientUnit.L]: { unit: IngredientUnit.ML, factor: 1000 },
-  [IngredientUnit.PIECE]: { unit: IngredientUnit.PIECE, factor: 1 },
+export const UNITE_BASE: Record<UniteMesure, { unite: UniteMesure; facteur: number }> = {
+  [UniteMesure.G]: { unite: UniteMesure.G, facteur: 1 },
+  [UniteMesure.KG]: { unite: UniteMesure.G, facteur: 1000 },
+  [UniteMesure.ML]: { unite: UniteMesure.ML, facteur: 1 },
+  [UniteMesure.L]: { unite: UniteMesure.ML, facteur: 1000 },
+  [UniteMesure.CM]: { unite: UniteMesure.CM, facteur: 1 },
+  [UniteMesure.M]: { unite: UniteMesure.CM, facteur: 100 },
+  [UniteMesure.PIECE]: { unite: UniteMesure.PIECE, facteur: 1 },
+  [UniteMesure.DOUZAINE]: { unite: UniteMesure.PIECE, facteur: 12 },
+  [UniteMesure.LOT]: { unite: UniteMesure.LOT, facteur: 1 },
 };
+
+/** Liste ordonnee d'unites a proposer dans un selecteur, par categorie. */
+export const UNITES_PAR_CATEGORIE: Record<UniteCategorie, UniteMesure[]> = {
+  [UniteCategorie.POIDS]: [UniteMesure.KG, UniteMesure.G],
+  [UniteCategorie.VOLUME]: [UniteMesure.L, UniteMesure.ML],
+  [UniteCategorie.LONGUEUR]: [UniteMesure.M, UniteMesure.CM],
+  [UniteCategorie.UNITAIRE]: [UniteMesure.PIECE, UniteMesure.DOUZAINE, UniteMesure.LOT],
+};
+
+/** Vrai si l'unite accepte des quantites decimales (poids, volume, longueur). */
+export function uniteAccepteDecimal(unite: UniteMesure): boolean {
+  return UNITE_CATEGORIE[unite] !== UniteCategorie.UNITAIRE;
+}
+
+/**
+ * Convertit une quantite d'une unite source vers une unite cible
+ * de la meme categorie. Lance une erreur si les categories different.
+ */
+export function convertirVersUnite(
+  quantite: number,
+  source: UniteMesure,
+  cible: UniteMesure,
+): number {
+  const baseSource = UNITE_BASE[source];
+  const baseCible = UNITE_BASE[cible];
+  if (baseSource.unite !== baseCible.unite) {
+    throw new Error(
+      `Conversion impossible entre ${source} (${UNITE_CATEGORIE[source]}) et ${cible} (${UNITE_CATEGORIE[cible]})`,
+    );
+  }
+  return (quantite * baseSource.facteur) / baseCible.facteur;
+}
+
+/**
+ * Formate une quantite avec son unite courte. Affiche les decimales seulement
+ * si elles ne sont pas nulles (ex: 1.5 kg, 12 pièces, 0.250 kg).
+ */
+export function formaterQuantite(quantite: number, unite: UniteMesure): string {
+  const estEntier = Math.abs(quantite - Math.round(quantite)) < 1e-9;
+  const formate = estEntier
+    ? Math.round(quantite).toString()
+    : quantite.toFixed(3).replace(/\.?0+$/, "");
+  return `${formate} ${UNITE_LABELS[unite]}`;
+}
 
 // ─── Types ───
 

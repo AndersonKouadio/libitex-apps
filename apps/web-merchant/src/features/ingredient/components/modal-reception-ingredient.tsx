@@ -7,7 +7,8 @@ import { entreeIngredientSchema, type EntreeIngredientDTO } from "../schemas/ing
 import { useReceptionnerIngredientMutation } from "../queries/ingredient-mutations";
 import { useIngredientListQuery } from "../queries/ingredient-list.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
-import { UNITES_ORDONNEES, UNITE_LABELS, type UniteIngredient } from "../types/ingredient.type";
+import { UniteMesure, UNITE_LABELS } from "@/features/unite/types/unite.type";
+import { SelectUnite } from "@/features/unite/components/select-unite";
 
 interface Props {
   ouvert: boolean;
@@ -22,14 +23,14 @@ export function ModalReceptionIngredient({ ouvert, onFermer }: Props) {
   const [ingredientId, setIngredientId] = useState("");
   const [emplacementId, setEmplacementId] = useState("");
   const [quantite, setQuantite] = useState("");
-  const [unite, setUnite] = useState<UniteIngredient | "">("");
+  const [unite, setUnite] = useState<UniteMesure | "">("");
   const [coutTotal, setCoutTotal] = useState("");
   const [reference, setReference] = useState("");
   const [note, setNote] = useState("");
   const [erreur, setErreur] = useState("");
 
   const ingredient = ingredients?.find((i) => i.id === ingredientId);
-  const uniteEffective = unite || ingredient?.unite || "KG";
+  const uniteEffective = (unite || ingredient?.unite || UniteMesure.KG) as UniteMesure;
 
   async function soumettre() {
     setErreur("");
@@ -37,7 +38,7 @@ export function ModalReceptionIngredient({ ouvert, onFermer }: Props) {
       ingredientId,
       emplacementId: emplacementId || emplacements?.[0]?.id || "",
       quantite: Number(quantite) || 0,
-      unite: (unite || ingredient?.unite) as UniteIngredient | undefined,
+      unite: (unite || ingredient?.unite) as UniteMesure | undefined,
       coutTotal: coutTotal ? Number(coutTotal) : undefined,
       reference: reference || undefined,
       note: note || undefined,
@@ -108,20 +109,11 @@ export function ModalReceptionIngredient({ ouvert, onFermer }: Props) {
                 <Label>Quantité reçue</Label>
                 <Input placeholder="25" min="0" step="0.001" />
               </TextField>
-              <Select
-                selectedKey={uniteEffective}
-                onSelectionChange={(k) => setUnite(String(k) as UniteIngredient)}
-              >
-                <Label>Unité</Label>
-                <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
-                <Select.Popover>
-                  <ListBox>
-                    {UNITES_ORDONNEES.map((u) => (
-                      <ListBox.Item key={u} id={u} textValue={UNITE_LABELS[u]}>{UNITE_LABELS[u]}</ListBox.Item>
-                    ))}
-                  </ListBox>
-                </Select.Popover>
-              </Select>
+              <SelectUnite
+                label="Unité"
+                valeur={uniteEffective}
+                onChange={(u) => setUnite(u)}
+              />
             </div>
 
             <TextField type="number" value={coutTotal} onChange={setCoutTotal}>

@@ -106,11 +106,13 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
                 axes={axes}
                 variantesGenerees={variantesGenerees}
                 prixDetailReference={varianteUnique.prixDetail ? String(varianteUnique.prixDetail) : ""}
+                varianteReference={varianteUnique}
                 onPrefixe={form.setPrefixeSku}
                 onPrixReference={(v) => form.setVarianteUnique({ ...varianteUnique, prixDetail: Number(v) || 0 })}
                 onAjouterAxe={form.ajouterAxe}
                 onRetirerAxe={form.retirerAxe}
                 onModifierAxe={form.modifierAxe}
+                onModifierVarianteReference={(data) => form.setVarianteUnique({ ...varianteUnique, ...data })}
               />
             ) : (
               <SectionVarianteUnique

@@ -2,6 +2,7 @@ import { Injectable, Inject } from "@nestjs/common";
 import { eq, and, isNull, sql, ilike, or } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import { type Database, products, variants, categories } from "@libitex/db";
+import type { UniteMesure } from "@libitex/shared";
 
 @Injectable()
 export class ProduitRepository {
@@ -33,6 +34,9 @@ export class ProduitRepository {
     priceRetail: string;
     priceWholesale?: string;
     priceVip?: string;
+    saleUnit?: UniteMesure;
+    saleStep?: string;
+    pricePerUnit?: boolean;
   }) {
     const [variante] = await this.db
       .insert(variants)
