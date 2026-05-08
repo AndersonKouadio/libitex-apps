@@ -13,10 +13,11 @@ services:
       - STORAGE_PUBLIC_ENDPOINT=https://libitex-storage.lunion-lab.com
       - STORAGE_REGION=us-east-1
       - STORAGE_BUCKET=libitex-public
-      # Credentials MinIO : doivent etre definis dans .env, sinon les uploads
-      # echoueront avec "Variables manquantes : STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY".
-      - STORAGE_ACCESS_KEY=${STORAGE_ACCESS_KEY:?STORAGE_ACCESS_KEY manquant dans .env}
-      - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY:?STORAGE_SECRET_KEY manquant dans .env}
+      # Credentials MinIO : doivent etre definis dans .env. Sans elles, les uploads
+      # echoueront avec une erreur claire "Variables manquantes : STORAGE_ACCESS_KEY,
+      # STORAGE_SECRET_KEY" — on les expose explicitement ici pour rappel.
+      - STORAGE_ACCESS_KEY=${STORAGE_ACCESS_KEY}
+      - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY}
     ports:
       - "127.0.0.1:3010:3000"
     depends_on:
