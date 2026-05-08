@@ -13,6 +13,7 @@ export interface RouteMeta {
 export const ROUTE_META: Record<string, RouteMeta> = {
   "/dashboard": { titre: "Tableau de bord", raccourci: "Accueil" },
   "/catalogue": { titre: "Catalogue" },
+  "/catalogue/nouveau": { titre: "Nouveau produit", raccourci: "Nouveau" },
   "/categories": { titre: "Catégories" },
   "/clients": { titre: "Clients" },
   "/ingredients": { titre: "Ingrédients" },
@@ -47,10 +48,17 @@ export function construireBreadcrumb(pathname: string): MailleBreadcrumb[] {
     const meta = ROUTE_META[courant];
     mailles.push({
       href: courant,
-      libelle: meta?.raccourci ?? meta?.titre ?? capitaliser(seg),
+      libelle: meta?.raccourci ?? meta?.titre ?? libelleParDefaut(seg),
     });
   }
   return mailles;
+}
+
+const REGEX_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function libelleParDefaut(seg: string): string {
+  if (REGEX_UUID.test(seg)) return "Détail";
+  return capitaliser(seg);
 }
 
 export function obtenirTitre(pathname: string): string {

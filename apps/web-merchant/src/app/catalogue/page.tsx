@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { PageContainer } from "@/components/layout/page-container";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
 import type { IProduit } from "@/features/catalogue/types/produit.type";
-import { ModalCreerProduit } from "@/features/catalogue/components/modal-creer-produit";
-import { ModalModifierProduit } from "@/features/catalogue/components/modal-modifier-produit";
 import { Table, Chip, Button, Skeleton, SearchField, Input } from "@heroui/react";
 import { Package, Plus, Pencil } from "lucide-react";
 
@@ -23,8 +22,6 @@ const LABELS_TYPE: Record<string, { label: string; color: string }> = {
 export default function PageCatalogue() {
   const [page, setPage] = useState(1);
   const [recherche, setRecherche] = useState("");
-  const [modalOuvert, setModalOuvert] = useState(false);
-  const [produitEnEdition, setProduitEnEdition] = useState<IProduit | null>(null);
   const { data, isLoading } = useProduitListQuery(page, recherche || undefined);
 
   const produits = data?.data ?? [];
@@ -41,13 +38,14 @@ export default function PageCatalogue() {
           >
             <Input placeholder="Rechercher un produit..." />
           </SearchField>
-          <Button variant="primary" className="gap-1.5 shrink-0" onPress={() => setModalOuvert(true)}>
-            <Plus size={16} />
-            Nouveau produit
-          </Button>
+          <Link href="/catalogue/nouveau">
+            <Button variant="primary" className="gap-1.5 shrink-0">
+              <Plus size={16} />
+              Nouveau produit
+            </Button>
+          </Link>
         </div>
 
-        {/* Tableau */}
         {isLoading ? (
           <div className="bg-surface rounded-xl border border-border p-4 space-y-3">
             {[1, 2, 3].map((i) => (
@@ -67,10 +65,12 @@ export default function PageCatalogue() {
             <Package size={32} className="text-muted/30 mx-auto mb-3" />
             <p className="text-sm text-foreground font-medium">Votre catalogue est vide</p>
             <p className="text-sm text-muted mt-1 mb-4">Ajoutez votre premier produit pour commencer a vendre</p>
-            <Button variant="primary" className="gap-1.5" onPress={() => setModalOuvert(true)}>
-              <Plus size={16} />
-              Ajouter un produit
-            </Button>
+            <Link href="/catalogue/nouveau">
+              <Button variant="primary" className="gap-1.5">
+                <Plus size={16} />
+                Ajouter un produit
+              </Button>
+            </Link>
           </div>
         ) : (
           <Table>
@@ -119,14 +119,14 @@ export default function PageCatalogue() {
                           </span>
                         </Table.Cell>
                         <Table.Cell>
-                          <Button
-                            variant="ghost"
-                            className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
-                            aria-label={`Modifier ${p.nom}`}
-                            onPress={() => setProduitEnEdition(p)}
-                          >
-                            <Pencil size={14} />
-                          </Button>
+                          <Link href={`/catalogue/${p.id}`} aria-label={`Modifier ${p.nom}`}>
+                            <Button
+                              variant="ghost"
+                              className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
+                            >
+                              <Pencil size={14} />
+                            </Button>
+                          </Link>
                         </Table.Cell>
                       </Table.Row>
                     );
@@ -137,7 +137,6 @@ export default function PageCatalogue() {
           </Table>
         )}
 
-        {/* Pagination */}
         {meta && meta.totalPages > 1 && (
           <div className="flex items-center justify-between mt-4">
             <p className="text-xs text-neutral-400">
@@ -157,16 +156,6 @@ export default function PageCatalogue() {
             </div>
           </div>
         )}
-
-      <ModalCreerProduit
-        ouvert={modalOuvert}
-        onFermer={() => setModalOuvert(false)}
-      />
-
-      <ModalModifierProduit
-        produit={produitEnEdition}
-        onFermer={() => setProduitEnEdition(null)}
-      />
     </PageContainer>
   );
 }
