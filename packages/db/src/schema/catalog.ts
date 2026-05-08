@@ -58,6 +58,18 @@ export const products = pgTable("products", {
   // pour bijouterie, ISBN/auteur pour librairie, etc.). Forme libre, le frontend
   // affiche les champs adaptes au secteur de la boutique.
   sectorMetadata: jsonb("sector_metadata").$type<Record<string, unknown>>().default({}),
+  // ─── Specificites RESTAURATION (utilisees par les produits MENU) ───
+  // Temps de preparation en minutes (affiche au client, pilote la file cuisine).
+  cookingTimeMinutes: integer("cooking_time_minutes"),
+  // Prix promo affiche en barre quand isPromotion est vrai.
+  promotionPrice: numeric("promotion_price", { precision: 15, scale: 2 }),
+  isPromotion: boolean("is_promotion").notNull().default(false),
+  // 'TOUJOURS_EPICE' | 'JAMAIS_EPICE' | 'AU_CHOIX' — pictogramme cuisine.
+  spiceLevel: varchar("spice_level", { length: 20 }),
+  // Tags libres (VEGAN, SANS_GLUTEN, HALAL, BIO, etc.).
+  cuisineTags: jsonb("cuisine_tags").$type<string[]>().default([]),
+  // Indisponibilite manuelle (rupture momentanee, distinct de isActive).
+  outOfStock: boolean("out_of_stock").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

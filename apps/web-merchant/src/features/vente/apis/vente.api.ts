@@ -7,7 +7,12 @@ const BASE = "/vente";
 export const venteAPI = {
   creerTicket: (token: string, data: {
     emplacementId: string;
-    lignes: { varianteId: string; quantite: number; numeroSerie?: string }[];
+    lignes: {
+      varianteId: string;
+      quantite: number;
+      numeroSerie?: string;
+      supplements?: { supplementId: string; quantite: number }[];
+    }[];
     nomClient?: string;
     telephoneClient?: string;
   }) =>

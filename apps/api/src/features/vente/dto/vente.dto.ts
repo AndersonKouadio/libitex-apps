@@ -17,6 +17,18 @@ export enum MethodePaiement {
 
 // --- Requete ---
 
+export class SupplementChoisiDto {
+  @ApiProperty({ example: "uuid-supplement" })
+  @IsString()
+  @IsNotEmpty()
+  supplementId!: string;
+
+  @ApiProperty({ example: 1 })
+  @IsInt()
+  @Min(1)
+  quantite!: number;
+}
+
 export class LigneTicketDto {
   @ApiProperty({ example: "uuid-variante" })
   @IsString()
@@ -44,6 +56,13 @@ export class LigneTicketDto {
   @IsString()
   @IsOptional()
   numeroSerie?: string;
+
+  @ApiPropertyOptional({ type: [SupplementChoisiDto], description: "Suppléments / extras choisis" })
+  @ValidateNested({ each: true })
+  @Type(() => SupplementChoisiDto)
+  @IsArray()
+  @IsOptional()
+  supplements?: SupplementChoisiDto[];
 }
 
 export class CreerTicketDto {
@@ -100,6 +119,13 @@ export class CompleterTicketDto {
 
 // --- Reponse ---
 
+export class SupplementLigneDto {
+  supplementId!: string;
+  nom!: string;
+  prixUnitaire!: number;
+  quantite!: number;
+}
+
 export class LigneTicketResponseDto {
   id!: string;
   varianteId!: string;
@@ -114,6 +140,7 @@ export class LigneTicketResponseDto {
   totalLigne!: number;
   numeroSerie!: string | null;
   numeroBatch!: string | null;
+  supplements!: SupplementLigneDto[];
 }
 
 export class PaiementResponseDto {

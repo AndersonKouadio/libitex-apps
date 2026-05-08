@@ -1,5 +1,12 @@
 import type { UniteMesure } from "@/features/unite/types/unite.type";
 
+export interface ISupplementLigne {
+  supplementId: string;
+  nom: string;
+  prixUnitaire: number;
+  quantite: number;
+}
+
 export interface ILigneTicket {
   id: string;
   varianteId: string;
@@ -20,6 +27,7 @@ export interface ILigneTicket {
   prixParUnite?: boolean;
   numeroSerie?: string;
   numeroLot?: string;
+  supplements: ISupplementLigne[];
 }
 
 export interface IPaiement {

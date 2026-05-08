@@ -75,6 +75,11 @@ export const ticketLines = pgTable("ticket_lines", {
   // For PERISHABLE products
   batchId: uuid("batch_id"),
   batchNumber: varchar("batch_number", { length: 100 }),
+  // Supplements/extras choisis a la vente (stockes en JSONB pour souplesse).
+  // Format : [{ supplementId, name, unitPrice, quantity }]
+  supplements: jsonb("supplements")
+    .$type<Array<{ supplementId: string; name: string; unitPrice: number; quantity: number }>>()
+    .default([]),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   index("idx_ticket_lines_ticket").on(table.ticketId),

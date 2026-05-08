@@ -35,7 +35,14 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
 
     const payload = creerTicketSchema.safeParse({
       emplacementId: empId,
-      lignes: panier.articles.map((a) => ({ varianteId: a.varianteId, quantite: a.quantite })),
+      lignes: panier.articles.map((a) => ({
+        varianteId: a.varianteId,
+        quantite: a.quantite,
+        supplements: a.supplements.map((s) => ({
+          supplementId: s.supplementId,
+          quantite: s.quantite,
+        })),
+      })),
     });
     if (!payload.success) {
       toast.danger(payload.error.issues[0]?.message ?? "Panier invalide");
@@ -71,6 +78,10 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
         lignes: panier.articles.map((a) => ({
           varianteId: a.varianteId,
           quantite: a.quantite,
+          supplements: a.supplements.map((s) => ({
+            supplementId: s.supplementId,
+            quantite: s.quantite,
+          })),
         })),
       });
       await venteAPI.mettreEnAttente(token, ticket.id);

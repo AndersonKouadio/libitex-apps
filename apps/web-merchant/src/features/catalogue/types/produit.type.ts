@@ -5,6 +5,7 @@ export enum TypeProduit {
   VARIANT = "VARIANT",
   SERIALIZED = "SERIALIZED",
   PERISHABLE = "PERISHABLE",
+  MENU = "MENU",
 }
 
 export interface IVariante {
@@ -24,6 +25,8 @@ export interface IVariante {
   prixParUnite: boolean;
 }
 
+export type NiveauEpice = "TOUJOURS_EPICE" | "JAMAIS_EPICE" | "AU_CHOIX";
+
 export interface IProduit {
   id: string;
   nom: string;
@@ -34,6 +37,15 @@ export interface IProduit {
   tauxTva: number;
   images: string[];
   metadataSecteur: Record<string, unknown>;
+  // Restauration
+  cookingTimeMinutes: number | null;
+  prixPromotion: number | null;
+  enPromotion: boolean;
+  niveauEpice: NiveauEpice | null;
+  tagsCuisine: string[];
+  enRupture: boolean;
+  supplementIds: string[];
+  // Communs
   actif: boolean;
   variantes: IVariante[];
   creeLe: string;

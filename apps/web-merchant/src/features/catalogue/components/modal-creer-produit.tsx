@@ -14,6 +14,7 @@ import { SectionVarianteUnique } from "./section-variante-unique";
 import { SectionVariantesAttributs } from "./section-variantes-attributs";
 import { SectionRecetteMenu } from "./section-recette-menu";
 import { SectionMetadataSecteur } from "./section-metadata-secteur";
+import { SectionRestauration } from "./section-restauration";
 import { ZoneUploadImages } from "@/features/upload/components/zone-upload-images";
 import type { SecteurActivite } from "@/features/auth/types/auth.type";
 
@@ -61,8 +62,11 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
   const {
     typeProduit, varianteUnique, axes, prefixeSku, variantesGenerees, images,
     metadataSecteur, lignesRecette, erreur,
+    cookingTimeMinutes, prixPromotion, enPromotion, niveauEpice, tagsCuisine,
+    enRupture, supplementIds,
   } = form.valeurs;
   const secteur = boutique?.secteurActivite as SecteurActivite | undefined;
+  const estRestauration = secteur === "RESTAURATION" || typeProduit === "MENU";
 
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(open) => { if (!open) onFermer(); }}>
@@ -129,6 +133,25 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
 
             {typeProduit === "MENU" && (
               <SectionRecetteMenu lignes={lignesRecette} onChange={form.setLignesRecette} />
+            )}
+
+            {estRestauration && (
+              <SectionRestauration
+                cookingTimeMinutes={cookingTimeMinutes}
+                prixPromotion={prixPromotion}
+                enPromotion={enPromotion}
+                niveauEpice={niveauEpice}
+                tagsCuisine={tagsCuisine}
+                enRupture={enRupture}
+                supplementIds={supplementIds}
+                onCookingTimeMinutes={form.setCookingTimeMinutes}
+                onPrixPromotion={form.setPrixPromotion}
+                onEnPromotion={form.setEnPromotion}
+                onNiveauEpice={form.setNiveauEpice}
+                onTagsCuisine={form.setTagsCuisine}
+                onEnRupture={form.setEnRupture}
+                onSupplementIds={form.setSupplementIds}
+              />
             )}
 
             <SectionMetadataSecteur

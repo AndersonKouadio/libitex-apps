@@ -1,9 +1,15 @@
 import { z } from "zod";
 
+export const supplementChoisiSchema = z.object({
+  supplementId: z.string().min(1),
+  quantite: z.number().int().positive(),
+});
+
 export const ligneTicketSchema = z.object({
   varianteId: z.string().min(1, "Article requis"),
-  quantite: z.number().int().positive("Quantité invalide"),
+  quantite: z.number().positive("Quantité invalide"),
   numeroSerie: z.string().optional(),
+  supplements: z.array(supplementChoisiSchema).optional(),
 });
 
 export const creerTicketSchema = z.object({

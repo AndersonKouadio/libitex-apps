@@ -26,7 +26,17 @@ export class CatalogueService {
       taxRate: dto.tauxTva?.toString(),
       images: dto.images ?? [],
       sectorMetadata: dto.metadataSecteur ?? {},
+      cookingTimeMinutes: dto.cookingTimeMinutes,
+      promotionPrice: dto.prixPromotion?.toString(),
+      isPromotion: dto.enPromotion,
+      spiceLevel: dto.niveauEpice,
+      cuisineTags: dto.tagsCuisine ?? [],
+      outOfStock: dto.enRupture,
     });
+
+    if (dto.supplementIds && dto.supplementIds.length > 0) {
+      await this.produitRepo.lierSupplements(produit.id, dto.supplementIds);
+    }
 
     const variantes: VarianteResponseDto[] = [];
     for (const v of dto.variantes) {
@@ -52,15 +62,19 @@ export class CatalogueService {
       after: { nom: produit.name, type: produit.productType, nbVariantes: variantes.length },
     });
 
-    return this.mapProduit(produit, variantes);
+    const supplementIds = dto.supplementIds ?? [];
+    return this.mapProduit(produit, variantes, supplementIds);
   }
 
   async obtenirProduit(tenantId: string, id: string): Promise<ProduitResponseDto> {
     const produit = await this.produitRepo.obtenirParId(tenantId, id);
     if (!produit) throw new RessourceIntrouvableException("Produit", id);
 
-    const rawVariantes = await this.produitRepo.obtenirVariantes(id);
-    return this.mapProduit(produit, rawVariantes.map((v) => this.mapVariante(v)));
+    const [rawVariantes, supplementIds] = await Promise.all([
+      this.produitRepo.obtenirVariantes(id),
+      this.produitRepo.listerSupplementsDuProduit(id),
+    ]);
+    return this.mapProduit(produit, rawVariantes.map((v) => this.mapVariante(v)), supplementIds);
   }
 
   async listerProduits(
@@ -71,8 +85,11 @@ export class CatalogueService {
 
     const produits = await Promise.all(
       data.map(async (p) => {
-        const rawVariantes = await this.produitRepo.obtenirVariantes(p.id);
-        return this.mapProduit(p, rawVariantes.map((v) => this.mapVariante(v)));
+        const [rawVariantes, supplementIds] = await Promise.all([
+          this.produitRepo.obtenirVariantes(p.id),
+          this.produitRepo.listerSupplementsDuProduit(p.id),
+        ]);
+        return this.mapProduit(p, rawVariantes.map((v) => this.mapVariante(v)), supplementIds);
       }),
     );
 
@@ -89,8 +106,18 @@ export class CatalogueService {
       brand: dto.marque,
       images: dto.images,
       sectorMetadata: dto.metadataSecteur,
+      cookingTimeMinutes: dto.cookingTimeMinutes,
+      promotionPrice: dto.prixPromotion?.toString(),
+      isPromotion: dto.enPromotion,
+      spiceLevel: dto.niveauEpice,
+      cuisineTags: dto.tagsCuisine,
+      outOfStock: dto.enRupture,
       isActive: dto.actif,
     });
+
+    if (dto.supplementIds !== undefined) {
+      await this.produitRepo.remplacerSupplements(id, dto.supplementIds);
+    }
 
     await this.audit.logUpdate(
       tenantId, userId, "PRODUIT", id,
@@ -98,8 +125,11 @@ export class CatalogueService {
       { nom: updated.name, marque: updated.brand, actif: updated.isActive },
     );
 
-    const rawVariantes = await this.produitRepo.obtenirVariantes(id);
-    return this.mapProduit(updated, rawVariantes.map((v) => this.mapVariante(v)));
+    const [rawVariantes, supplementIds] = await Promise.all([
+      this.produitRepo.obtenirVariantes(id),
+      this.produitRepo.listerSupplementsDuProduit(id),
+    ]);
+    return this.mapProduit(updated, rawVariantes.map((v) => this.mapVariante(v)), supplementIds);
   }
 
   async supprimerProduit(tenantId: string, userId: string, id: string): Promise<void> {
@@ -122,7 +152,11 @@ export class CatalogueService {
 
   // --- Mappers (DB -> DTO reponse) ---
 
-  private mapProduit(raw: any, variantes: VarianteResponseDto[]): ProduitResponseDto {
+  private mapProduit(
+    raw: any,
+    variantes: VarianteResponseDto[],
+    supplementIds: string[] = [],
+  ): ProduitResponseDto {
     return {
       id: raw.id,
       nom: raw.name,
@@ -135,6 +169,17 @@ export class CatalogueService {
       metadataSecteur: (raw.sectorMetadata && typeof raw.sectorMetadata === "object")
         ? raw.sectorMetadata as Record<string, unknown>
         : {},
+      // Restauration
+      cookingTimeMinutes: raw.cookingTimeMinutes ?? null,
+      prixPromotion: raw.promotionPrice !== null && raw.promotionPrice !== undefined
+        ? Number(raw.promotionPrice)
+        : null,
+      enPromotion: raw.isPromotion ?? false,
+      niveauEpice: raw.spiceLevel ?? null,
+      tagsCuisine: Array.isArray(raw.cuisineTags) ? raw.cuisineTags : [],
+      enRupture: raw.outOfStock ?? false,
+      supplementIds,
+      // Communs
       actif: raw.isActive,
       variantes,
       creeLe: raw.createdAt?.toISOString?.() ?? raw.createdAt,

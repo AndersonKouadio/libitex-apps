@@ -5,6 +5,13 @@ import type { IVariante, IProduit } from "@/features/catalogue/types/produit.typ
 import { UniteMesure, uniteAccepteDecimal } from "@/features/unite/types/unite.type";
 import { arrondirAuPas } from "@/features/unite/utils/unite";
 
+export interface SupplementChoisi {
+  supplementId: string;
+  nom: string;
+  prixUnitaire: number;
+  quantite: number;
+}
+
 export interface ArticlePanier {
   varianteId: string;
   nomProduit: string;
@@ -17,6 +24,7 @@ export interface ArticlePanier {
   uniteVente: UniteMesure;
   pasMin: number | null;
   prixParUnite: boolean;
+  supplements: SupplementChoisi[];
 }
 
 /**
@@ -29,26 +37,47 @@ function pasEffectif(unite: UniteMesure, pasMin: number | null): number {
   return uniteAccepteDecimal(unite) ? 0.1 : 1;
 }
 
-/** Recalcule le total ligne selon le mode tarifaire (forfait vs au kg/m). */
+/** Recalcule le total ligne selon le mode tarifaire (forfait vs au kg/m).
+ *  Inclut les supplements (prix * qte) qui s'appliquent une seule fois par ligne. */
 function recalculerTotalLigne(article: Omit<ArticlePanier, "totalLigne">): number {
-  return Number((article.prixUnitaire * article.quantite).toFixed(2));
+  const baseLigne = article.prixUnitaire * article.quantite;
+  const totalSupplements = (article.supplements ?? []).reduce(
+    (s, sup) => s + sup.prixUnitaire * sup.quantite,
+    0,
+  );
+  return Number((baseLigne + totalSupplements).toFixed(2));
 }
 
 export function usePanier() {
   const [articles, setArticles] = useState<ArticlePanier[]>([]);
 
   const ajouter = useCallback(
-    (produit: IProduit, variante: IVariante, quantiteInitiale?: number) => {
+    (
+      produit: IProduit,
+      variante: IVariante,
+      quantiteInitiale?: number,
+      supplements?: SupplementChoisi[],
+    ) => {
       const unite = variante.uniteVente ?? UniteMesure.PIECE;
       const pas = pasEffectif(unite, variante.pasMin);
       const qInit = quantiteInitiale ?? pas;
 
+      // Si la variante a des supplements distincts, on cree une nouvelle ligne
+      // (deux clients qui prennent le meme menu avec des sauces differentes
+      //  doivent rester sur deux lignes). Sinon on incremente la ligne existante.
+      const cleSupplements = JSON.stringify(
+        (supplements ?? []).map((s) => `${s.supplementId}:${s.quantite}`).sort(),
+      );
+
       setArticles((prev) => {
-        const existant = prev.find((a) => a.varianteId === variante.id);
+        const existant = prev.find(
+          (a) => a.varianteId === variante.id
+            && JSON.stringify(a.supplements.map((s) => `${s.supplementId}:${s.quantite}`).sort()) === cleSupplements,
+        );
         if (existant) {
           const q = arrondirAuPas(existant.quantite + (quantiteInitiale ?? pas), variante.pasMin);
           return prev.map((a) =>
-            a.varianteId === variante.id
+            a === existant
               ? { ...a, quantite: q, totalLigne: recalculerTotalLigne({ ...a, quantite: q }) }
               : a,
           );
@@ -64,6 +93,7 @@ export function usePanier() {
           uniteVente: unite,
           pasMin: variante.pasMin,
           prixParUnite: variante.prixParUnite,
+          supplements: supplements ?? [],
         };
         return [...prev, { ...nouveau, totalLigne: recalculerTotalLigne(nouveau) }];
       });
@@ -120,7 +150,7 @@ export function usePanier() {
     images: Map<string, string | null>,
   ) => {
     setArticles(
-      lignes.map((l) => ({
+      lignes.map((l: any) => ({
         varianteId: l.varianteId,
         nomProduit: l.nomProduit,
         nomVariante: l.nomVariante ?? l.sku,
@@ -132,6 +162,7 @@ export function usePanier() {
         uniteVente: l.uniteVente ?? UniteMesure.PIECE,
         pasMin: l.pasMin ?? null,
         prixParUnite: l.prixParUnite ?? false,
+        supplements: l.supplements ?? [],
       })),
     );
   }, []);

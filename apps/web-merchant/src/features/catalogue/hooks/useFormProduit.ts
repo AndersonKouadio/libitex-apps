@@ -51,6 +51,14 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
   const [images, setImages] = useState<string[]>([]);
   const [metadataSecteur, setMetadataSecteur] = useState<Record<string, unknown>>({});
   const [lignesRecette, setLignesRecette] = useState<LigneRecetteDTO[]>([]);
+  // Restauration
+  const [cookingTimeMinutes, setCookingTimeMinutes] = useState<number | null>(null);
+  const [prixPromotion, setPrixPromotion] = useState<number | null>(null);
+  const [enPromotion, setEnPromotion] = useState(false);
+  const [niveauEpice, setNiveauEpice] = useState<"TOUJOURS_EPICE" | "JAMAIS_EPICE" | "AU_CHOIX" | null>(null);
+  const [tagsCuisine, setTagsCuisine] = useState<string[]>([]);
+  const [enRupture, setEnRupture] = useState(false);
+  const [supplementIds, setSupplementIds] = useState<string[]>([]);
   const [erreur, setErreur] = useState("");
   // Suivi de l'edition manuelle du SKU. Si l'utilisateur modifie le SKU
   // a la main, on cesse de l'auto-regenerer quand le nom change.
@@ -100,6 +108,8 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
     setCategorieId(""); setCodeBarresEan13(""); setTauxTva("0"); setPrefixeSku("");
     setAxes(AXES_VIDES); setVarianteUnique({ ...VARIANTE_VIDE }); setImages([]);
     setMetadataSecteur({}); setLignesRecette([]); setErreur("");
+    setCookingTimeMinutes(null); setPrixPromotion(null); setEnPromotion(false);
+    setNiveauEpice(null); setTagsCuisine([]); setEnRupture(false); setSupplementIds([]);
     setSkuManuel(false); setPrefixeSkuManuel(false);
   }, [typeParDefaut]);
 
@@ -152,6 +162,13 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
       tauxTva: tauxTva ? Number(tauxTva) : undefined,
       images: images.length > 0 ? images : undefined,
       metadataSecteur: Object.keys(metadataSecteur).length > 0 ? metadataSecteur : undefined,
+      cookingTimeMinutes: cookingTimeMinutes ?? undefined,
+      prixPromotion: prixPromotion ?? undefined,
+      enPromotion,
+      niveauEpice: niveauEpice ?? undefined,
+      tagsCuisine: tagsCuisine.length > 0 ? tagsCuisine : undefined,
+      enRupture,
+      supplementIds: supplementIds.length > 0 ? supplementIds : undefined,
       variantes,
     };
 
@@ -162,19 +179,28 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
     }
     setErreur("");
     return validation.data;
-  }, [nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva, images, metadataSecteur, lignesRecette, variantesGenerees]);
+  }, [
+    nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva,
+    images, metadataSecteur, lignesRecette, variantesGenerees,
+    cookingTimeMinutes, prixPromotion, enPromotion, niveauEpice, tagsCuisine,
+    enRupture, supplementIds,
+  ]);
 
   return {
     valeurs: {
       nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva,
       prefixeSku, axes, varianteUnique, variantesGenerees, images, metadataSecteur,
       lignesRecette, erreur,
+      cookingTimeMinutes, prixPromotion, enPromotion, niveauEpice, tagsCuisine,
+      enRupture, supplementIds,
     },
     setNom, setDescription, setTypeProduit, setMarque, setCategorieId,
     setCodeBarresEan13, setTauxTva,
     setPrefixeSku: setPrefixeSkuAvecTracking,
     setVarianteUnique: setVarianteUniqueAvecSkuTracking,
     setImages, setMetadataSecteur, setLignesRecette,
+    setCookingTimeMinutes, setPrixPromotion, setEnPromotion,
+    setNiveauEpice, setTagsCuisine, setEnRupture, setSupplementIds,
     ajouterAxe, retirerAxe, modifierAxe,
     regenererSku,
     reinitialiser, valider, setErreur,

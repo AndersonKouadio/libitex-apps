@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@heroui/react";
 import {
-  LayoutDashboard, ShoppingCart, Package, Warehouse, Wheat,
+  LayoutDashboard, ShoppingCart, Package, Warehouse, Wheat, UtensilsCrossed,
   Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight,
   Monitor,
 } from "lucide-react";
@@ -23,6 +23,8 @@ const NAV_ERP: ItemNav[] = [
   { href: "/dashboard", libelle: "Tableau de bord", icone: LayoutDashboard },
   { href: "/catalogue", libelle: "Catalogue", icone: Package },
   { href: "/ingredients", libelle: "Ingrédients", icone: Wheat,
+    visibleSi: (s) => s === "RESTAURATION" || s === "AUTRE" },
+  { href: "/supplements", libelle: "Suppléments", icone: UtensilsCrossed,
     visibleSi: (s) => s === "RESTAURATION" || s === "AUTRE" },
   { href: "/stock", libelle: "Stock", icone: Warehouse },
   { href: "/clients", libelle: "Clients", icone: Users },

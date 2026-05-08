@@ -1,7 +1,9 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { eq, and, isNull, sql, ilike, or } from "drizzle-orm";
+import { eq, and, isNull, sql, ilike, or, inArray } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
-import { type Database, products, variants, categories } from "@libitex/db";
+import {
+  type Database, products, variants, categories, productSupplements,
+} from "@libitex/db";
 import type { UniteMesure } from "@libitex/shared";
 
 @Injectable()
@@ -18,6 +20,12 @@ export class ProduitRepository {
     taxRate?: string;
     images?: string[];
     sectorMetadata?: Record<string, unknown>;
+    cookingTimeMinutes?: number;
+    promotionPrice?: string;
+    isPromotion?: boolean;
+    spiceLevel?: string;
+    cuisineTags?: string[];
+    outOfStock?: boolean;
   }) {
     const [produit] = await this.db
       .insert(products)
@@ -26,9 +34,36 @@ export class ProduitRepository {
         ...data,
         images: data.images || [],
         sectorMetadata: data.sectorMetadata || {},
+        cuisineTags: data.cuisineTags || [],
       })
       .returning();
     return produit;
+  }
+
+  async lierSupplements(productId: string, supplementIds: string[]) {
+    if (supplementIds.length === 0) return;
+    await this.db
+      .insert(productSupplements)
+      .values(supplementIds.map((sid, i) => ({
+        productId,
+        supplementId: sid,
+        sortOrder: i,
+      })))
+      .onConflictDoNothing();
+  }
+
+  async remplacerSupplements(productId: string, supplementIds: string[]) {
+    await this.db.delete(productSupplements).where(eq(productSupplements.productId, productId));
+    await this.lierSupplements(productId, supplementIds);
+  }
+
+  async listerSupplementsDuProduit(productId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ supplementId: productSupplements.supplementId })
+      .from(productSupplements)
+      .where(eq(productSupplements.productId, productId))
+      .orderBy(productSupplements.sortOrder);
+    return rows.map((r) => r.supplementId);
   }
 
   async creerVariante(productId: string, data: {
@@ -97,6 +132,12 @@ export class ProduitRepository {
     brand: string;
     images: string[];
     sectorMetadata: Record<string, unknown>;
+    cookingTimeMinutes: number;
+    promotionPrice: string;
+    isPromotion: boolean;
+    spiceLevel: string;
+    cuisineTags: string[];
+    outOfStock: boolean;
     isActive: boolean;
   }>) {
     // Filtre les undefined : sinon Drizzle ecrase a NULL les champs non fournis.

@@ -68,8 +68,12 @@ export class TicketRepository {
     sku: string; quantity: string; unitPrice: string; discount: string;
     taxRate: string; taxAmount: string; lineTotal: string;
     serialNumber?: string; serialId?: string; batchId?: string; batchNumber?: string;
+    supplements?: Array<{ supplementId: string; name: string; unitPrice: number; quantity: number }>;
   }) {
-    const [ligne] = await this.db.insert(ticketLines).values(data).returning();
+    const [ligne] = await this.db.insert(ticketLines).values({
+      ...data,
+      supplements: data.supplements ?? [],
+    }).returning();
     return ligne;
   }
 

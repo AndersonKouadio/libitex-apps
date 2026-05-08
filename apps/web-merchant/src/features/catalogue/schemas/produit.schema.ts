@@ -15,6 +15,8 @@ export const creerVarianteSchema = z.object({
   prixParUnite: z.boolean().optional(),
 });
 
+export const niveauEpiceSchema = z.enum(["TOUJOURS_EPICE", "JAMAIS_EPICE", "AU_CHOIX"]);
+
 export const creerProduitSchema = z.object({
   nom: z.string().min(2, "Nom du produit requis (2 caractères min.)"),
   description: z.string().optional(),
@@ -25,6 +27,15 @@ export const creerProduitSchema = z.object({
   tauxTva: z.number().min(0).optional(),
   images: z.array(z.string().url("URL d'image invalide")).max(6, "6 images maximum").optional(),
   metadataSecteur: z.record(z.string(), z.unknown()).optional(),
+  // Restauration
+  cookingTimeMinutes: z.number().int().min(0).optional(),
+  prixPromotion: z.number().min(0).optional(),
+  enPromotion: z.boolean().optional(),
+  niveauEpice: niveauEpiceSchema.optional(),
+  tagsCuisine: z.array(z.string()).optional(),
+  enRupture: z.boolean().optional(),
+  supplementIds: z.array(z.string()).optional(),
+  // Variantes
   variantes: z.array(creerVarianteSchema).min(1, "Au moins une variante requise"),
 });
 
@@ -35,6 +46,13 @@ export const modifierProduitSchema = z.object({
   categorieId: z.string().optional(),
   images: z.array(z.string().url("URL d'image invalide")).max(6, "6 images maximum").optional(),
   metadataSecteur: z.record(z.string(), z.unknown()).optional(),
+  cookingTimeMinutes: z.number().int().min(0).optional(),
+  prixPromotion: z.number().min(0).optional(),
+  enPromotion: z.boolean().optional(),
+  niveauEpice: niveauEpiceSchema.optional(),
+  tagsCuisine: z.array(z.string()).optional(),
+  enRupture: z.boolean().optional(),
+  supplementIds: z.array(z.string()).optional(),
   actif: z.boolean().optional(),
 });
 

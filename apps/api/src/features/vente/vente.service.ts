@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { TicketRepository } from "./repositories/ticket.repository";
 import { StockService } from "../stock/stock.service";
 import { IngredientService } from "../ingredient/ingredient.service";
+import { SupplementService } from "../supplement/supplement.service";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import {
   RessourceIntrouvableException,
@@ -22,6 +23,7 @@ export class VenteService {
     private readonly ticketRepo: TicketRepository,
     private readonly stockService: StockService,
     private readonly ingredientService: IngredientService,
+    private readonly supplementService: SupplementService,
     private readonly audit: AuditService,
   ) {}
 
@@ -47,7 +49,16 @@ export class VenteService {
       const prixUnitaire = ligne.prixUnitaire ?? Number(variant.priceRetail);
       const remise = ligne.remise ?? 0;
       const tauxTva = Number(product.taxRate ?? 0);
-      const sousTotalLigne = prixUnitaire * ligne.quantite - remise;
+
+      // Resolution des supplements pour figer leur prix au moment de la vente
+      // (un changement de prix ulterieur ne doit pas affecter ce ticket).
+      const supplementsLigne = await this.resoudreSupplements(tenantId, ligne.supplements ?? []);
+      const totalSupplements = supplementsLigne.reduce(
+        (s, sup) => s + sup.unitPrice * sup.quantity,
+        0,
+      );
+
+      const sousTotalLigne = prixUnitaire * ligne.quantite + totalSupplements - remise;
       const tvaLigne = sousTotalLigne * (tauxTva / 100);
       const totalLigne = sousTotalLigne + tvaLigne;
 
@@ -78,6 +89,7 @@ export class VenteService {
         discount: remise.toString(), taxRate: tauxTva.toString(),
         taxAmount: tvaLigne.toFixed(2), lineTotal: totalLigne.toFixed(2),
         serialNumber, serialId, batchId, batchNumber,
+        supplements: supplementsLigne,
       });
 
       sousTotal += sousTotalLigne;
@@ -287,6 +299,7 @@ export class VenteService {
   }
 
   private mapLigne(raw: any): LigneTicketResponseDto {
+    const supplementsRaw = Array.isArray(raw.supplements) ? raw.supplements : [];
     return {
       id: raw.id,
       varianteId: raw.variantId,
@@ -301,7 +314,39 @@ export class VenteService {
       totalLigne: Number(raw.lineTotal),
       numeroSerie: raw.serialNumber,
       numeroBatch: raw.batchNumber,
+      supplements: supplementsRaw.map((s: any) => ({
+        supplementId: s.supplementId,
+        nom: s.name,
+        prixUnitaire: Number(s.unitPrice ?? 0),
+        quantite: Number(s.quantity ?? 1),
+      })),
     };
+  }
+
+  /**
+   * Resout les supplements demandes (par id + quantite) en figeant leur nom et prix
+   * au moment de la vente. Les changements de prix ulterieurs n'affectent pas le ticket.
+   */
+  private async resoudreSupplements(
+    tenantId: string,
+    demandes: Array<{ supplementId: string; quantite: number }>,
+  ): Promise<Array<{ supplementId: string; name: string; unitPrice: number; quantity: number }>> {
+    if (demandes.length === 0) return [];
+    const ids = demandes.map((d) => d.supplementId);
+    const supplements = await this.supplementService.listerParIds(tenantId, ids);
+    const parId = new Map(supplements.map((s) => [s.id, s]));
+    return demandes
+      .map((d) => {
+        const s = parId.get(d.supplementId);
+        if (!s) return null;
+        return {
+          supplementId: s.id,
+          name: s.nom,
+          unitPrice: s.prix,
+          quantity: d.quantite,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
   }
 
   private mapPaiement(raw: any): PaiementResponseDto {

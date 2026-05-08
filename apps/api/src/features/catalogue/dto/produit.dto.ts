@@ -1,6 +1,6 @@
 import {
   IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsArray,
-  ValidateNested, IsBoolean, Min, IsUrl, ArrayMaxSize,
+  ValidateNested, IsBoolean, Min, IsUrl, ArrayMaxSize, IsInt,
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
@@ -13,6 +13,18 @@ export enum TypeProduit {
   PERISHABLE = "PERISHABLE",
   MENU = "MENU",
 }
+
+export enum NiveauEpice {
+  TOUJOURS_EPICE = "TOUJOURS_EPICE",
+  JAMAIS_EPICE = "JAMAIS_EPICE",
+  AU_CHOIX = "AU_CHOIX",
+}
+
+export const TAGS_CUISINE_VALIDES = [
+  "VEGAN", "VEGETARIEN", "SANS_GLUTEN", "SANS_LACTOSE",
+  "HALAL", "CASHER", "BIO", "MAISON", "NOUVEAU", "SIGNATURE",
+] as const;
+export type TagCuisine = typeof TAGS_CUISINE_VALIDES[number];
 
 // --- Requete ---
 
@@ -135,6 +147,54 @@ export class CreerProduitDto {
   @IsOptional()
   metadataSecteur?: Record<string, unknown>;
 
+  // ─── Champs RESTAURATION (pertinents pour les produits MENU) ───
+
+  @ApiPropertyOptional({ example: 15, description: "Temps de préparation en minutes" })
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  cookingTimeMinutes?: number;
+
+  @ApiPropertyOptional({ example: 1500, description: "Prix promotionnel (affiché barré quand isPromotion=true)" })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  prixPromotion?: number;
+
+  @ApiPropertyOptional({ example: false })
+  @IsBoolean()
+  @IsOptional()
+  enPromotion?: boolean;
+
+  @ApiPropertyOptional({ enum: NiveauEpice })
+  @IsEnum(NiveauEpice)
+  @IsOptional()
+  niveauEpice?: NiveauEpice;
+
+  @ApiPropertyOptional({
+    description: "Tags cuisine : VEGAN, VEGETARIEN, SANS_GLUTEN, SANS_LACTOSE, HALAL, CASHER, BIO, MAISON, NOUVEAU, SIGNATURE",
+    type: [String],
+    example: ["VEGAN", "MAISON"],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  tagsCuisine?: string[];
+
+  @ApiPropertyOptional({ description: "Indisponibilité ponctuelle (rupture, distinct de actif)" })
+  @IsBoolean()
+  @IsOptional()
+  enRupture?: boolean;
+
+  @ApiPropertyOptional({
+    description: "Identifiants des suppléments rattachés (sauces, accompagnements...)",
+    type: [String],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  supplementIds?: string[];
+
   @ApiProperty({ type: [CreerVarianteDto] })
   @ValidateNested({ each: true })
   @Type(() => CreerVarianteDto)
@@ -173,6 +233,45 @@ export class ModifierProduitDto {
   @ApiPropertyOptional({ description: "Métadonnées spécifiques au secteur" })
   @IsOptional()
   metadataSecteur?: Record<string, unknown>;
+
+  @ApiPropertyOptional()
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  cookingTimeMinutes?: number;
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  prixPromotion?: number;
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  enPromotion?: boolean;
+
+  @ApiPropertyOptional({ enum: NiveauEpice })
+  @IsEnum(NiveauEpice)
+  @IsOptional()
+  niveauEpice?: NiveauEpice;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  tagsCuisine?: string[];
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  enRupture?: boolean;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  supplementIds?: string[];
 
   @ApiPropertyOptional()
   @IsBoolean()
@@ -219,6 +318,16 @@ export class ProduitResponseDto {
   tauxTva!: number;
   images!: string[];
   metadataSecteur!: Record<string, unknown>;
+  // ─── Champs restauration ───
+  cookingTimeMinutes!: number | null;
+  prixPromotion!: number | null;
+  enPromotion!: boolean;
+  niveauEpice!: string | null;
+  tagsCuisine!: string[];
+  enRupture!: boolean;
+  /** Suppléments rattachés (renvoie au moins l'id, complété par le module supplément). */
+  supplementIds!: string[];
+  // ─── Communs ───
   actif!: boolean;
   variantes!: VarianteResponseDto[];
   creeLe!: string;

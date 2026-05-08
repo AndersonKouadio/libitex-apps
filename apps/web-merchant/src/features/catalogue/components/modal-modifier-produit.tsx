@@ -6,13 +6,14 @@ import {
   Select, ListBox,
 } from "@heroui/react";
 import { Pencil } from "lucide-react";
-import type { IProduit } from "../types/produit.type";
+import type { IProduit, NiveauEpice } from "../types/produit.type";
 import type { SecteurActivite } from "@/features/auth/types/auth.type";
 import { useModifierProduitMutation } from "../queries/produit-update.mutation";
 import { useCategorieListQuery } from "../queries/categorie-list.query";
 import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
 import { ZoneUploadImages } from "@/features/upload/components/zone-upload-images";
 import { SectionMetadataSecteur } from "./section-metadata-secteur";
+import { SectionRestauration } from "./section-restauration";
 import { modifierProduitSchema, type ModifierProduitDTO } from "../schemas/produit.schema";
 
 interface Props {
@@ -33,7 +34,16 @@ export function ModalModifierProduit({ produit, onFermer }: Props) {
   const [images, setImages] = useState<string[]>([]);
   const [metadataSecteur, setMetadataSecteur] = useState<Record<string, unknown>>({});
   const [actif, setActif] = useState(true);
+  // Restauration
+  const [cookingTimeMinutes, setCookingTimeMinutes] = useState<number | null>(null);
+  const [prixPromotion, setPrixPromotion] = useState<number | null>(null);
+  const [enPromotion, setEnPromotion] = useState(false);
+  const [niveauEpice, setNiveauEpice] = useState<NiveauEpice | null>(null);
+  const [tagsCuisine, setTagsCuisine] = useState<string[]>([]);
+  const [enRupture, setEnRupture] = useState(false);
+  const [supplementIds, setSupplementIds] = useState<string[]>([]);
   const [erreur, setErreur] = useState("");
+  const estRestauration = secteur === "RESTAURATION" || produit?.typeProduit === "MENU";
 
   useEffect(() => {
     if (!produit) return;
@@ -44,6 +54,13 @@ export function ModalModifierProduit({ produit, onFermer }: Props) {
     setImages(produit.images ?? []);
     setMetadataSecteur(produit.metadataSecteur ?? {});
     setActif(produit.actif);
+    setCookingTimeMinutes(produit.cookingTimeMinutes);
+    setPrixPromotion(produit.prixPromotion);
+    setEnPromotion(produit.enPromotion);
+    setNiveauEpice(produit.niveauEpice);
+    setTagsCuisine(produit.tagsCuisine ?? []);
+    setEnRupture(produit.enRupture);
+    setSupplementIds(produit.supplementIds ?? []);
     setErreur("");
   }, [produit]);
 
@@ -59,6 +76,13 @@ export function ModalModifierProduit({ produit, onFermer }: Props) {
       categorieId: categorieId || undefined,
       images,
       metadataSecteur,
+      cookingTimeMinutes: cookingTimeMinutes ?? undefined,
+      prixPromotion: prixPromotion ?? undefined,
+      enPromotion,
+      niveauEpice: niveauEpice ?? undefined,
+      tagsCuisine,
+      enRupture,
+      supplementIds,
       actif,
     };
     const validation = modifierProduitSchema.safeParse(data);
@@ -133,6 +157,25 @@ export function ModalModifierProduit({ produit, onFermer }: Props) {
             </div>
 
             <ZoneUploadImages cible="produits" images={images} onChange={setImages} />
+
+            {estRestauration && (
+              <SectionRestauration
+                cookingTimeMinutes={cookingTimeMinutes}
+                prixPromotion={prixPromotion}
+                enPromotion={enPromotion}
+                niveauEpice={niveauEpice}
+                tagsCuisine={tagsCuisine}
+                enRupture={enRupture}
+                supplementIds={supplementIds}
+                onCookingTimeMinutes={setCookingTimeMinutes}
+                onPrixPromotion={setPrixPromotion}
+                onEnPromotion={setEnPromotion}
+                onNiveauEpice={setNiveauEpice}
+                onTagsCuisine={setTagsCuisine}
+                onEnRupture={setEnRupture}
+                onSupplementIds={setSupplementIds}
+              />
+            )}
 
             <SectionMetadataSecteur
               secteur={secteur}

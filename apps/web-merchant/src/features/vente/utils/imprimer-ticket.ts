@@ -52,12 +52,18 @@ function construireHtml(ticket: ITicket, boutique: InfosBoutique, monnaie: numbe
       const qte = l.uniteVente
         ? formaterQuantite(l.quantite, l.uniteVente as UniteMesure)
         : String(l.quantite);
+      const supplementsHtml = (l.supplements ?? []).length > 0
+        ? `<div class="supplements">${(l.supplements ?? [])
+            .map((s) => `+ ${escape(s.nom)} ×${s.quantite} (${formatMontant(s.prixUnitaire * s.quantite)})`)
+            .join("<br>")}</div>`
+        : "";
       return `
         <tr class="ligne">
           <td class="nom">
             ${escape(l.nomProduit)}
             ${l.nomVariante ? `<div class="variante">${escape(l.nomVariante)}</div>` : ""}
             <div class="qte-prix">${qte} × ${formatMontant(l.prixUnitaire)}</div>
+            ${supplementsHtml}
           </td>
           <td class="total">${formatMontant(l.totalLigne)}</td>
         </tr>`;
@@ -98,6 +104,7 @@ function construireHtml(ticket: ITicket, boutique: InfosBoutique, monnaie: numbe
     .nom { padding-right: 6px; }
     .variante { font-size: 11px; color: #555; }
     .qte-prix { font-size: 11px; color: #555; margin-top: 1px; }
+    .supplements { font-size: 10px; color: #444; margin-top: 2px; padding-left: 6px; border-left: 2px solid #ccc; }
     .total { text-align: right; white-space: nowrap; font-weight: 600; }
     .separateur { border-top: 1px dashed #000; margin: 8px 0; }
     .ligne-flex { display: flex; justify-content: space-between; padding: 2px 0; }

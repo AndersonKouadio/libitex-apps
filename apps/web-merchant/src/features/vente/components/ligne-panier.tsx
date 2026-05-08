@@ -68,7 +68,18 @@ export function LignePanier({
               {article.nomProduit}
             </p>
             <p className="text-xs text-muted truncate mt-0.5">{article.nomVariante}</p>
-            <p className="text-[10px] text-muted/70 font-mono mt-0.5">{article.sku}</p>
+            {article.supplements.length > 0 ? (
+              <ul className="mt-1 space-y-0.5 pl-2 border-l-2 border-warning/30">
+                {article.supplements.map((s) => (
+                  <li key={s.supplementId} className="text-[10px] text-muted">
+                    + {s.nom}{s.quantite > 1 ? ` ×${s.quantite}` : ""}{" "}
+                    <span className="tabular-nums">({formatMontant(s.prixUnitaire * s.quantite)} F)</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[10px] text-muted/70 font-mono mt-0.5">{article.sku}</p>
+            )}
           </div>
           <Button
             variant="ghost"
