@@ -4,6 +4,7 @@ import "./globals.css";
 import { QueryProvider } from "@/providers/query-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import { ToastProvider } from "@/providers/toast-provider";
+import { ConfirmationProvider } from "@/providers/confirmation-provider";
 import { SWRegister } from "@/providers/sw-register";
 
 const inter = Inter({
@@ -63,7 +64,9 @@ export default function RootLayout({
       <body className="bg-background text-foreground antialiased" suppressHydrationWarning>
         <QueryProvider>
           <AuthProvider>
-            {children}
+            <ConfirmationProvider>
+              {children}
+            </ConfirmationProvider>
             <ToastProvider />
             <SWRegister />
           </AuthProvider>

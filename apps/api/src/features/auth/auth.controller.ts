@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Body, HttpCode, HttpStatus, UseGuards,
+  Controller, Get, Post, Patch, Delete, Body, HttpCode, HttpStatus, UseGuards,
 } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagger";
@@ -7,6 +7,7 @@ import { AuthService } from "./auth.service";
 import {
   ConnexionDto, InscriptionDto, ChangerMotDePasseDto,
   DemanderResetDto, ReinitialiserMotDePasseDto,
+  ModifierProfilDto, SupprimerCompteDto,
 } from "./dto/auth.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 
@@ -58,6 +59,37 @@ export class AuthController {
   @ApiResponse({ status: 200, description: "Email envoyé (réponse identique si compte inexistant)" })
   demanderReset(@Body() dto: DemanderResetDto) {
     return this.authService.demanderReinitialisation(dto.email);
+  }
+
+  @Get("profil")
+  @UseGuards(AuthGuard("jwt"))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Profil de l'utilisateur connecté" })
+  obtenirProfil(@CurrentUser() user: CurrentUserData) {
+    return this.authService.obtenirProfil(user.userId);
+  }
+
+  @Patch("profil")
+  @UseGuards(AuthGuard("jwt"))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Modifier le profil (prénom, nom, téléphone). L'email reste fixé à l'inscription." })
+  modifierProfil(
+    @CurrentUser() user: CurrentUserData,
+    @Body() dto: ModifierProfilDto,
+  ) {
+    return this.authService.modifierProfil(user.userId, dto);
+  }
+
+  @Delete("compte")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard("jwt"))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Supprimer définitivement son compte (refuse si propriétaire d'au moins une boutique)" })
+  supprimerCompte(
+    @CurrentUser() user: CurrentUserData,
+    @Body() dto: SupprimerCompteDto,
+  ) {
+    return this.authService.supprimerCompte(user.userId, dto.motDePasse);
   }
 
   @Post("reinitialiser-mot-de-passe")

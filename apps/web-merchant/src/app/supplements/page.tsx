@@ -11,6 +11,7 @@ import {
 import { ModalSupplement } from "@/features/supplement/components/modal-supplement";
 import { LABELS_CATEGORIE_SUPPLEMENT, type ISupplement } from "@/features/supplement/types/supplement.type";
 import { formatMontant } from "@/features/vente/utils/format";
+import { useConfirmation } from "@/providers/confirmation-provider";
 
 const COULEURS_CATEGORIE: Record<string, string> = {
   NOURRITURE: "bg-success/10 text-success",
@@ -22,6 +23,7 @@ const COULEURS_CATEGORIE: Record<string, string> = {
 export default function PageSupplements() {
   const { data, isLoading } = useSupplementListQuery();
   const supprimer = useSupprimerSupplementMutation();
+  const confirmer = useConfirmation();
   const [modalOuvert, setModalOuvert] = useState(false);
   const [enEdition, setEnEdition] = useState<ISupplement | null>(null);
 
@@ -38,7 +40,12 @@ export default function PageSupplements() {
   }
 
   async function handleSupprimer(s: ISupplement) {
-    if (!window.confirm(`Supprimer le supplément « ${s.nom} » ?`)) return;
+    const ok = await confirmer({
+      titre: "Supprimer ce supplément ?",
+      description: `Le supplément « ${s.nom} » sera supprimé du catalogue.`,
+      actionLibelle: "Supprimer",
+    });
+    if (!ok) return;
     await supprimer.mutateAsync(s.id);
   }
 

@@ -9,6 +9,7 @@ import { useCategorieListQuery } from "@/features/catalogue/queries/categorie-li
 import { useSupprimerCategorieMutation } from "@/features/catalogue/queries/categorie.mutations";
 import { ModalCategorie } from "@/features/catalogue/components/modal-categorie";
 import type { ICategorie } from "@/features/catalogue/types/produit.type";
+import { useConfirmation } from "@/providers/confirmation-provider";
 
 interface NoeudArbre {
   categorie: ICategorie;
@@ -34,6 +35,7 @@ function construireArbre(categories: ICategorie[]): NoeudArbre[] {
 export default function PageCategories() {
   const { data, isLoading } = useCategorieListQuery();
   const supprimer = useSupprimerCategorieMutation();
+  const confirmer = useConfirmation();
   const [modalOuvert, setModalOuvert] = useState(false);
   const [enEdition, setEnEdition] = useState<ICategorie | null>(null);
 
@@ -51,7 +53,12 @@ export default function PageCategories() {
   }
 
   async function handleSupprimer(c: ICategorie) {
-    if (!window.confirm(`Supprimer la catégorie « ${c.nom} » ?`)) return;
+    const ok = await confirmer({
+      titre: "Supprimer cette catégorie ?",
+      description: `La catégorie « ${c.nom} » sera supprimée. Les produits associés ne seront plus catégorisés mais ne sont pas supprimés.`,
+      actionLibelle: "Supprimer",
+    });
+    if (!ok) return;
     await supprimer.mutateAsync(c.id);
   }
 

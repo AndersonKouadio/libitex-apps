@@ -1,5 +1,5 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import { type Database, memberships, tenants, users } from "@libitex/db";
 
@@ -58,6 +58,7 @@ export class MembershipRepository {
       .where(and(
         eq(memberships.userId, userId),
         eq(memberships.isActive, true),
+        isNull(tenants.deletedAt),
       ));
   }
 
@@ -107,5 +108,12 @@ export class MembershipRepository {
       ),
     });
     return list.length;
+  }
+
+  async desactiverPourTenant(tenantId: string) {
+    await this.db
+      .update(memberships)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(memberships.tenantId, tenantId));
   }
 }

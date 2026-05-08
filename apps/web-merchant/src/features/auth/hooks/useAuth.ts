@@ -19,6 +19,7 @@ interface AuthContextValue {
   connecter: (data: ConnexionDTO) => Promise<void>;
   deconnecter: () => void;
   appliquerSession: (token: string, utilisateur: IUtilisateurSession, boutiques: IBoutiqueResume[], active: IBoutiqueResume) => void;
+  mettreAJourUtilisateur: (patch: Partial<IUtilisateurSession>) => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -82,8 +83,17 @@ export function useAuthState() {
     localStorage.removeItem(STORAGE_BOUTIQUE_ACTIVE);
   }, []);
 
+  const mettreAJourUtilisateur = useCallback((patch: Partial<IUtilisateurSession>) => {
+    setUtilisateur((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      localStorage.setItem(STORAGE_USER, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   return {
     token, utilisateur, boutiques, boutiqueActive, enChargement,
-    connecter, deconnecter, appliquerSession: persister,
+    connecter, deconnecter, appliquerSession: persister, mettreAJourUtilisateur,
   };
 }

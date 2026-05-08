@@ -116,6 +116,30 @@ export class DemanderResetDto {
   email!: string;
 }
 
+export class ModifierProfilDto {
+  @ApiPropertyOptional({ example: "Amadou" })
+  @IsString()
+  @IsOptional()
+  prenom?: string;
+
+  @ApiPropertyOptional({ example: "Diallo" })
+  @IsString()
+  @IsOptional()
+  nomFamille?: string;
+
+  @ApiPropertyOptional({ example: "+221770001234" })
+  @IsString()
+  @IsOptional()
+  telephone?: string;
+}
+
+export class SupprimerCompteDto {
+  @ApiProperty({ description: "Mot de passe pour confirmer la suppression du compte" })
+  @IsString()
+  @MinLength(1, { message: "Mot de passe requis" })
+  motDePasse!: string;
+}
+
 export class ReinitialiserMotDePasseDto {
   @ApiProperty({ description: "Token reçu par email" })
   @IsString()

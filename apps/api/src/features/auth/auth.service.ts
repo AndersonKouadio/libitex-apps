@@ -305,6 +305,54 @@ export class AuthService {
     return { ok: true };
   }
 
+  async obtenirProfil(userId: string) {
+    const user = await this.utilisateurRepo.trouverParId(userId);
+    if (!user) throw new NotFoundException("Utilisateur introuvable");
+    return {
+      id: user.id,
+      email: user.email,
+      prenom: user.firstName,
+      nomFamille: user.lastName,
+      telephone: user.phone ?? undefined,
+    };
+  }
+
+  async modifierProfil(
+    userId: string,
+    data: { prenom?: string; nomFamille?: string; telephone?: string },
+  ) {
+    const user = await this.utilisateurRepo.trouverParId(userId);
+    if (!user) throw new NotFoundException("Utilisateur introuvable");
+    await this.utilisateurRepo.modifierUtilisateur(userId, {
+      firstName: data.prenom,
+      lastName: data.nomFamille,
+      phone: data.telephone,
+    });
+    return this.obtenirProfil(userId);
+  }
+
+  async supprimerCompte(userId: string, motDePasse: string): Promise<{ ok: true }> {
+    const user = await this.utilisateurRepo.trouverParId(userId);
+    if (!user) throw new NotFoundException("Utilisateur introuvable");
+
+    const valide = await bcrypt.compare(motDePasse, user.passwordHash);
+    if (!valide) throw new IdentifiantsInvalidesException();
+
+    // Refuse la suppression si l'utilisateur est l'unique proprietaire d'au moins
+    // une boutique : il doit d'abord transferer la propriete ou supprimer la
+    // boutique (qui demande deja a avoir au moins une autre boutique).
+    const memberships = await this.membershipRepo.listerParUtilisateur(userId);
+    const tenantsProprietaire = memberships.filter((m) => m.membership.isOwner);
+    if (tenantsProprietaire.length > 0) {
+      throw new BadRequestException(
+        "Vous êtes propriétaire de boutiques. Supprimez-les d'abord depuis « Mes boutiques » avant de fermer votre compte.",
+      );
+    }
+
+    await this.utilisateurRepo.supprimerUtilisateur(userId);
+    return { ok: true };
+  }
+
   private toBoutiqueResume(tenant: any, membership: any): BoutiqueResumeDto {
     return {
       id: tenant.id,

@@ -8,22 +8,36 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBoutiqueListQuery } from "@/features/boutique/queries/boutique-list.query";
 import { useSupprimerBoutiqueMutation } from "@/features/boutique/queries/boutique.mutations";
+import { useSwitcherBoutiqueMutation } from "@/features/boutique/queries/boutique-switch.mutation";
 import { CarteBoutique } from "@/features/boutique/components/carte-boutique";
 import { ModalCreerBoutique } from "@/features/boutique/components/modal-creer-boutique";
 import type { IBoutiqueResume } from "@/features/boutique/types/boutique.type";
+import { useConfirmation } from "@/providers/confirmation-provider";
 
 export default function PageBoutiques() {
-  const { boutiques: boutiquesSession } = useAuth();
+  const { boutiques: boutiquesSession, boutiqueActive } = useAuth();
   const { data: boutiquesAPI, isLoading } = useBoutiqueListQuery();
   const supprimer = useSupprimerBoutiqueMutation();
+  const switcher = useSwitcherBoutiqueMutation();
+  const confirmer = useConfirmation();
 
   const [modalCreationOuvert, setModalCreationOuvert] = useState(false);
 
   const boutiques = boutiquesAPI ?? boutiquesSession;
 
   async function handleSupprimer(b: IBoutiqueResume) {
-    const message = `Supprimer définitivement la boutique « ${b.nom} » ?\n\nLes données (catalogue, ventes, stock) ne seront plus accessibles.`;
-    if (!window.confirm(message)) return;
+    const ok = await confirmer({
+      titre: `Supprimer la boutique « ${b.nom} » ?`,
+      description: "Les données (catalogue, stock, ventes) ne seront plus accessibles. Cette action ne peut pas être annulée par vous-même.",
+      actionLibelle: "Supprimer la boutique",
+    });
+    if (!ok) return;
+    // Si on supprime la boutique active, on bascule d'abord sur une autre pour que
+    // le JWT ne pointe plus vers le tenant qui va etre soft-supprime.
+    if (boutiqueActive?.id === b.id) {
+      const autre = boutiques.find((x) => x.id !== b.id);
+      if (autre) await switcher.mutateAsync(autre.id);
+    }
     await supprimer.mutateAsync(b.id);
   }
 

@@ -9,6 +9,7 @@ import { ModalEntreeStock } from "@/features/stock/components/modal-entree-stock
 import { ModalEmplacement } from "@/features/stock/components/modal-emplacement";
 import { ModalTransfertStock } from "@/features/stock/components/modal-transfert-stock";
 import type { IEmplacement } from "@/features/stock/types/stock.type";
+import { useConfirmation } from "@/providers/confirmation-provider";
 import { Table, Chip, Card, Button, Skeleton } from "@heroui/react";
 import {
   MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus, Plus,
@@ -22,6 +23,7 @@ const LABELS_TYPE: Record<string, string> = {
 export default function PageStock() {
   const { data: emplacements } = useEmplacementListQuery();
   const supprimer = useSupprimerEmplacementMutation();
+  const confirmer = useConfirmation();
   const [empSelectionne, setEmpSelectionne] = useState("");
   const [modalOuvert, setModalOuvert] = useState(false);
   const [modalEmpOuvert, setModalEmpOuvert] = useState(false);
@@ -41,7 +43,12 @@ export default function PageStock() {
   }
 
   async function supprimerEmplacement(emp: IEmplacement) {
-    if (!window.confirm(`Supprimer l'emplacement « ${emp.nom} » ?`)) return;
+    const ok = await confirmer({
+      titre: "Supprimer cet emplacement ?",
+      description: `L'emplacement « ${emp.nom} » sera supprimé. Cette action échoue s'il contient encore du stock.`,
+      actionLibelle: "Supprimer",
+    });
+    if (!ok) return;
     try {
       await supprimer.mutateAsync(emp.id);
       if (empSelectionne === emp.id) setEmpSelectionne("");

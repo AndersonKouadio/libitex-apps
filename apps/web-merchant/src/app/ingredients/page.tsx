@@ -16,12 +16,14 @@ import { ModalIngredient } from "@/features/ingredient/components/modal-ingredie
 import { ModalReceptionIngredient } from "@/features/ingredient/components/modal-reception-ingredient";
 import type { IIngredient } from "@/features/ingredient/types/ingredient.type";
 import { UNITE_LABELS } from "@/features/unite/types/unite.type";
+import { useConfirmation } from "@/providers/confirmation-provider";
 
 export default function PageIngredients() {
   const { data: boutique } = useBoutiqueActiveQuery();
   const { data: emplacements } = useEmplacementListQuery();
   const { data: ingredients, isLoading } = useIngredientListQuery();
   const supprimer = useSupprimerIngredientMutation();
+  const confirmer = useConfirmation();
 
   const [empSelectionne, setEmpSelectionne] = useState("");
   const [modalIngredientOuvert, setModalIngredientOuvert] = useState(false);
@@ -39,7 +41,12 @@ export default function PageIngredients() {
   }
 
   async function handleSupprimer(i: IIngredient) {
-    if (!window.confirm(`Supprimer l'ingrédient « ${i.nom} » ?`)) return;
+    const ok = await confirmer({
+      titre: "Supprimer cet ingrédient ?",
+      description: `L'ingrédient « ${i.nom} » sera supprimé. Les recettes des menus qui l'utilisent doivent être mises à jour.`,
+      actionLibelle: "Supprimer",
+    });
+    if (!ok) return;
     await supprimer.mutateAsync(i.id);
   }
 

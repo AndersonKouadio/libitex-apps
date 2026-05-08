@@ -8,6 +8,7 @@ import { Users, UserPlus, Phone, Mail, MapPin, Trash2, Pencil } from "lucide-rea
 import { useClientListQuery, useSupprimerClientMutation } from "@/features/client/queries/client.query";
 import { ModalClient } from "@/features/client/components/modal-client";
 import type { IClient } from "@/features/client/types/client.type";
+import { useConfirmation } from "@/providers/confirmation-provider";
 
 export default function PageClients() {
   const [recherche, setRecherche] = useState("");
@@ -15,6 +16,7 @@ export default function PageClients() {
   const [enEdition, setEnEdition] = useState<IClient | null>(null);
   const { data, isLoading } = useClientListQuery(1, recherche || undefined);
   const supprimer = useSupprimerClientMutation();
+  const confirmer = useConfirmation();
   const clients = data?.data ?? [];
 
   function ouvrirCreation() {
@@ -28,7 +30,12 @@ export default function PageClients() {
   }
 
   async function handleSupprimer(id: string, nom: string) {
-    if (!window.confirm(`Supprimer le client ${nom} ?`)) return;
+    const ok = await confirmer({
+      titre: "Supprimer ce client ?",
+      description: `Le client « ${nom} » sera supprimé. Son historique d'achats reste consultable depuis les rapports.`,
+      actionLibelle: "Supprimer",
+    });
+    if (!ok) return;
     await supprimer.mutateAsync(id);
   }
 

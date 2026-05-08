@@ -1,5 +1,5 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import { type Database, users, tenants } from "@libitex/db";
 import { ActivitySector, ACTIVITY_SECTOR_PRODUCT_TYPES } from "@libitex/shared";
@@ -30,11 +30,15 @@ export class UtilisateurRepository {
   }
 
   async trouverTenantParSlug(slug: string) {
-    return this.db.query.tenants.findFirst({ where: eq(tenants.slug, slug) });
+    return this.db.query.tenants.findFirst({
+      where: and(eq(tenants.slug, slug), isNull(tenants.deletedAt)),
+    });
   }
 
   async trouverTenantParId(id: string) {
-    return this.db.query.tenants.findFirst({ where: eq(tenants.id, id) });
+    return this.db.query.tenants.findFirst({
+      where: and(eq(tenants.id, id), isNull(tenants.deletedAt)),
+    });
   }
 
   async creerUtilisateur(data: {
@@ -56,12 +60,42 @@ export class UtilisateurRepository {
 
   async trouverParEmail(email: string) {
     return this.db.query.users.findFirst({
-      where: and(eq(users.email, email), eq(users.isActive, true)),
+      where: and(
+        eq(users.email, email),
+        eq(users.isActive, true),
+        isNull(users.deletedAt),
+      ),
     });
   }
 
   async trouverParId(id: string) {
-    return this.db.query.users.findFirst({ where: eq(users.id, id) });
+    return this.db.query.users.findFirst({
+      where: and(eq(users.id, id), isNull(users.deletedAt)),
+    });
+  }
+
+  async modifierUtilisateur(id: string, data: Partial<{
+    firstName: string;
+    lastName: string;
+    phone: string;
+  }>) {
+    const cleaned: Record<string, unknown> = {};
+    Object.entries(data).forEach(([k, v]) => {
+      if (v !== undefined) cleaned[k] = v;
+    });
+    const [updated] = await this.db
+      .update(users)
+      .set({ ...cleaned, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+
+  async supprimerUtilisateur(id: string) {
+    await this.db
+      .update(users)
+      .set({ deletedAt: new Date(), isActive: false, updatedAt: new Date() })
+      .where(eq(users.id, id));
   }
 
   async mettreAJourDerniereConnexion(userId: string) {

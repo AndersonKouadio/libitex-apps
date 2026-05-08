@@ -24,6 +24,7 @@ export const ROUTE_META: Record<string, RouteMeta> = {
   "/parametres": { titre: "Paramètres" },
   "/parametres/boutiques": { titre: "Mes boutiques", raccourci: "Boutiques" },
   "/parametres/profil": { titre: "Profil de la boutique", raccourci: "Profil" },
+  "/parametres/mon-compte": { titre: "Mon compte", raccourci: "Compte" },
   "/parametres/equipe": { titre: "Équipe" },
   "/changer-mot-de-passe": { titre: "Changer le mot de passe", raccourci: "Mot de passe" },
 };

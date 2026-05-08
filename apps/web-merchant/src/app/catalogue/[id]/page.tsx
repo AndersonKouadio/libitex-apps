@@ -25,6 +25,7 @@ import type {
   NiveauEpice, ModeDisponibilite, PlanningDisponibilite,
 } from "@/features/catalogue/types/produit.type";
 import type { SecteurActivite } from "@/features/auth/types/auth.type";
+import { useConfirmation } from "@/providers/confirmation-provider";
 
 export default function PageModifierProduit({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -32,6 +33,7 @@ export default function PageModifierProduit({ params }: { params: Promise<{ id: 
   const { data: produit, isLoading } = useProduitDetailQuery(id);
   const mutation = useModifierProduitMutation();
   const supprimer = useSupprimerProduitMutation();
+  const confirmer = useConfirmation();
   const { data: categories } = useCategorieListQuery();
   const { data: boutique } = useBoutiqueActiveQuery();
   const secteur = boutique?.secteurActivite as SecteurActivite | undefined;
@@ -113,7 +115,12 @@ export default function PageModifierProduit({ params }: { params: Promise<{ id: 
 
   async function handleSupprimer() {
     if (!produit) return;
-    if (!window.confirm(`Supprimer définitivement « ${produit.nom} » ? Cette action est irréversible.`)) return;
+    const ok = await confirmer({
+      titre: "Supprimer ce produit ?",
+      description: `Le produit « ${produit.nom} » et ses variantes seront supprimés. L'historique de stock reste consultable mais le produit n'apparaît plus au POS.`,
+      actionLibelle: "Supprimer définitivement",
+    });
+    if (!ok) return;
     await supprimer.mutateAsync(produit.id);
     router.push("/catalogue");
   }

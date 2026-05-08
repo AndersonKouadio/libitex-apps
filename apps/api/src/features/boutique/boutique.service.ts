@@ -59,6 +59,9 @@ export class BoutiqueService {
     }
 
     await this.utilisateurRepo.supprimerTenant(tenantId);
+    // Cascade : desactiver tous les memberships rattaches a ce tenant pour que
+    // les autres utilisateurs ne le voient plus dans leur liste de boutiques.
+    await this.membershipRepo.desactiverPourTenant(tenantId);
   }
 
   private toDetail(tenant: any): BoutiqueDetailDto {

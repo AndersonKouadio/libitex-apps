@@ -14,21 +14,27 @@ import { CarteMembre } from "@/features/equipe/components/carte-membre";
 import { ModalInviterMembre } from "@/features/equipe/components/modal-inviter-membre";
 import { ModalModifierMembre } from "@/features/equipe/components/modal-modifier-membre";
 import type { IMembre } from "@/features/equipe/types/equipe.type";
+import { useConfirmation } from "@/providers/confirmation-provider";
 
 export default function PageEquipe() {
   const { utilisateur } = useAuth();
   const { data: membres, isLoading } = useEquipeListQuery();
   const { data: emplacements } = useEmplacementListQuery();
   const retirer = useRetirerMembreMutation();
+  const confirmer = useConfirmation();
 
   const [modalInviter, setModalInviter] = useState(false);
   const [membreModif, setMembreModif] = useState<IMembre | null>(null);
 
-  function confirmerRetrait(m: IMembre) {
+  async function confirmerRetrait(m: IMembre) {
     const nom = `${m.prenom} ${m.nomFamille}`;
-    if (window.confirm(`Retirer ${nom} de la boutique ? Son compte est conservé mais perdra l'accès.`)) {
-      retirer.mutate(m.membershipId);
-    }
+    const ok = await confirmer({
+      titre: "Retirer ce membre ?",
+      description: `${nom} perdra l'accès à cette boutique. Son compte personnel et ses autres boutiques sont conservés.`,
+      actionLibelle: "Retirer",
+    });
+    if (!ok) return;
+    retirer.mutate(m.membershipId);
   }
 
   return (
