@@ -21,12 +21,14 @@ interface Props {
   mode?: "lateral" | "plein";
   /** Optionnel : ouvre la modale de saisie pour les unites continues (kg, m). */
   onSaisirQuantite?: (varianteId: string) => void;
+  /** Optionnel : ouvre la modale supplements pour la ligne d'index donne. */
+  onPersonnaliser?: (indexLigne: number) => void;
 }
 
 export function PanierVente({
   articles, total, nombreArticles,
   onModifierQuantite, onDefinirQuantite, onRetirer, onVider, onEncaisser, onAttente,
-  onSaisirQuantite, mode = "lateral",
+  onSaisirQuantite, onPersonnaliser, mode = "lateral",
 }: Props) {
   const vide = articles.length === 0;
 
@@ -70,14 +72,15 @@ export function PanierVente({
           </div>
         ) : (
           <ul className="divide-y divide-border">
-            {articles.map((a) => (
+            {articles.map((a, i) => (
               <LignePanier
-                key={a.varianteId}
+                key={`${a.varianteId}-${i}`}
                 article={a}
                 onModifierQuantite={onModifierQuantite}
                 onDefinirQuantite={onDefinirQuantite}
                 onRetirer={onRetirer}
                 onSaisirQuantite={onSaisirQuantite}
+                onPersonnaliser={onPersonnaliser ? () => onPersonnaliser(i) : undefined}
               />
             ))}
           </ul>

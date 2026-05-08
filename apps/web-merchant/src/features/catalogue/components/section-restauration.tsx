@@ -4,11 +4,8 @@ import {
   TextField, Label, Input, FieldError, Switch,
   Select, ListBox, CheckboxGroup, Checkbox,
 } from "@heroui/react";
-import Link from "next/link";
 import { Clock, Tag, Flame, AlertTriangle, UtensilsCrossed } from "lucide-react";
 import type { NiveauEpice } from "../types/produit.type";
-import { useSupplementListQuery } from "@/features/supplement/queries/supplement.query";
-import { LABELS_CATEGORIE_SUPPLEMENT } from "@/features/supplement/types/supplement.type";
 
 interface Props {
   cookingTimeMinutes: number | null;
@@ -17,14 +14,12 @@ interface Props {
   niveauEpice: NiveauEpice | null;
   tagsCuisine: string[];
   enRupture: boolean;
-  supplementIds: string[];
   onCookingTimeMinutes: (v: number | null) => void;
   onPrixPromotion: (v: number | null) => void;
   onEnPromotion: (v: boolean) => void;
   onNiveauEpice: (v: NiveauEpice | null) => void;
   onTagsCuisine: (v: string[]) => void;
   onEnRupture: (v: boolean) => void;
-  onSupplementIds: (v: string[]) => void;
 }
 
 const TAGS_DISPONIBLES = [
@@ -47,9 +42,6 @@ const NIVEAUX_EPICE: { id: NiveauEpice; label: string; description: string }[] =
 ];
 
 export function SectionRestauration(props: Props) {
-  const { data: supplements } = useSupplementListQuery();
-  const supplementsActifs = (supplements ?? []).filter((s) => s.actif);
-
   return (
     <section className="space-y-4">
       <header className="flex items-start gap-3 pb-2 border-b border-border">
@@ -59,7 +51,7 @@ export function SectionRestauration(props: Props) {
         <div>
           <h3 className="text-sm font-semibold text-foreground">Spécificités restauration</h3>
           <p className="text-xs text-muted mt-0.5">
-            Temps de préparation, promo, options épicé/régime et suppléments associés.
+            Temps de préparation, promo, niveau d'épice et tags régime.
           </p>
         </div>
       </header>
@@ -147,43 +139,6 @@ export function SectionRestauration(props: Props) {
             </Checkbox>
           ))}
         </CheckboxGroup>
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <Label className="text-sm font-medium text-foreground">
-            Suppléments rattachés
-          </Label>
-          <Link href="/supplements" className="text-xs text-accent hover:underline">
-            Gérer les suppléments
-          </Link>
-        </div>
-        {supplementsActifs.length === 0 ? (
-          <p className="text-xs text-muted italic">
-            Aucun supplément créé. Créez-les dans <Link href="/supplements" className="text-accent hover:underline">/supplements</Link> pour pouvoir les rattacher.
-          </p>
-        ) : (
-          <CheckboxGroup
-            value={props.supplementIds}
-            onChange={(v) => props.onSupplementIds(v as string[])}
-            className="space-y-1"
-            aria-label="Suppléments"
-          >
-            {supplementsActifs.map((s) => (
-              <Checkbox key={s.id} value={s.id}>
-                <span className="flex items-center gap-2 text-sm">
-                  <span className="text-xs text-muted px-1.5 py-0.5 rounded bg-muted/10">
-                    {LABELS_CATEGORIE_SUPPLEMENT[s.categorie]}
-                  </span>
-                  <span>{s.nom}</span>
-                  <span className="ml-auto text-xs font-semibold text-foreground tabular-nums">
-                    +{s.prix} F
-                  </span>
-                </span>
-              </Checkbox>
-            ))}
-          </CheckboxGroup>
-        )}
       </div>
 
       <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border">

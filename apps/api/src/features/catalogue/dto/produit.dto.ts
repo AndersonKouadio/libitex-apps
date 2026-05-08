@@ -187,15 +187,6 @@ export class CreerProduitDto {
   enRupture?: boolean;
 
   @ApiPropertyOptional({
-    description: "Identifiants des suppléments rattachés (sauces, accompagnements...)",
-    type: [String],
-  })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  supplementIds?: string[];
-
-  @ApiPropertyOptional({
     description: "TOUJOURS = vendable à toute heure ; PROGRAMME = restreint aux plages horaires",
     enum: ["TOUJOURS", "PROGRAMME"],
   })
@@ -291,12 +282,6 @@ export class ModifierProduitDto {
   @IsOptional()
   enRupture?: boolean;
 
-  @ApiPropertyOptional({ type: [String] })
-  @IsArray()
-  @IsString({ each: true })
-  @IsOptional()
-  supplementIds?: string[];
-
   @ApiPropertyOptional({ enum: ["TOUJOURS", "PROGRAMME"] })
   @IsEnum(["TOUJOURS", "PROGRAMME"])
   @IsOptional()
@@ -376,8 +361,6 @@ export class ProduitResponseDto {
   niveauEpice!: string | null;
   tagsCuisine!: string[];
   enRupture!: boolean;
-  /** Suppléments rattachés (renvoie au moins l'id, complété par le module supplément). */
-  supplementIds!: string[];
   modeDisponibilite!: "TOUJOURS" | "PROGRAMME";
   planningDisponibilite!: Record<string, Array<{ from: string; to: string }>>;
   /** Emplacements où le produit est disponible (vide = partout). */

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@heroui/react";
-import { Minus, Plus, Trash2, Package, Pencil } from "lucide-react";
+import { Minus, Plus, Trash2, Package, Pencil, Sparkles } from "lucide-react";
 import type { ArticlePanier } from "../hooks/usePanier";
 import { formatMontant } from "../utils/format";
 import { formaterQuantite, UNITE_LABELS, uniteAccepteDecimal } from "@/features/unite/types/unite.type";
@@ -14,6 +14,8 @@ interface Props {
   onRetirer: (varianteId: string) => void;
   /** Optionnel : ouvre une saisie directe (utile pour produits pesés). */
   onSaisirQuantite?: (varianteId: string) => void;
+  /** Optionnel : ouvre la modale supplements pour cette ligne. */
+  onPersonnaliser?: () => void;
 }
 
 export function LignePanier({
@@ -22,6 +24,7 @@ export function LignePanier({
   onDefinirQuantite,
   onRetirer,
   onSaisirQuantite,
+  onPersonnaliser,
 }: Props) {
   const decimal = uniteAccepteDecimal(article.uniteVente);
   const [valeurInput, setValeurInput] = useState(String(article.quantite));
@@ -149,6 +152,20 @@ export function LignePanier({
             </p>
           </div>
         </div>
+
+        {onPersonnaliser && (
+          <Button
+            variant="ghost"
+            className="mt-1.5 gap-1 text-[11px] text-accent hover:underline px-1.5 py-0.5 h-auto min-w-0"
+            onPress={onPersonnaliser}
+            aria-label="Ajouter des suppléments"
+          >
+            <Sparkles size={11} />
+            {article.supplements.length > 0
+              ? `Modifier les suppléments (${article.supplements.length})`
+              : "Ajouter un supplément"}
+          </Button>
+        )}
       </div>
     </li>
   );

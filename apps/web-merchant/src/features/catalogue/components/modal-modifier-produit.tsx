@@ -44,7 +44,6 @@ export function ModalModifierProduit({ produit, onFermer }: Props) {
   const [niveauEpice, setNiveauEpice] = useState<NiveauEpice | null>(null);
   const [tagsCuisine, setTagsCuisine] = useState<string[]>([]);
   const [enRupture, setEnRupture] = useState(false);
-  const [supplementIds, setSupplementIds] = useState<string[]>([]);
   const [modeDisponibilite, setModeDisponibilite] = useState<ModeDisponibilite>("TOUJOURS");
   const [planningDisponibilite, setPlanningDisponibilite] = useState<PlanningDisponibilite>({});
   const [emplacementsDisponibles, setEmplacementsDisponibles] = useState<string[]>([]);
@@ -66,7 +65,6 @@ export function ModalModifierProduit({ produit, onFermer }: Props) {
     setNiveauEpice(produit.niveauEpice);
     setTagsCuisine(produit.tagsCuisine ?? []);
     setEnRupture(produit.enRupture);
-    setSupplementIds(produit.supplementIds ?? []);
     setModeDisponibilite(produit.modeDisponibilite ?? "TOUJOURS");
     setPlanningDisponibilite(produit.planningDisponibilite ?? {});
     setEmplacementsDisponibles(produit.emplacementsDisponibles ?? []);
@@ -91,7 +89,6 @@ export function ModalModifierProduit({ produit, onFermer }: Props) {
       niveauEpice: niveauEpice ?? undefined,
       tagsCuisine,
       enRupture,
-      supplementIds,
       modeDisponibilite,
       planningDisponibilite: modeDisponibilite === "PROGRAMME" ? planningDisponibilite : undefined,
       emplacementsDisponibles,
@@ -178,14 +175,12 @@ export function ModalModifierProduit({ produit, onFermer }: Props) {
                 niveauEpice={niveauEpice}
                 tagsCuisine={tagsCuisine}
                 enRupture={enRupture}
-                supplementIds={supplementIds}
                 onCookingTimeMinutes={setCookingTimeMinutes}
                 onPrixPromotion={setPrixPromotion}
                 onEnPromotion={setEnPromotion}
                 onNiveauEpice={setNiveauEpice}
                 onTagsCuisine={setTagsCuisine}
                 onEnRupture={setEnRupture}
-                onSupplementIds={setSupplementIds}
               />
             )}
 

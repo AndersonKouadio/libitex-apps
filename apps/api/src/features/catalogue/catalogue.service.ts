@@ -36,9 +36,6 @@ export class CatalogueService {
       availabilitySchedule: dto.planningDisponibilite,
     });
 
-    if (dto.supplementIds && dto.supplementIds.length > 0) {
-      await this.produitRepo.lierSupplements(produit.id, dto.supplementIds);
-    }
     if (dto.emplacementsDisponibles && dto.emplacementsDisponibles.length > 0) {
       await this.produitRepo.lierEmplacements(produit.id, dto.emplacementsDisponibles);
     }
@@ -67,24 +64,21 @@ export class CatalogueService {
       after: { nom: produit.name, type: produit.productType, nbVariantes: variantes.length },
     });
 
-    const supplementIds = dto.supplementIds ?? [];
     const emplacementsDisponibles = dto.emplacementsDisponibles ?? [];
-    return this.mapProduit(produit, variantes, supplementIds, emplacementsDisponibles);
+    return this.mapProduit(produit, variantes, emplacementsDisponibles);
   }
 
   async obtenirProduit(tenantId: string, id: string): Promise<ProduitResponseDto> {
     const produit = await this.produitRepo.obtenirParId(tenantId, id);
     if (!produit) throw new RessourceIntrouvableException("Produit", id);
 
-    const [rawVariantes, supplementIds, emplacementsDisponibles] = await Promise.all([
+    const [rawVariantes, emplacementsDisponibles] = await Promise.all([
       this.produitRepo.obtenirVariantes(id),
-      this.produitRepo.listerSupplementsDuProduit(id),
       this.produitRepo.listerEmplacementsDuProduit(id),
     ]);
     return this.mapProduit(
       produit,
       rawVariantes.map((v) => this.mapVariante(v)),
-      supplementIds,
       emplacementsDisponibles,
     );
   }
@@ -97,15 +91,13 @@ export class CatalogueService {
 
     const produits = await Promise.all(
       data.map(async (p) => {
-        const [rawVariantes, supplementIds, emplacementsDisponibles] = await Promise.all([
+        const [rawVariantes, emplacementsDisponibles] = await Promise.all([
           this.produitRepo.obtenirVariantes(p.id),
-          this.produitRepo.listerSupplementsDuProduit(p.id),
           this.produitRepo.listerEmplacementsDuProduit(p.id),
         ]);
         return this.mapProduit(
           p,
           rawVariantes.map((v) => this.mapVariante(v)),
-          supplementIds,
           emplacementsDisponibles,
         );
       }),
@@ -135,9 +127,6 @@ export class CatalogueService {
       isActive: dto.actif,
     });
 
-    if (dto.supplementIds !== undefined) {
-      await this.produitRepo.remplacerSupplements(id, dto.supplementIds);
-    }
     if (dto.emplacementsDisponibles !== undefined) {
       await this.produitRepo.remplacerEmplacements(id, dto.emplacementsDisponibles);
     }
@@ -148,15 +137,13 @@ export class CatalogueService {
       { nom: updated.name, marque: updated.brand, actif: updated.isActive },
     );
 
-    const [rawVariantes, supplementIds, emplacementsDisponibles] = await Promise.all([
+    const [rawVariantes, emplacementsDisponibles] = await Promise.all([
       this.produitRepo.obtenirVariantes(id),
-      this.produitRepo.listerSupplementsDuProduit(id),
       this.produitRepo.listerEmplacementsDuProduit(id),
     ]);
     return this.mapProduit(
       updated,
       rawVariantes.map((v) => this.mapVariante(v)),
-      supplementIds,
       emplacementsDisponibles,
     );
   }
@@ -221,7 +208,6 @@ export class CatalogueService {
   private mapProduit(
     raw: any,
     variantes: VarianteResponseDto[],
-    supplementIds: string[] = [],
     emplacementsDisponibles: string[] = [],
   ): ProduitResponseDto {
     return {
@@ -245,7 +231,6 @@ export class CatalogueService {
       niveauEpice: raw.spiceLevel ?? null,
       tagsCuisine: Array.isArray(raw.cuisineTags) ? raw.cuisineTags : [],
       enRupture: raw.outOfStock ?? false,
-      supplementIds,
       modeDisponibilite: (raw.availabilityMode ?? "TOUJOURS") as "TOUJOURS" | "PROGRAMME",
       planningDisponibilite: (raw.availabilitySchedule && typeof raw.availabilitySchedule === "object")
         ? raw.availabilitySchedule

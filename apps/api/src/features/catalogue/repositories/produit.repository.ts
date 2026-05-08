@@ -2,7 +2,7 @@ import { Injectable, Inject } from "@nestjs/common";
 import { eq, and, isNull, sql, ilike, or, inArray } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
-  type Database, products, variants, categories, productSupplements, productLocations,
+  type Database, products, variants, categories, productLocations,
 } from "@libitex/db";
 import type { UniteMesure } from "@libitex/shared";
 
@@ -40,32 +40,6 @@ export class ProduitRepository {
       })
       .returning();
     return produit;
-  }
-
-  async lierSupplements(productId: string, supplementIds: string[]) {
-    if (supplementIds.length === 0) return;
-    await this.db
-      .insert(productSupplements)
-      .values(supplementIds.map((sid, i) => ({
-        productId,
-        supplementId: sid,
-        sortOrder: i,
-      })))
-      .onConflictDoNothing();
-  }
-
-  async remplacerSupplements(productId: string, supplementIds: string[]) {
-    await this.db.delete(productSupplements).where(eq(productSupplements.productId, productId));
-    await this.lierSupplements(productId, supplementIds);
-  }
-
-  async listerSupplementsDuProduit(productId: string): Promise<string[]> {
-    const rows = await this.db
-      .select({ supplementId: productSupplements.supplementId })
-      .from(productSupplements)
-      .where(eq(productSupplements.productId, productId))
-      .orderBy(productSupplements.sortOrder);
-    return rows.map((r) => r.supplementId);
   }
 
   async lierEmplacements(productId: string, locationIds: string[]) {

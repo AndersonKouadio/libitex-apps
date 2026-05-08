@@ -13,27 +13,31 @@ interface Props {
   ouvert: boolean;
   nomProduit: string;
   prixBase: number;
-  /** Identifiants des supplements rattaches au produit. */
-  supplementIdsDisponibles: string[];
+  /** Suppléments deja sur la ligne (mode edition) — pre-remplit la modale. */
+  supplementsCourants?: SupplementChoisi[];
   onConfirmer: (supplements: SupplementChoisi[]) => void;
   onFermer: () => void;
 }
 
 export function ModalSupplements({
-  ouvert, nomProduit, prixBase, supplementIdsDisponibles, onConfirmer, onFermer,
+  ouvert, nomProduit, prixBase, supplementsCourants, onConfirmer, onFermer,
 }: Props) {
   const { data: tous } = useSupplementListQuery();
   // Map supplementId -> quantite choisie (0 = non selectionne)
   const [quantites, setQuantites] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    if (ouvert) setQuantites({});
-  }, [ouvert]);
+    if (ouvert) {
+      const initial: Record<string, number> = {};
+      for (const s of supplementsCourants ?? []) initial[s.supplementId] = s.quantite;
+      setQuantites(initial);
+    }
+  }, [ouvert, supplementsCourants]);
 
-  const supplementsDispos = useMemo(() => {
-    const set = new Set(supplementIdsDisponibles);
-    return (tous ?? []).filter((s) => s.actif && set.has(s.id));
-  }, [tous, supplementIdsDisponibles]);
+  const supplementsDispos = useMemo(
+    () => (tous ?? []).filter((s) => s.actif),
+    [tous],
+  );
 
   // Regroupement par categorie pour l'UI.
   const parCategorie = useMemo(() => {
@@ -88,12 +92,12 @@ export function ModalSupplements({
           <Modal.Body className="space-y-4">
             {supplementsDispos.length === 0 ? (
               <p className="text-sm text-muted text-center py-6">
-                Aucun supplément disponible pour ce menu.
+                Aucun supplément actif. Créez-en dans le menu Suppléments.
               </p>
             ) : (
               <>
                 <p className="text-xs text-muted">
-                  Ajoutez des suppléments si souhaité (facultatif).
+                  Choisissez les extras à ajouter (sauces, accompagnements, boissons…).
                 </p>
 
                 {Object.entries(parCategorie).map(([cat, items]) => (
@@ -171,7 +175,7 @@ export function ModalSupplements({
           <Modal.Footer>
             <Button variant="secondary" slot="close">Annuler</Button>
             <Button variant="primary" onPress={valider}>
-              {totalSupplements > 0 ? "Ajouter au panier" : "Ajouter sans supplément"}
+              Confirmer
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

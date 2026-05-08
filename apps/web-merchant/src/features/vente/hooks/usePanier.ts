@@ -128,6 +128,20 @@ export function usePanier() {
     );
   }, []);
 
+  /** Met a jour les supplements d'une ligne (cible par index pour eviter
+   *  les conflits entre deux lignes ayant le meme varianteId). */
+  const definirSupplementsLigne = useCallback(
+    (indexLigne: number, supplements: SupplementChoisi[]) => {
+      setArticles((prev) =>
+        prev.map((a, i) => {
+          if (i !== indexLigne) return a;
+          return { ...a, supplements, totalLigne: recalculerTotalLigne({ ...a, supplements }) };
+        }),
+      );
+    },
+    [],
+  );
+
   const retirer = useCallback((varianteId: string) => {
     setArticles((prev) => prev.filter((a) => a.varianteId !== varianteId));
   }, []);
@@ -172,6 +186,7 @@ export function usePanier() {
 
   return {
     articles, total, nombreArticles,
-    ajouter, modifierQuantite, definirQuantite, retirer, vider, chargerDepuisTicket,
+    ajouter, modifierQuantite, definirQuantite, definirSupplementsLigne,
+    retirer, vider, chargerDepuisTicket,
   };
 }

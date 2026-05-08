@@ -22,7 +22,6 @@ import { ModalTicketsAttente } from "@/features/vente/components/modal-tickets-a
 import { ModalSaisirQuantite } from "@/features/vente/components/modal-saisir-quantite";
 import { ModalSupplements } from "@/features/vente/components/modal-supplements";
 import { useSaisieQuantite } from "@/features/vente/hooks/useSaisieQuantite";
-import { useSupplementsMenu } from "@/features/vente/hooks/useSupplementsMenu";
 import { useEncaissement } from "@/features/vente/hooks/useEncaissement";
 import { formatMontant } from "@/features/vente/utils/format";
 
@@ -54,16 +53,19 @@ export default function PagePOS() {
   const nombreEnAttente = (ticketsAttenteData?.data ?? []).filter((t) => t.statut === "PARKED").length;
 
   const saisieQuantite = useSaisieQuantite(panier, produits);
-  const supplementsMenu = useSupplementsMenu(panier);
   const encaissement = useEncaissement(panier, empId, token);
+  // Index de la ligne en cours de personnalisation (suppléments). null = ferme.
+  const [ligneSupplements, setLigneSupplements] = useState<number | null>(null);
+  const articleEnCours = ligneSupplements !== null ? panier.articles[ligneSupplements] : undefined;
 
-  // Quand on tape sur un produit dans la grille :
-  //  1. Si le produit a des supplements rattaches → ouvrir la modale supplement
-  //  2. Sinon, si l'unite est decimale → ouvrir la saisie de quantite
-  //  3. Sinon, ajout direct au panier
-  function handleAjoutGrille(produit: typeof produits[number], variante: typeof produits[number]["variantes"][number]) {
-    if (supplementsMenu.tenterOuvrir(produit, variante)) return;
-    saisieQuantite.ajouterDepuisGrille(produit, variante);
+  function ouvrirSupplements(indexLigne: number) {
+    setLigneSupplements(indexLigne);
+  }
+  function confirmerSupplements(supplements: typeof panier.articles[number]["supplements"]) {
+    if (ligneSupplements !== null) {
+      panier.definirSupplementsLigne(ligneSupplements, supplements);
+    }
+    setLigneSupplements(null);
   }
 
   async function lancerEncaissement(methode: string) {
@@ -145,7 +147,7 @@ export default function PagePOS() {
         </header>
 
         <div className="flex-1 overflow-hidden flex flex-col pb-20 lg:pb-0">
-          <GrilleProduits produits={produits} stocks={stocks} onAjouter={handleAjoutGrille} />
+          <GrilleProduits produits={produits} stocks={stocks} onAjouter={saisieQuantite.ajouterDepuisGrille} />
         </div>
       </div>
 
@@ -163,6 +165,7 @@ export default function PagePOS() {
           onEncaisser={() => setPaiementOuvert(true)}
           onAttente={lancerMiseEnAttente}
           onSaisirQuantite={saisieQuantite.ouvrirPourLigne}
+          onPersonnaliser={ouvrirSupplements}
         />
       </div>
 
@@ -220,6 +223,7 @@ export default function PagePOS() {
               onEncaisser={ouvrirEncaissement}
               onAttente={lancerMiseEnAttente}
               onSaisirQuantite={saisieQuantite.ouvrirPourLigne}
+              onPersonnaliser={ouvrirSupplements}
             />
           </Drawer.Dialog>
         </Drawer.Content>
@@ -278,14 +282,14 @@ export default function PagePOS() {
         />
       )}
 
-      {supplementsMenu.saisie && (
+      {articleEnCours && (
         <ModalSupplements
           ouvert
-          nomProduit={supplementsMenu.saisie.produit.nom}
-          prixBase={supplementsMenu.saisie.variante.prixDetail}
-          supplementIdsDisponibles={supplementsMenu.saisie.produit.supplementIds ?? []}
-          onConfirmer={supplementsMenu.confirmer}
-          onFermer={supplementsMenu.fermer}
+          nomProduit={articleEnCours.nomProduit}
+          prixBase={articleEnCours.prixUnitaire * articleEnCours.quantite}
+          supplementsCourants={articleEnCours.supplements}
+          onConfirmer={confirmerSupplements}
+          onFermer={() => setLigneSupplements(null)}
         />
       )}
     </div>

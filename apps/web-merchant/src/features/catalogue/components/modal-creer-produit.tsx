@@ -64,7 +64,7 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
     typeProduit, varianteUnique, axes, prefixeSku, variantesGenerees, images,
     metadataSecteur, lignesRecette, erreur,
     cookingTimeMinutes, prixPromotion, enPromotion, niveauEpice, tagsCuisine,
-    enRupture, supplementIds,
+    enRupture,
     modeDisponibilite, planningDisponibilite, emplacementsDisponibles,
   } = form.valeurs;
   const secteur = boutique?.secteurActivite as SecteurActivite | undefined;
@@ -145,14 +145,12 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
                 niveauEpice={niveauEpice}
                 tagsCuisine={tagsCuisine}
                 enRupture={enRupture}
-                supplementIds={supplementIds}
                 onCookingTimeMinutes={form.setCookingTimeMinutes}
                 onPrixPromotion={form.setPrixPromotion}
                 onEnPromotion={form.setEnPromotion}
                 onNiveauEpice={form.setNiveauEpice}
                 onTagsCuisine={form.setTagsCuisine}
                 onEnRupture={form.setEnRupture}
-                onSupplementIds={form.setSupplementIds}
               />
             )}
 

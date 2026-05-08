@@ -1,16 +1,14 @@
 import {
-  pgTable, uuid, varchar, text, numeric, boolean, integer, timestamp, index, primaryKey,
+  pgTable, uuid, varchar, text, numeric, boolean, timestamp, index,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
-import { products } from "./catalog";
 
 /**
- * Supplements / extras / options proposes en surcoût sur une vente.
- * Cas typique restauration : sauces, accompagnements, boissons,
- * suppléments fromage, niveau de cuisson chargeable, etc.
+ * Catalogue independant de supplements proposes au moment de la commande.
  *
- * Lies aux produits via `productSupplements` (N:M). Le client choisit
- * a la caisse parmi les supplements rattaches au plat.
+ * Volontairement decouples des produits : le client peut ajouter n'importe quel
+ * supplement actif a n'importe quelle ligne de ticket. Pas de rattachement
+ * obligatoire produit-par-produit (qui complexifie sans valeur ajoutee).
  */
 export const supplements = pgTable("supplements", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -28,19 +26,4 @@ export const supplements = pgTable("supplements", {
 }, (table) => [
   index("idx_supplements_tenant").on(table.tenantId),
   index("idx_supplements_category").on(table.tenantId, table.category),
-]);
-
-export const productSupplements = pgTable("product_supplements", {
-  productId: uuid("product_id").references(() => products.id).notNull(),
-  supplementId: uuid("supplement_id").references(() => supplements.id).notNull(),
-  // Si true, le client doit obligatoirement choisir au moins 1 de ce supplement
-  // (cas typique : choix de sauce, choix d'accompagnement).
-  isRequired: boolean("is_required").notNull().default(false),
-  // Nombre maximal d'unites de ce supplement par ligne de ticket.
-  maxQuantity: integer("max_quantity").notNull().default(1),
-  // Ordre d'affichage dans la modale POS.
-  sortOrder: integer("sort_order").notNull().default(0),
-}, (table) => [
-  primaryKey({ columns: [table.productId, table.supplementId] }),
-  index("idx_product_supplements_product").on(table.productId),
 ]);

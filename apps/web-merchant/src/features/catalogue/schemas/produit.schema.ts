@@ -42,7 +42,6 @@ export const creerProduitSchema = z.object({
   niveauEpice: niveauEpiceSchema.optional(),
   tagsCuisine: z.array(z.string()).optional(),
   enRupture: z.boolean().optional(),
-  supplementIds: z.array(z.string()).optional(),
   // Disponibilite
   modeDisponibilite: modeDisponibiliteSchema.optional(),
   planningDisponibilite: planningDisponibiliteSchema.optional(),
@@ -64,7 +63,6 @@ export const modifierProduitSchema = z.object({
   niveauEpice: niveauEpiceSchema.optional(),
   tagsCuisine: z.array(z.string()).optional(),
   enRupture: z.boolean().optional(),
-  supplementIds: z.array(z.string()).optional(),
   modeDisponibilite: modeDisponibiliteSchema.optional(),
   planningDisponibilite: planningDisponibiliteSchema.optional(),
   emplacementsDisponibles: z.array(z.string()).optional(),

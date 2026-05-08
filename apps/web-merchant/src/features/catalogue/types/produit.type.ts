@@ -53,7 +53,6 @@ export interface IProduit {
   niveauEpice: NiveauEpice | null;
   tagsCuisine: string[];
   enRupture: boolean;
-  supplementIds: string[];
   // Disponibilite
   modeDisponibilite: ModeDisponibilite;
   planningDisponibilite: PlanningDisponibilite;
