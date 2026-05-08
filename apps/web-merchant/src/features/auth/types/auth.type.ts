@@ -1,4 +1,4 @@
-export type TypeProduit = "SIMPLE" | "VARIANT" | "SERIALIZED" | "PERISHABLE";
+export type TypeProduit = "SIMPLE" | "VARIANT" | "SERIALIZED" | "PERISHABLE" | "MENU";
 
 export type SecteurActivite =
   | "VETEMENT"
@@ -19,6 +19,7 @@ export interface IUtilisateurSession {
   email: string;
   prenom: string;
   nomFamille: string;
+  mustChangePassword: boolean;
 }
 
 export interface IBoutiqueResume {

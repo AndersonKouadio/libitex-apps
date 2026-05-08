@@ -187,10 +187,31 @@ export class AuthService {
         email: user.email,
         prenom: user.firstName,
         nomFamille: user.lastName,
+        mustChangePassword: user.mustChangePassword ?? false,
       },
       boutiques,
       boutiqueActive,
     };
+  }
+
+  async changerMotDePasse(
+    userId: string,
+    motDePasseActuel: string,
+    nouveauMotDePasse: string,
+  ): Promise<{ ok: true }> {
+    const user = await this.utilisateurRepo.trouverParId(userId);
+    if (!user) throw new IdentifiantsInvalidesException();
+
+    const valide = await bcrypt.compare(motDePasseActuel, user.passwordHash);
+    if (!valide) throw new IdentifiantsInvalidesException();
+
+    if (motDePasseActuel === nouveauMotDePasse) {
+      throw new IdentifiantsInvalidesException();
+    }
+
+    const hash = await bcrypt.hash(nouveauMotDePasse, 12);
+    await this.utilisateurRepo.changerMotDePasse(userId, hash);
+    return { ok: true };
   }
 
   private toBoutiqueResume(tenant: any, membership: any): BoutiqueResumeDto {

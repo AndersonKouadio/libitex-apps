@@ -41,9 +41,17 @@ export class UtilisateurRepository {
     tenantId?: string; email: string; passwordHash: string;
     firstName: string; lastName: string; phone?: string;
     role: "SUPER_ADMIN" | "ADMIN" | "MANAGER" | "COMMERCIAL" | "CASHIER" | "WAREHOUSE";
+    mustChangePassword?: boolean;
   }) {
     const [user] = await this.db.insert(users).values(data).returning();
     return user;
+  }
+
+  async changerMotDePasse(userId: string, passwordHash: string) {
+    await this.db
+      .update(users)
+      .set({ passwordHash, mustChangePassword: false, updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
 
   async trouverParEmail(email: string) {

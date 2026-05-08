@@ -60,6 +60,7 @@ export class EquipeService {
         lastName: dto.nomFamille,
         phone: dto.telephone,
         role: dto.role,
+        mustChangePassword: true,
       });
     }
 

@@ -10,4 +10,9 @@ export const authAPI = {
 
   inscrire: (data: InscriptionDTO) =>
     httpClient.post<IAuthResponse>(`${BASE}/inscription`, data),
+
+  changerMotDePasse: (
+    token: string,
+    data: { motDePasseActuel: string; nouveauMotDePasse: string },
+  ) => httpClient.post<{ ok: true }>(`${BASE}/changer-mot-de-passe`, data, { token }),
 };

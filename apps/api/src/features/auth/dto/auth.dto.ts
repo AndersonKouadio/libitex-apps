@@ -95,6 +95,19 @@ export class UtilisateurSessionDto {
   email!: string;
   prenom!: string;
   nomFamille!: string;
+  mustChangePassword!: boolean;
+}
+
+export class ChangerMotDePasseDto {
+  @ApiProperty({ description: "Mot de passe actuel ou temporaire" })
+  @IsString()
+  @MinLength(1, { message: "Mot de passe actuel requis" })
+  motDePasseActuel!: string;
+
+  @ApiProperty({ example: "nouveauMotDePasse123" })
+  @IsString()
+  @MinLength(8, { message: "Le nouveau mot de passe doit contenir au moins 8 caractères" })
+  nouveauMotDePasse!: string;
 }
 
 export class BoutiqueResumeDto {

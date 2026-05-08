@@ -22,6 +22,9 @@ export const users = pgTable("users", {
   // role: garde pour le moment, sera porte par memberships.role
   role: userRoleEnum("role").notNull().default("CASHIER"),
   isActive: boolean("is_active").notNull().default(true),
+  // Force l'utilisateur a changer son mot de passe a la prochaine connexion
+  // (cas typique : membres invites avec mot de passe temporaire)
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   refreshToken: text("refresh_token"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

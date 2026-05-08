@@ -29,6 +29,19 @@ export const creerBoutiqueSchema = z.object({
   secteurActivite: z.enum(SECTEURS_VALIDES),
 });
 
+export const changerMotDePasseSchema = z.object({
+  motDePasseActuel: z.string().min(1, "Mot de passe actuel requis"),
+  nouveauMotDePasse: z.string().min(8, "8 caractères minimum"),
+  confirmation: z.string(),
+}).refine(
+  (data) => data.nouveauMotDePasse === data.confirmation,
+  { message: "Les deux mots de passe ne correspondent pas", path: ["confirmation"] },
+).refine(
+  (data) => data.motDePasseActuel !== data.nouveauMotDePasse,
+  { message: "Le nouveau mot de passe doit être différent de l'actuel", path: ["nouveauMotDePasse"] },
+);
+
 export type ConnexionDTO = z.infer<typeof connexionSchema>;
 export type InscriptionDTO = z.infer<typeof inscriptionSchema>;
 export type CreerBoutiqueDTO = z.infer<typeof creerBoutiqueSchema>;
+export type ChangerMotDePasseDTO = z.infer<typeof changerMotDePasseSchema>;

@@ -17,13 +17,13 @@ export const SECTEUR_TYPES_PRODUITS: Record<SecteurActivite, TypeProduit[]> = {
   VETEMENT: ["SIMPLE", "VARIANT"],
   ALIMENTAIRE: ["SIMPLE", "PERISHABLE"],
   ELECTRONIQUE: ["SIMPLE", "VARIANT", "SERIALIZED"],
-  RESTAURATION: ["SIMPLE", "PERISHABLE"],
+  RESTAURATION: ["MENU", "SIMPLE"],
   BEAUTE_COSMETIQUE: ["SIMPLE", "VARIANT", "PERISHABLE"],
   QUINCAILLERIE: ["SIMPLE", "VARIANT"],
   LIBRAIRIE: ["SIMPLE"],
   PHARMACIE: ["SIMPLE", "PERISHABLE", "SERIALIZED"],
   BIJOUTERIE: ["SIMPLE", "VARIANT", "SERIALIZED"],
-  AUTRE: ["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE"],
+  AUTRE: ["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE", "MENU"],
 };
 
 export const TYPE_PRODUIT_LABELS: Record<TypeProduit, string> = {
@@ -31,6 +31,7 @@ export const TYPE_PRODUIT_LABELS: Record<TypeProduit, string> = {
   VARIANT: "Avec variantes",
   SERIALIZED: "Sérialisé",
   PERISHABLE: "Périssable",
+  MENU: "Menu (recette)",
 };
 
 export const SECTEURS_ORDONNES: SecteurActivite[] = [

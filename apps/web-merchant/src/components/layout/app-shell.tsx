@@ -13,7 +13,7 @@ interface Props {
 }
 
 export function AppShell({ children, pleinEcran = false }: Props) {
-  const { token, enChargement } = useAuth();
+  const { token, enChargement, utilisateur } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [tiroirOuvert, setTiroirOuvert] = useState(false);
@@ -21,6 +21,13 @@ export function AppShell({ children, pleinEcran = false }: Props) {
   useEffect(() => {
     if (!enChargement && !token) router.push("/");
   }, [enChargement, token, router]);
+
+  // Force le changement de mot de passe pour les comptes nouvellement invites
+  useEffect(() => {
+    if (!enChargement && token && utilisateur?.mustChangePassword) {
+      router.push("/changer-mot-de-passe");
+    }
+  }, [enChargement, token, utilisateur?.mustChangePassword, router]);
 
   // Fermer le tiroir lors d'un changement de route
   useEffect(() => {
