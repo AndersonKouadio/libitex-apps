@@ -48,24 +48,37 @@ jobs:
             docker compose -f docker-compose.prod.yml build $SERVICES
             docker compose -f docker-compose.prod.yml up -d --force-recreate $SERVICES
 
-            # Sync des configs nginx versionnees (sans-effet si rien n'a change).
-            # Permet de pousser des ajustements (client_max_body_size, headers...)
-            # sans intervention manuelle sur le VPS.
-            for fichier in /opt/libitex/infra/nginx/libitex-*.lunion-lab.com; do
-              nom=$(basename "$fichier")
-              if [ -f "$fichier" ] && ! cmp -s "$fichier" "/etc/nginx/sites-available/$nom"; then
-                echo ">> Mise a jour nginx: $nom"
-                sudo cp "$fichier" "/etc/nginx/sites-available/$nom"
-                NGINX_CHANGED=1
+            # Sync des configs nginx versionnees (best-effort).
+            # Necessite sudo sans mot de passe pour cp/nginx/systemctl.
+            # Si non configure, on log un warning et on continue : l'utilisateur
+            # peut appliquer manuellement via `./deploy.sh nginx` sur le VPS.
+            if sudo -n true 2>/dev/null; then
+              for fichier in /opt/libitex/infra/nginx/libitex-*.lunion-lab.com; do
+                nom=$(basename "$fichier")
+                if [ -f "$fichier" ] && ! sudo cmp -s "$fichier" "/etc/nginx/sites-available/$nom" 2>/dev/null; then
+                  echo ">> Mise a jour nginx: $nom"
+                  sudo cp "$fichier" "/etc/nginx/sites-available/$nom"
+                  NGINX_CHANGED=1
+                fi
+              done
+              if [ -n "$NGINX_CHANGED" ]; then
+                if sudo nginx -t; then
+                  sudo systemctl reload nginx
+                  echo ">> Nginx recharge"
+                else
+                  echo ">> ATTENTION: nginx -t a echoue, configuration non appliquee"
+                fi
               fi
-            done
-            if [ -n "$NGINX_CHANGED" ]; then
-              if sudo nginx -t; then
-                sudo systemctl reload nginx
-                echo ">> Nginx recharge"
-              else
-                echo ">> ATTENTION: nginx -t a echoue, configuration non appliquee"
-              fi
+            else
+              # Detecte un changement sans pouvoir l'appliquer : avertit.
+              for fichier in /opt/libitex/infra/nginx/libitex-*.lunion-lab.com; do
+                nom=$(basename "$fichier")
+                if [ -f "$fichier" ] && [ -f "/etc/nginx/sites-available/$nom" ] \
+                  && ! cmp -s "$fichier" "/etc/nginx/sites-available/$nom" 2>/dev/null; then
+                  echo ">> WARN: $nom a change mais sudo sans mot de passe non configure."
+                  echo ">> Lance manuellement sur le VPS : sudo /opt/libitex/deploy.sh nginx"
+                fi
+              done
             fi
 
             # Verify
