@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card } from "@heroui/react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { Store, Users, ChevronRight, Building2, Tag, ShieldCheck } from "lucide-react";
+import { Store, Users, ChevronRight, Tag, ShieldCheck } from "lucide-react";
 import { ModalChangerMotDePasse } from "@/features/auth/components/modal-changer-mot-de-passe";
 
 interface SectionConfig {
@@ -15,7 +15,6 @@ interface SectionConfig {
   titre: string;
   description: string;
   classes: string;
-  enConstruction?: boolean;
 }
 
 const SECTIONS: SectionConfig[] = [
@@ -23,7 +22,7 @@ const SECTIONS: SectionConfig[] = [
     href: "/parametres/boutiques",
     icone: Store,
     titre: "Mes boutiques",
-    description: "Gérez vos boutiques, basculez entre elles ou créez-en une nouvelle.",
+    description: "Profil (nom, secteur, devise, contact, adresse), bascule entre boutiques, création et suppression.",
     classes: "bg-accent/10 text-accent",
   },
   {
@@ -39,14 +38,6 @@ const SECTIONS: SectionConfig[] = [
     titre: "Sécurité",
     description: "Changer votre mot de passe et protéger votre compte.",
     classes: "bg-primary-500/10 text-primary-500",
-  },
-  {
-    href: "/parametres",
-    icone: Building2,
-    titre: "Profil de la boutique",
-    description: "Nom, adresse, devise, secteur d'activité et types de produits autorisés.",
-    classes: "bg-success/10 text-success",
-    enConstruction: true,
   },
   {
     href: "/categories",
@@ -76,14 +67,7 @@ export default function PageParametres() {
                     <Icone size={18} />
                   </span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-foreground">{s.titre}</p>
-                      {s.enConstruction && (
-                        <span className="text-[10px] text-muted bg-muted/10 px-1.5 py-0.5 rounded">
-                          Bientôt
-                        </span>
-                      )}
-                    </div>
+                    <p className="text-sm font-semibold text-foreground">{s.titre}</p>
                     <p className="text-xs text-muted mt-1">{s.description}</p>
                   </div>
                   <ChevronRight size={16} className="text-muted shrink-0" />
