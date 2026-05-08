@@ -116,4 +116,27 @@ export class MembershipRepository {
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(memberships.tenantId, tenantId));
   }
+
+  async desactiverPourUtilisateur(userId: string) {
+    await this.db
+      .update(memberships)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(memberships.userId, userId));
+  }
+
+  /**
+   * Compte les autres proprietaires actifs d'un tenant (hors `userId`). Sert a
+   * decider, lors d'une suppression de compte, si le tenant doit egalement
+   * etre soft-supprime (aucun autre proprietaire) ou laisse aux co-proprietaires.
+   */
+  async compterAutresProprietaires(tenantId: string, userId: string): Promise<number> {
+    const list = await this.db.query.memberships.findMany({
+      where: and(
+        eq(memberships.tenantId, tenantId),
+        eq(memberships.isOwner, true),
+        eq(memberships.isActive, true),
+      ),
+    });
+    return list.filter((m) => m.userId !== userId).length;
+  }
 }

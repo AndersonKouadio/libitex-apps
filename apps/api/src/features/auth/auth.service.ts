@@ -338,17 +338,24 @@ export class AuthService {
     const valide = await bcrypt.compare(motDePasse, user.passwordHash);
     if (!valide) throw new IdentifiantsInvalidesException();
 
-    // Refuse la suppression si l'utilisateur est l'unique proprietaire d'au moins
-    // une boutique : il doit d'abord transferer la propriete ou supprimer la
-    // boutique (qui demande deja a avoir au moins une autre boutique).
+    // Cascade : pour chaque boutique dont l'utilisateur est seul proprietaire,
+    // on soft-supprime le tenant et desactive ses memberships. Les boutiques
+    // partagees avec d'autres proprietaires sont conservees ; seul le membership
+    // de cet utilisateur sera desactive avec le compte.
     const memberships = await this.membershipRepo.listerParUtilisateur(userId);
-    const tenantsProprietaire = memberships.filter((m) => m.membership.isOwner);
-    if (tenantsProprietaire.length > 0) {
-      throw new BadRequestException(
-        "Vous êtes propriétaire de boutiques. Supprimez-les d'abord depuis « Mes boutiques » avant de fermer votre compte.",
+    for (const { membership, tenant } of memberships) {
+      if (!membership.isOwner) continue;
+      const autresProprietaires = await this.membershipRepo.compterAutresProprietaires(
+        tenant.id,
+        userId,
       );
+      if (autresProprietaires === 0) {
+        await this.utilisateurRepo.supprimerTenant(tenant.id);
+        await this.membershipRepo.desactiverPourTenant(tenant.id);
+      }
     }
 
+    await this.membershipRepo.desactiverPourUtilisateur(userId);
     await this.utilisateurRepo.supprimerUtilisateur(userId);
     return { ok: true };
   }

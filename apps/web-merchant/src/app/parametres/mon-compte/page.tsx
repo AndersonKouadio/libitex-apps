@@ -153,7 +153,7 @@ export default function PageMonCompte() {
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground">Supprimer mon compte</p>
               <p className="text-xs text-muted mt-1">
-                Action définitive. Vos accès et vos préférences seront perdus. Refusé tant que vous êtes propriétaire d'au moins une boutique : supprimez-les d'abord depuis « Mes boutiques ».
+                Action définitive. Toutes les boutiques dont vous êtes l'unique propriétaire seront aussi supprimées (catalogue, stock, ventes inclus). Les boutiques partagées avec d'autres propriétaires sont conservées.
               </p>
             </div>
             <Button
