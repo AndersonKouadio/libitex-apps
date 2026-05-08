@@ -13,6 +13,7 @@ export const connexionSchema = z.object({
 export const inscriptionSchema = z.object({
   nomBoutique: z.string().min(2, "Nom de boutique requis"),
   slugBoutique: z.string().min(2, "Identifiant boutique requis"),
+  adresseBoutique: z.string().optional(),
   email: z.string().email("Adresse email invalide"),
   motDePasse: z.string().min(6, "6 caractères minimum"),
   prenom: z.string().min(1, "Prenom requis"),
@@ -25,6 +26,7 @@ export const inscriptionSchema = z.object({
 export const creerBoutiqueSchema = z.object({
   nomBoutique: z.string().min(2, "Nom de boutique requis"),
   slugBoutique: z.string().min(2, "Identifiant boutique requis"),
+  adresseBoutique: z.string().optional(),
   devise: z.string().default("XOF"),
   secteurActivite: z.enum(SECTEURS_VALIDES),
 });

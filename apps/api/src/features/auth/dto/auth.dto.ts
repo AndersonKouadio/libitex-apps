@@ -57,6 +57,11 @@ export class InscriptionDto {
   @IsEnum(ActivitySector)
   @IsOptional()
   secteurActivite?: ActivitySector;
+
+  @ApiPropertyOptional({ example: "Plateau, avenue Pompidou — Dakar" })
+  @IsString()
+  @IsOptional()
+  adresseBoutique?: string;
 }
 
 export class CreerBoutiqueDto {
@@ -78,6 +83,11 @@ export class CreerBoutiqueDto {
   @ApiProperty({ enum: ActivitySector })
   @IsEnum(ActivitySector)
   secteurActivite!: ActivitySector;
+
+  @ApiPropertyOptional({ example: "Plateau, avenue Pompidou — Dakar" })
+  @IsString()
+  @IsOptional()
+  adresseBoutique?: string;
 }
 
 // --- Reponse ---

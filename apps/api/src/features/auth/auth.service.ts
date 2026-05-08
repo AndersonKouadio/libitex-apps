@@ -71,6 +71,7 @@ export class AuthService {
       await this.stockService.creerEmplacement(tenant.id, {
         nom: dto.nomBoutique,
         type: "STORE",
+        adresse: dto.adresseBoutique,
       });
     } catch (err) {
       this.logger.error(
@@ -157,6 +158,7 @@ export class AuthService {
       await this.stockService.creerEmplacement(tenant.id, {
         nom: dto.nomBoutique,
         type: "STORE",
+        adresse: dto.adresseBoutique,
       });
     } catch (err) {
       this.logger.error(

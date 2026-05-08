@@ -266,3 +266,12 @@ export const CURRENCIES = ["XOF", "XAF", "USD", "EUR", "GBP", "CNY"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
 export const DEFAULT_CURRENCY: Currency = "XOF";
+
+export const CURRENCY_LABELS: Record<Currency, string> = {
+  XOF: "Franc CFA BCEAO (XOF)",
+  XAF: "Franc CFA BEAC (XAF)",
+  USD: "Dollar américain (USD)",
+  EUR: "Euro (EUR)",
+  GBP: "Livre sterling (GBP)",
+  CNY: "Yuan chinois (CNY)",
+};

@@ -5,10 +5,11 @@ import { TextField, Label, Input } from "@heroui/react";
 interface Props {
   nomBoutique: string;
   slugBoutique: string;
-  onChange: (champ: "nomBoutique", valeur: string) => void;
+  adresseBoutique: string;
+  onChange: (champ: "nomBoutique" | "adresseBoutique", valeur: string) => void;
 }
 
-export function ChampsBoutique({ nomBoutique, slugBoutique, onChange }: Props) {
+export function ChampsBoutique({ nomBoutique, slugBoutique, adresseBoutique, onChange }: Props) {
   return (
     <div>
       <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Votre boutique</p>
@@ -26,6 +27,14 @@ export function ChampsBoutique({ nomBoutique, slugBoutique, onChange }: Props) {
           <span className="text-xs text-muted">libitex.com/</span>
           <span className="text-xs font-mono text-foreground">{slugBoutique || "..."}</span>
         </div>
+        <TextField
+          name="adresseBoutique"
+          value={adresseBoutique}
+          onChange={(v) => onChange("adresseBoutique", v)}
+        >
+          <Label>Adresse du point de vente</Label>
+          <Input placeholder="Plateau, avenue Pompidou — Dakar" />
+        </TextField>
       </div>
     </div>
   );

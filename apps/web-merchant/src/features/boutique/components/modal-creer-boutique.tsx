@@ -5,6 +5,7 @@ import { Modal, Button, TextField, Label, Input } from "@heroui/react";
 import { Store } from "lucide-react";
 import { creerBoutiqueSchema, type CreerBoutiqueDTO } from "@/features/auth/schemas/auth.schema";
 import { ChampSecteur } from "@/features/auth/components/champ-secteur";
+import { ChampDevise } from "@/features/auth/components/champ-devise";
 import { slugifier } from "@/features/auth/utils/slug";
 import type { SecteurActivite } from "@/features/auth/types/auth.type";
 import { useAjouterBoutiqueMutation } from "../queries/boutique-add.mutation";
@@ -17,6 +18,7 @@ interface Props {
 const VIDE: CreerBoutiqueDTO = {
   nomBoutique: "",
   slugBoutique: "",
+  adresseBoutique: "",
   devise: "XOF",
   secteurActivite: "AUTRE",
 };
@@ -81,6 +83,19 @@ export function ModalCreerBoutique({ ouvert, onFermer }: Props) {
               isRequired
               valeur={form.secteurActivite as SecteurActivite}
               onChange={(s) => setForm((p) => ({ ...p, secteurActivite: s }))}
+            />
+
+            <TextField
+              value={form.adresseBoutique ?? ""}
+              onChange={(v) => setForm((p) => ({ ...p, adresseBoutique: v }))}
+            >
+              <Label>Adresse du point de vente</Label>
+              <Input placeholder="Plateau, avenue Pompidou — Dakar" />
+            </TextField>
+
+            <ChampDevise
+              valeur={form.devise}
+              onChange={(c) => setForm((p) => ({ ...p, devise: c }))}
             />
           </Modal.Body>
           <Modal.Footer>

@@ -6,6 +6,7 @@ import { Save } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { ChampSecteur } from "@/features/auth/components/champ-secteur";
+import { ChampDevise } from "@/features/auth/components/champ-devise";
 import type { SecteurActivite } from "@/features/auth/types/auth.type";
 import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
 import { useModifierBoutiqueMutation } from "@/features/boutique/queries/boutique.mutations";
@@ -82,10 +83,7 @@ export default function PageProfilBoutique() {
               <ChampSecteur isRequired valeur={secteur} onChange={setSecteur} />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <TextField value={devise} onChange={setDevise}>
-                  <Label>Devise</Label>
-                  <Input placeholder="XOF" />
-                </TextField>
+                <ChampDevise valeur={devise} onChange={setDevise} />
                 <TextField type="email" value={email} onChange={setEmail}>
                   <Label>Email de contact</Label>
                   <Input placeholder="contact@boutique.sn" />
