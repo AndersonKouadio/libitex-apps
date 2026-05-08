@@ -6,7 +6,7 @@ import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags, ApiOperation } from "@nestjs/swagger";
 import { CatalogueService } from "./catalogue.service";
 import {
-  CreerProduitDto, ModifierProduitDto, CreerCategorieDto,
+  CreerProduitDto, ModifierProduitDto, CreerCategorieDto, ModifierCategorieDto,
 } from "./dto/produit.dto";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
@@ -78,5 +78,24 @@ export class CatalogueController {
   @ApiOperation({ summary: "Lister les catégories" })
   listerCategories(@CurrentUser() user: CurrentUserData) {
     return this.catalogueService.listerCategories(user.tenantId);
+  }
+
+  @Patch("categories/:id")
+  @ApiOperation({ summary: "Modifier une catégorie" })
+  @Roles("ADMIN", "MANAGER")
+  modifierCategorie(
+    @CurrentUser() user: CurrentUserData,
+    @Param("id") id: string,
+    @Body() dto: ModifierCategorieDto,
+  ) {
+    return this.catalogueService.modifierCategorie(user.tenantId, id, dto);
+  }
+
+  @Delete("categories/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Supprimer une catégorie (refus si elle contient encore des produits)" })
+  @Roles("ADMIN", "MANAGER")
+  supprimerCategorie(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
+    return this.catalogueService.supprimerCategorie(user.tenantId, id);
   }
 }

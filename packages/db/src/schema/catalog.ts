@@ -1,6 +1,6 @@
 import {
   pgTable, uuid, varchar, text, boolean, timestamp, pgEnum,
-  integer, numeric, jsonb, date, index,
+  integer, numeric, jsonb, date, index, primaryKey,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
 import { uniteMesureEnum } from "./_shared";
@@ -70,6 +70,14 @@ export const products = pgTable("products", {
   cuisineTags: jsonb("cuisine_tags").$type<string[]>().default([]),
   // Indisponibilite manuelle (rupture momentanee, distinct de isActive).
   outOfStock: boolean("out_of_stock").notNull().default(false),
+  // Mode de disponibilite : 'TOUJOURS' (defaut, vendable a toute heure)
+  // ou 'PROGRAMME' (limite aux plages de availabilitySchedule).
+  availabilityMode: varchar("availability_mode", { length: 20 }).notNull().default("TOUJOURS"),
+  // Plages horaires par jour de la semaine quand mode=PROGRAMME.
+  // Format: { lundi: [{from:"06:00",to:"11:00"}], mardi: [...], ... }
+  availabilitySchedule: jsonb("availability_schedule")
+    .$type<Record<string, Array<{ from: string; to: string }>>>()
+    .default({}),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -79,6 +87,20 @@ export const products = pgTable("products", {
   index("idx_products_type").on(table.tenantId, table.productType),
   index("idx_products_barcode").on(table.barcodeEan13),
   index("idx_products_barcode_internal").on(table.barcodeInternal),
+]);
+
+// ─── Disponibilite par emplacement (N:M, optionnelle) ───
+//
+// Convention : si AUCUNE ligne pour un produit donne, le produit est
+// disponible partout. Si lignes presentes, le produit est limite aux
+// emplacements listes. Permet d'avoir un menu servi seulement au resto A.
+export const productLocations = pgTable("product_locations", {
+  productId: uuid("product_id").references(() => products.id).notNull(),
+  locationId: uuid("location_id").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.productId, table.locationId] }),
+  index("idx_product_locations_product").on(table.productId),
+  index("idx_product_locations_location").on(table.locationId),
 ]);
 
 // ─── Variants (SKU) ───

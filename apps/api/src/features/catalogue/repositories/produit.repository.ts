@@ -2,7 +2,7 @@ import { Injectable, Inject } from "@nestjs/common";
 import { eq, and, isNull, sql, ilike, or, inArray } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
-  type Database, products, variants, categories, productSupplements,
+  type Database, products, variants, categories, productSupplements, productLocations,
 } from "@libitex/db";
 import type { UniteMesure } from "@libitex/shared";
 
@@ -26,6 +26,8 @@ export class ProduitRepository {
     spiceLevel?: string;
     cuisineTags?: string[];
     outOfStock?: boolean;
+    availabilityMode?: "TOUJOURS" | "PROGRAMME";
+    availabilitySchedule?: Record<string, Array<{ from: string; to: string }>>;
   }) {
     const [produit] = await this.db
       .insert(products)
@@ -64,6 +66,27 @@ export class ProduitRepository {
       .where(eq(productSupplements.productId, productId))
       .orderBy(productSupplements.sortOrder);
     return rows.map((r) => r.supplementId);
+  }
+
+  async lierEmplacements(productId: string, locationIds: string[]) {
+    if (locationIds.length === 0) return;
+    await this.db
+      .insert(productLocations)
+      .values(locationIds.map((id) => ({ productId, locationId: id })))
+      .onConflictDoNothing();
+  }
+
+  async remplacerEmplacements(productId: string, locationIds: string[]) {
+    await this.db.delete(productLocations).where(eq(productLocations.productId, productId));
+    await this.lierEmplacements(productId, locationIds);
+  }
+
+  async listerEmplacementsDuProduit(productId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ locationId: productLocations.locationId })
+      .from(productLocations)
+      .where(eq(productLocations.productId, productId));
+    return rows.map((r) => r.locationId);
   }
 
   async creerVariante(productId: string, data: {
@@ -138,6 +161,8 @@ export class ProduitRepository {
     spiceLevel: string;
     cuisineTags: string[];
     outOfStock: boolean;
+    availabilityMode: "TOUJOURS" | "PROGRAMME";
+    availabilitySchedule: Record<string, Array<{ from: string; to: string }>>;
     isActive: boolean;
   }>) {
     // Filtre les undefined : sinon Drizzle ecrase a NULL les champs non fournis.
@@ -175,5 +200,54 @@ export class ProduitRepository {
       where: and(eq(categories.tenantId, tenantId), isNull(categories.deletedAt)),
       orderBy: categories.sortOrder,
     });
+  }
+
+  async trouverCategorieParId(tenantId: string, id: string) {
+    return this.db.query.categories.findFirst({
+      where: and(
+        eq(categories.id, id),
+        eq(categories.tenantId, tenantId),
+        isNull(categories.deletedAt),
+      ),
+    });
+  }
+
+  async modifierCategorie(
+    tenantId: string,
+    id: string,
+    data: Partial<{ name: string; parentId: string | null }>,
+  ) {
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (data.name !== undefined) {
+      updates.name = data.name;
+      updates.slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    }
+    if (data.parentId !== undefined) updates.parentId = data.parentId;
+
+    const [updated] = await this.db
+      .update(categories)
+      .set(updates)
+      .where(and(eq(categories.id, id), eq(categories.tenantId, tenantId)))
+      .returning();
+    return updated;
+  }
+
+  async supprimerCategorie(tenantId: string, id: string) {
+    await this.db
+      .update(categories)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(categories.id, id), eq(categories.tenantId, tenantId)));
+  }
+
+  async compterProduitsCategorie(tenantId: string, categorieId: string): Promise<number> {
+    const [r] = await this.db
+      .select({ n: sql<number>`COUNT(*)` })
+      .from(products)
+      .where(and(
+        eq(products.tenantId, tenantId),
+        eq(products.categoryId, categorieId),
+        isNull(products.deletedAt),
+      ));
+    return Number(r?.n ?? 0);
   }
 }

@@ -15,6 +15,7 @@ import { SectionVariantesAttributs } from "./section-variantes-attributs";
 import { SectionRecetteMenu } from "./section-recette-menu";
 import { SectionMetadataSecteur } from "./section-metadata-secteur";
 import { SectionRestauration } from "./section-restauration";
+import { SectionDisponibilite } from "./section-disponibilite";
 import { ZoneUploadImages } from "@/features/upload/components/zone-upload-images";
 import type { SecteurActivite } from "@/features/auth/types/auth.type";
 
@@ -64,6 +65,7 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
     metadataSecteur, lignesRecette, erreur,
     cookingTimeMinutes, prixPromotion, enPromotion, niveauEpice, tagsCuisine,
     enRupture, supplementIds,
+    modeDisponibilite, planningDisponibilite, emplacementsDisponibles,
   } = form.valeurs;
   const secteur = boutique?.secteurActivite as SecteurActivite | undefined;
   const estRestauration = secteur === "RESTAURATION" || typeProduit === "MENU";
@@ -158,6 +160,15 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
               secteur={secteur}
               metadata={metadataSecteur}
               onChange={form.setMetadataSecteur}
+            />
+
+            <SectionDisponibilite
+              modeDisponibilite={modeDisponibilite}
+              planningDisponibilite={planningDisponibilite}
+              emplacementsDisponibles={emplacementsDisponibles}
+              onModeDisponibilite={form.setModeDisponibilite}
+              onPlanningDisponibilite={form.setPlanningDisponibilite}
+              onEmplacementsDisponibles={form.setEmplacementsDisponibles}
             />
           </Modal.Body>
 

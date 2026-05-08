@@ -6,7 +6,9 @@ import {
   Select, ListBox,
 } from "@heroui/react";
 import { Pencil } from "lucide-react";
-import type { IProduit, NiveauEpice } from "../types/produit.type";
+import type {
+  IProduit, NiveauEpice, ModeDisponibilite, PlanningDisponibilite,
+} from "../types/produit.type";
 import type { SecteurActivite } from "@/features/auth/types/auth.type";
 import { useModifierProduitMutation } from "../queries/produit-update.mutation";
 import { useCategorieListQuery } from "../queries/categorie-list.query";
@@ -14,6 +16,7 @@ import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-act
 import { ZoneUploadImages } from "@/features/upload/components/zone-upload-images";
 import { SectionMetadataSecteur } from "./section-metadata-secteur";
 import { SectionRestauration } from "./section-restauration";
+import { SectionDisponibilite } from "./section-disponibilite";
 import { modifierProduitSchema, type ModifierProduitDTO } from "../schemas/produit.schema";
 
 interface Props {
@@ -42,6 +45,9 @@ export function ModalModifierProduit({ produit, onFermer }: Props) {
   const [tagsCuisine, setTagsCuisine] = useState<string[]>([]);
   const [enRupture, setEnRupture] = useState(false);
   const [supplementIds, setSupplementIds] = useState<string[]>([]);
+  const [modeDisponibilite, setModeDisponibilite] = useState<ModeDisponibilite>("TOUJOURS");
+  const [planningDisponibilite, setPlanningDisponibilite] = useState<PlanningDisponibilite>({});
+  const [emplacementsDisponibles, setEmplacementsDisponibles] = useState<string[]>([]);
   const [erreur, setErreur] = useState("");
   const estRestauration = secteur === "RESTAURATION" || produit?.typeProduit === "MENU";
 
@@ -61,6 +67,9 @@ export function ModalModifierProduit({ produit, onFermer }: Props) {
     setTagsCuisine(produit.tagsCuisine ?? []);
     setEnRupture(produit.enRupture);
     setSupplementIds(produit.supplementIds ?? []);
+    setModeDisponibilite(produit.modeDisponibilite ?? "TOUJOURS");
+    setPlanningDisponibilite(produit.planningDisponibilite ?? {});
+    setEmplacementsDisponibles(produit.emplacementsDisponibles ?? []);
     setErreur("");
   }, [produit]);
 
@@ -83,6 +92,9 @@ export function ModalModifierProduit({ produit, onFermer }: Props) {
       tagsCuisine,
       enRupture,
       supplementIds,
+      modeDisponibilite,
+      planningDisponibilite: modeDisponibilite === "PROGRAMME" ? planningDisponibilite : undefined,
+      emplacementsDisponibles,
       actif,
     };
     const validation = modifierProduitSchema.safeParse(data);
@@ -181,6 +193,15 @@ export function ModalModifierProduit({ produit, onFermer }: Props) {
               secteur={secteur}
               metadata={metadataSecteur}
               onChange={setMetadataSecteur}
+            />
+
+            <SectionDisponibilite
+              modeDisponibilite={modeDisponibilite}
+              planningDisponibilite={planningDisponibilite}
+              emplacementsDisponibles={emplacementsDisponibles}
+              onModeDisponibilite={setModeDisponibilite}
+              onPlanningDisponibilite={setPlanningDisponibilite}
+              onEmplacementsDisponibles={setEmplacementsDisponibles}
             />
 
             <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border">

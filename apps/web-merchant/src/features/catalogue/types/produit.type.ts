@@ -27,6 +27,15 @@ export interface IVariante {
 
 export type NiveauEpice = "TOUJOURS_EPICE" | "JAMAIS_EPICE" | "AU_CHOIX";
 
+export type ModeDisponibilite = "TOUJOURS" | "PROGRAMME";
+
+export interface PlageHoraire {
+  from: string; // "HH:MM"
+  to: string;
+}
+
+export type PlanningDisponibilite = Record<string, PlageHoraire[]>;
+
 export interface IProduit {
   id: string;
   nom: string;
@@ -45,6 +54,10 @@ export interface IProduit {
   tagsCuisine: string[];
   enRupture: boolean;
   supplementIds: string[];
+  // Disponibilite
+  modeDisponibilite: ModeDisponibilite;
+  planningDisponibilite: PlanningDisponibilite;
+  emplacementsDisponibles: string[];
   // Communs
   actif: boolean;
   variantes: IVariante[];

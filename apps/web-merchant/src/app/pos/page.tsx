@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Select, ListBox, Label, Button, Chip, Drawer, Modal,
 } from "@heroui/react";
 import { ShoppingCart, PauseCircle, X } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
+import { estDisponibleMaintenant } from "@/features/catalogue/utils/disponibilite";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import { useStockEmplacementQuery } from "@/features/stock/queries/stock-emplacement.query";
 import { ModalCreerEmplacement } from "@/features/stock/components/modal-creer-emplacement";
@@ -40,7 +41,14 @@ export default function PagePOS() {
   const aucunEmplacement = emplacements !== undefined && emplacements.length === 0;
   const empId = emplacementId || emplacements?.[0]?.id || "";
   const { data: stocks } = useStockEmplacementQuery(empId || undefined);
-  const produits = produitsData?.data ?? [];
+  const tousLesProduits = produitsData?.data ?? [];
+  // Filtre actif : produit actif + en stock + plage horaire valide + emplacement autorise.
+  // Le filtrage est fait cote front pour eviter un round-trip a chaque tap, et reactif
+  // grace au refetch automatique de TanStack Query (refetchOnMount + window focus).
+  const produits = useMemo(
+    () => tousLesProduits.filter((p) => p.actif && estDisponibleMaintenant(p, empId)),
+    [tousLesProduits, empId],
+  );
 
   const { data: ticketsAttenteData } = useTicketListQuery({ statut: "PARKED", page: 1 });
   const nombreEnAttente = (ticketsAttenteData?.data ?? []).filter((t) => t.statut === "PARKED").length;

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, BadRequestException } from "@nestjs/common";
 import { ProduitRepository } from "./repositories/produit.repository";
 import { RessourceIntrouvableException } from "../../common/exceptions/metier.exception";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
@@ -32,10 +32,15 @@ export class CatalogueService {
       spiceLevel: dto.niveauEpice,
       cuisineTags: dto.tagsCuisine ?? [],
       outOfStock: dto.enRupture,
+      availabilityMode: dto.modeDisponibilite,
+      availabilitySchedule: dto.planningDisponibilite,
     });
 
     if (dto.supplementIds && dto.supplementIds.length > 0) {
       await this.produitRepo.lierSupplements(produit.id, dto.supplementIds);
+    }
+    if (dto.emplacementsDisponibles && dto.emplacementsDisponibles.length > 0) {
+      await this.produitRepo.lierEmplacements(produit.id, dto.emplacementsDisponibles);
     }
 
     const variantes: VarianteResponseDto[] = [];
@@ -63,18 +68,25 @@ export class CatalogueService {
     });
 
     const supplementIds = dto.supplementIds ?? [];
-    return this.mapProduit(produit, variantes, supplementIds);
+    const emplacementsDisponibles = dto.emplacementsDisponibles ?? [];
+    return this.mapProduit(produit, variantes, supplementIds, emplacementsDisponibles);
   }
 
   async obtenirProduit(tenantId: string, id: string): Promise<ProduitResponseDto> {
     const produit = await this.produitRepo.obtenirParId(tenantId, id);
     if (!produit) throw new RessourceIntrouvableException("Produit", id);
 
-    const [rawVariantes, supplementIds] = await Promise.all([
+    const [rawVariantes, supplementIds, emplacementsDisponibles] = await Promise.all([
       this.produitRepo.obtenirVariantes(id),
       this.produitRepo.listerSupplementsDuProduit(id),
+      this.produitRepo.listerEmplacementsDuProduit(id),
     ]);
-    return this.mapProduit(produit, rawVariantes.map((v) => this.mapVariante(v)), supplementIds);
+    return this.mapProduit(
+      produit,
+      rawVariantes.map((v) => this.mapVariante(v)),
+      supplementIds,
+      emplacementsDisponibles,
+    );
   }
 
   async listerProduits(
@@ -85,11 +97,17 @@ export class CatalogueService {
 
     const produits = await Promise.all(
       data.map(async (p) => {
-        const [rawVariantes, supplementIds] = await Promise.all([
+        const [rawVariantes, supplementIds, emplacementsDisponibles] = await Promise.all([
           this.produitRepo.obtenirVariantes(p.id),
           this.produitRepo.listerSupplementsDuProduit(p.id),
+          this.produitRepo.listerEmplacementsDuProduit(p.id),
         ]);
-        return this.mapProduit(p, rawVariantes.map((v) => this.mapVariante(v)), supplementIds);
+        return this.mapProduit(
+          p,
+          rawVariantes.map((v) => this.mapVariante(v)),
+          supplementIds,
+          emplacementsDisponibles,
+        );
       }),
     );
 
@@ -112,11 +130,16 @@ export class CatalogueService {
       spiceLevel: dto.niveauEpice,
       cuisineTags: dto.tagsCuisine,
       outOfStock: dto.enRupture,
+      availabilityMode: dto.modeDisponibilite,
+      availabilitySchedule: dto.planningDisponibilite,
       isActive: dto.actif,
     });
 
     if (dto.supplementIds !== undefined) {
       await this.produitRepo.remplacerSupplements(id, dto.supplementIds);
+    }
+    if (dto.emplacementsDisponibles !== undefined) {
+      await this.produitRepo.remplacerEmplacements(id, dto.emplacementsDisponibles);
     }
 
     await this.audit.logUpdate(
@@ -125,11 +148,17 @@ export class CatalogueService {
       { nom: updated.name, marque: updated.brand, actif: updated.isActive },
     );
 
-    const [rawVariantes, supplementIds] = await Promise.all([
+    const [rawVariantes, supplementIds, emplacementsDisponibles] = await Promise.all([
       this.produitRepo.obtenirVariantes(id),
       this.produitRepo.listerSupplementsDuProduit(id),
+      this.produitRepo.listerEmplacementsDuProduit(id),
     ]);
-    return this.mapProduit(updated, rawVariantes.map((v) => this.mapVariante(v)), supplementIds);
+    return this.mapProduit(
+      updated,
+      rawVariantes.map((v) => this.mapVariante(v)),
+      supplementIds,
+      emplacementsDisponibles,
+    );
   }
 
   async supprimerProduit(tenantId: string, userId: string, id: string): Promise<void> {
@@ -141,6 +170,10 @@ export class CatalogueService {
   }
 
   async creerCategorie(tenantId: string, dto: CreerCategorieDto): Promise<CategorieResponseDto> {
+    if (dto.parentId) {
+      const parent = await this.produitRepo.trouverCategorieParId(tenantId, dto.parentId);
+      if (!parent) throw new RessourceIntrouvableException("Catégorie parent", dto.parentId);
+    }
     const cat = await this.produitRepo.creerCategorie(tenantId, dto.nom, dto.parentId);
     return { id: cat.id, nom: cat.name, slug: cat.slug, parentId: cat.parentId };
   }
@@ -150,12 +183,46 @@ export class CatalogueService {
     return cats.map((c) => ({ id: c.id, nom: c.name, slug: c.slug, parentId: c.parentId }));
   }
 
+  async modifierCategorie(
+    tenantId: string,
+    id: string,
+    dto: { nom?: string; parentId?: string },
+  ): Promise<CategorieResponseDto> {
+    const existante = await this.produitRepo.trouverCategorieParId(tenantId, id);
+    if (!existante) throw new RessourceIntrouvableException("Catégorie", id);
+    if (dto.parentId === id) {
+      throw new BadRequestException("Une catégorie ne peut pas être son propre parent");
+    }
+    if (dto.parentId) {
+      const parent = await this.produitRepo.trouverCategorieParId(tenantId, dto.parentId);
+      if (!parent) throw new RessourceIntrouvableException("Catégorie parent", dto.parentId);
+    }
+    const updated = await this.produitRepo.modifierCategorie(tenantId, id, {
+      name: dto.nom,
+      parentId: dto.parentId === "" ? null : dto.parentId,
+    });
+    return { id: updated.id, nom: updated.name, slug: updated.slug, parentId: updated.parentId };
+  }
+
+  async supprimerCategorie(tenantId: string, id: string): Promise<void> {
+    const existante = await this.produitRepo.trouverCategorieParId(tenantId, id);
+    if (!existante) throw new RessourceIntrouvableException("Catégorie", id);
+    const nbProduits = await this.produitRepo.compterProduitsCategorie(tenantId, id);
+    if (nbProduits > 0) {
+      throw new BadRequestException(
+        `Impossible de supprimer : ${nbProduits} produit${nbProduits > 1 ? "s" : ""} appartiennent encore à cette catégorie. Réaffectez-les d'abord.`,
+      );
+    }
+    await this.produitRepo.supprimerCategorie(tenantId, id);
+  }
+
   // --- Mappers (DB -> DTO reponse) ---
 
   private mapProduit(
     raw: any,
     variantes: VarianteResponseDto[],
     supplementIds: string[] = [],
+    emplacementsDisponibles: string[] = [],
   ): ProduitResponseDto {
     return {
       id: raw.id,
@@ -179,6 +246,11 @@ export class CatalogueService {
       tagsCuisine: Array.isArray(raw.cuisineTags) ? raw.cuisineTags : [],
       enRupture: raw.outOfStock ?? false,
       supplementIds,
+      modeDisponibilite: (raw.availabilityMode ?? "TOUJOURS") as "TOUJOURS" | "PROGRAMME",
+      planningDisponibilite: (raw.availabilitySchedule && typeof raw.availabilitySchedule === "object")
+        ? raw.availabilitySchedule
+        : {},
+      emplacementsDisponibles,
       // Communs
       actif: raw.isActive,
       variantes,

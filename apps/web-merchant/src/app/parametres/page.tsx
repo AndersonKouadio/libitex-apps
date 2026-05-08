@@ -48,12 +48,11 @@ const SECTIONS: SectionConfig[] = [
     enConstruction: true,
   },
   {
-    href: "/parametres",
+    href: "/categories",
     icone: Tag,
     titre: "Catégories",
     description: "Organisez votre catalogue par catégories et sous-catégories.",
     classes: "bg-muted/10 text-muted",
-    enConstruction: true,
   },
 ];
 

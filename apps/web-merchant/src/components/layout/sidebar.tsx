@@ -7,7 +7,7 @@ import { Button } from "@heroui/react";
 import {
   LayoutDashboard, ShoppingCart, Package, Warehouse, Wheat, UtensilsCrossed,
   Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight,
-  Monitor,
+  Monitor, FolderTree,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { SwitcherBoutique } from "@/features/boutique/components/switcher-boutique";
@@ -22,6 +22,7 @@ interface ItemNav {
 const NAV_ERP: ItemNav[] = [
   { href: "/dashboard", libelle: "Tableau de bord", icone: LayoutDashboard },
   { href: "/catalogue", libelle: "Catalogue", icone: Package },
+  { href: "/categories", libelle: "Catégories", icone: FolderTree },
   { href: "/ingredients", libelle: "Ingrédients", icone: Wheat,
     visibleSi: (s) => s === "RESTAURATION" || s === "AUTRE" },
   { href: "/supplements", libelle: "Suppléments", icone: UtensilsCrossed,

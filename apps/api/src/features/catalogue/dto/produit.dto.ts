@@ -195,6 +195,30 @@ export class CreerProduitDto {
   @IsOptional()
   supplementIds?: string[];
 
+  @ApiPropertyOptional({
+    description: "TOUJOURS = vendable à toute heure ; PROGRAMME = restreint aux plages horaires",
+    enum: ["TOUJOURS", "PROGRAMME"],
+  })
+  @IsEnum(["TOUJOURS", "PROGRAMME"])
+  @IsOptional()
+  modeDisponibilite?: "TOUJOURS" | "PROGRAMME";
+
+  @ApiPropertyOptional({
+    description: "Plages horaires par jour quand mode=PROGRAMME",
+    example: { lundi: [{ from: "06:00", to: "11:00" }] },
+  })
+  @IsOptional()
+  planningDisponibilite?: Record<string, Array<{ from: string; to: string }>>;
+
+  @ApiPropertyOptional({
+    description: "Liste d'emplacements où le produit est disponible (vide = partout)",
+    type: [String],
+  })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  emplacementsDisponibles?: string[];
+
   @ApiProperty({ type: [CreerVarianteDto] })
   @ValidateNested({ each: true })
   @Type(() => CreerVarianteDto)
@@ -273,6 +297,21 @@ export class ModifierProduitDto {
   @IsOptional()
   supplementIds?: string[];
 
+  @ApiPropertyOptional({ enum: ["TOUJOURS", "PROGRAMME"] })
+  @IsEnum(["TOUJOURS", "PROGRAMME"])
+  @IsOptional()
+  modeDisponibilite?: "TOUJOURS" | "PROGRAMME";
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  planningDisponibilite?: Record<string, Array<{ from: string; to: string }>>;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  emplacementsDisponibles?: string[];
+
   @ApiPropertyOptional()
   @IsBoolean()
   @IsOptional()
@@ -284,6 +323,18 @@ export class CreerCategorieDto {
   @IsString()
   @IsNotEmpty()
   nom!: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  parentId?: string;
+}
+
+export class ModifierCategorieDto {
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  nom?: string;
 
   @ApiPropertyOptional()
   @IsString()
@@ -327,6 +378,10 @@ export class ProduitResponseDto {
   enRupture!: boolean;
   /** Suppléments rattachés (renvoie au moins l'id, complété par le module supplément). */
   supplementIds!: string[];
+  modeDisponibilite!: "TOUJOURS" | "PROGRAMME";
+  planningDisponibilite!: Record<string, Array<{ from: string; to: string }>>;
+  /** Emplacements où le produit est disponible (vide = partout). */
+  emplacementsDisponibles!: string[];
   // ─── Communs ───
   actif!: boolean;
   variantes!: VarianteResponseDto[];

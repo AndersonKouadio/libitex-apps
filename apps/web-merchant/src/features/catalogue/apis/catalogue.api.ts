@@ -28,4 +28,10 @@ export const catalogueAPI = {
 
   creerCategorie: (token: string, data: { nom: string; parentId?: string }) =>
     httpClient.post<ICategorie>(`${BASE}/categories`, data, { token }),
+
+  modifierCategorie: (token: string, id: string, data: { nom?: string; parentId?: string }) =>
+    httpClient.patch<ICategorie>(`${BASE}/categories/${id}`, data, { token }),
+
+  supprimerCategorie: (token: string, id: string) =>
+    httpClient.delete<void>(`${BASE}/categories/${id}`, { token }),
 };

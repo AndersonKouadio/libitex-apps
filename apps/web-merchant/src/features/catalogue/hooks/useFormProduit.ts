@@ -59,6 +59,12 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
   const [tagsCuisine, setTagsCuisine] = useState<string[]>([]);
   const [enRupture, setEnRupture] = useState(false);
   const [supplementIds, setSupplementIds] = useState<string[]>([]);
+  // Disponibilite
+  const [modeDisponibilite, setModeDisponibilite] = useState<"TOUJOURS" | "PROGRAMME">("TOUJOURS");
+  const [planningDisponibilite, setPlanningDisponibilite] = useState<
+    Record<string, Array<{ from: string; to: string }>>
+  >({});
+  const [emplacementsDisponibles, setEmplacementsDisponibles] = useState<string[]>([]);
   const [erreur, setErreur] = useState("");
   // Suivi de l'edition manuelle du SKU. Si l'utilisateur modifie le SKU
   // a la main, on cesse de l'auto-regenerer quand le nom change.
@@ -110,6 +116,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
     setMetadataSecteur({}); setLignesRecette([]); setErreur("");
     setCookingTimeMinutes(null); setPrixPromotion(null); setEnPromotion(false);
     setNiveauEpice(null); setTagsCuisine([]); setEnRupture(false); setSupplementIds([]);
+    setModeDisponibilite("TOUJOURS"); setPlanningDisponibilite({}); setEmplacementsDisponibles([]);
     setSkuManuel(false); setPrefixeSkuManuel(false);
   }, [typeParDefaut]);
 
@@ -169,6 +176,9 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
       tagsCuisine: tagsCuisine.length > 0 ? tagsCuisine : undefined,
       enRupture,
       supplementIds: supplementIds.length > 0 ? supplementIds : undefined,
+      modeDisponibilite,
+      planningDisponibilite: modeDisponibilite === "PROGRAMME" ? planningDisponibilite : undefined,
+      emplacementsDisponibles: emplacementsDisponibles.length > 0 ? emplacementsDisponibles : undefined,
       variantes,
     };
 
@@ -184,6 +194,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
     images, metadataSecteur, lignesRecette, variantesGenerees,
     cookingTimeMinutes, prixPromotion, enPromotion, niveauEpice, tagsCuisine,
     enRupture, supplementIds,
+    modeDisponibilite, planningDisponibilite, emplacementsDisponibles,
   ]);
 
   return {
@@ -193,6 +204,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
       lignesRecette, erreur,
       cookingTimeMinutes, prixPromotion, enPromotion, niveauEpice, tagsCuisine,
       enRupture, supplementIds,
+      modeDisponibilite, planningDisponibilite, emplacementsDisponibles,
     },
     setNom, setDescription, setTypeProduit, setMarque, setCategorieId,
     setCodeBarresEan13, setTauxTva,
@@ -201,6 +213,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
     setImages, setMetadataSecteur, setLignesRecette,
     setCookingTimeMinutes, setPrixPromotion, setEnPromotion,
     setNiveauEpice, setTagsCuisine, setEnRupture, setSupplementIds,
+    setModeDisponibilite, setPlanningDisponibilite, setEmplacementsDisponibles,
     ajouterAxe, retirerAxe, modifierAxe,
     regenererSku,
     reinitialiser, valider, setErreur,
