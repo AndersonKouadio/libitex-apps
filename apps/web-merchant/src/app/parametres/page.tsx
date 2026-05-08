@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card } from "@heroui/react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { Store, Users, ChevronRight, Tag, ShieldCheck, Building2 } from "lucide-react";
+import { Store, Users, ChevronRight, ShieldCheck, Building2 } from "lucide-react";
 import { ModalChangerMotDePasse } from "@/features/auth/components/modal-changer-mot-de-passe";
 
 interface SectionConfig {
@@ -45,13 +45,6 @@ const SECTIONS: SectionConfig[] = [
     titre: "Sécurité",
     description: "Changer votre mot de passe et protéger votre compte.",
     classes: "bg-primary-500/10 text-primary-500",
-  },
-  {
-    href: "/categories",
-    icone: Tag,
-    titre: "Catégories",
-    description: "Organisez votre catalogue par catégories et sous-catégories.",
-    classes: "bg-muted/10 text-muted",
   },
 ];
 
