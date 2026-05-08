@@ -55,11 +55,12 @@ case $COMPONENT in
     echo ">> Generation SSL avec Certbot..."
     # On enchaine les domaines : si le DNS d'un domaine n'est pas pret, certbot
     # echoue mais les autres sont quand meme certifies (--non-interactive).
+    # --expand permet d'ajouter de nouveaux domaines a un cert existant sans erreur.
     sudo certbot --nginx \
       -d libitex-api.lunion-lab.com \
       -d libitex-pro.lunion-lab.com \
       -d libitex-storage.lunion-lab.com \
-      --non-interactive --agree-tos -m andersonkouadio0118@gmail.com
+      --expand --non-interactive --agree-tos -m andersonkouadio0118@gmail.com
     echo ">> Nginx OK"
     ;;
   down)
