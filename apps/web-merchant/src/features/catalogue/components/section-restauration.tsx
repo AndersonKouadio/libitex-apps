@@ -6,6 +6,7 @@ import {
 } from "@heroui/react";
 import { Clock, Tag, Flame, AlertTriangle, UtensilsCrossed } from "lucide-react";
 import type { NiveauEpice } from "../types/produit.type";
+import { TAGS_CUISINE, NIVEAUX_EPICE } from "../utils/restauration-options";
 
 interface Props {
   cookingTimeMinutes: number | null;
@@ -21,25 +22,6 @@ interface Props {
   onTagsCuisine: (v: string[]) => void;
   onEnRupture: (v: boolean) => void;
 }
-
-const TAGS_DISPONIBLES = [
-  { id: "VEGAN", label: "Vegan" },
-  { id: "VEGETARIEN", label: "Végétarien" },
-  { id: "SANS_GLUTEN", label: "Sans gluten" },
-  { id: "SANS_LACTOSE", label: "Sans lactose" },
-  { id: "HALAL", label: "Halal" },
-  { id: "CASHER", label: "Casher" },
-  { id: "BIO", label: "Bio" },
-  { id: "MAISON", label: "Fait maison" },
-  { id: "NOUVEAU", label: "Nouveauté" },
-  { id: "SIGNATURE", label: "Signature" },
-] as const;
-
-const NIVEAUX_EPICE: { id: NiveauEpice; label: string; description: string }[] = [
-  { id: "AU_CHOIX", label: "Au choix du client", description: "Le client peut commander épicé ou non." },
-  { id: "TOUJOURS_EPICE", label: "Toujours épicé", description: "Le plat est toujours servi épicé." },
-  { id: "JAMAIS_EPICE", label: "Jamais épicé", description: "Le plat n'est jamais épicé." },
-];
 
 export function SectionRestauration(props: Props) {
   return (
@@ -133,7 +115,7 @@ export function SectionRestauration(props: Props) {
           className="grid grid-cols-2 sm:grid-cols-3 gap-1.5"
           aria-label="Tags cuisine"
         >
-          {TAGS_DISPONIBLES.map((t) => (
+          {TAGS_CUISINE.map((t) => (
             <Checkbox key={t.id} value={t.id}>
               <span className="text-xs">{t.label}</span>
             </Checkbox>
