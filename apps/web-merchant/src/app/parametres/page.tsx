@@ -14,12 +14,11 @@ const SECTIONS = [
     classes: "bg-accent/10 text-accent",
   },
   {
-    href: "/parametres",
+    href: "/parametres/equipe",
     icone: Users,
     titre: "Équipe",
-    description: "Inviter des utilisateurs, attribuer roles et accès aux points de vente.",
+    description: "Inviter des membres, attribuer rôles et accès aux points de vente.",
     classes: "bg-warning/10 text-warning",
-    enConstruction: true,
   },
   {
     href: "/parametres",

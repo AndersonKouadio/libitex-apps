@@ -9,6 +9,7 @@ import { TableauDeBordModule } from "./features/tableau-de-bord/tableau-de-bord.
 import { BoutiqueModule } from "./features/boutique/boutique.module";
 import { UploadModule } from "./features/upload/upload.module";
 import { IngredientModule } from "./features/ingredient/ingredient.module";
+import { EquipeModule } from "./features/equipe/equipe.module";
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { IngredientModule } from "./features/ingredient/ingredient.module";
     BoutiqueModule,
     UploadModule,
     IngredientModule,
+    EquipeModule,
   ],
 })
 export class AppModule {}
