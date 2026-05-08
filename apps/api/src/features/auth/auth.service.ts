@@ -69,7 +69,7 @@ export class AuthService {
 
     try {
       await this.stockService.creerEmplacement(tenant.id, {
-        nom: dto.nomBoutique,
+        nom: dto.nomPointDeVente?.trim() || "Boutique principale",
         type: "STORE",
         adresse: dto.adresseBoutique,
       });
@@ -156,7 +156,7 @@ export class AuthService {
 
     try {
       await this.stockService.creerEmplacement(tenant.id, {
-        nom: dto.nomBoutique,
+        nom: dto.nomPointDeVente?.trim() || "Boutique principale",
         type: "STORE",
         adresse: dto.adresseBoutique,
       });

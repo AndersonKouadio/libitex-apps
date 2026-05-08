@@ -18,6 +18,7 @@ interface Props {
 const VIDE: CreerBoutiqueDTO = {
   nomBoutique: "",
   slugBoutique: "",
+  nomPointDeVente: "",
   adresseBoutique: "",
   devise: "XOF",
   secteurActivite: "AUTRE",
@@ -84,6 +85,14 @@ export function ModalCreerBoutique({ ouvert, onFermer }: Props) {
               valeur={form.secteurActivite as SecteurActivite}
               onChange={(s) => setForm((p) => ({ ...p, secteurActivite: s }))}
             />
+
+            <TextField
+              value={form.nomPointDeVente ?? ""}
+              onChange={(v) => setForm((p) => ({ ...p, nomPointDeVente: v }))}
+            >
+              <Label>Nom du point de vente</Label>
+              <Input placeholder="Boutique principale" />
+            </TextField>
 
             <TextField
               value={form.adresseBoutique ?? ""}

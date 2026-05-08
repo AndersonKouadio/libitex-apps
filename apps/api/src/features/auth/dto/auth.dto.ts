@@ -58,6 +58,11 @@ export class InscriptionDto {
   @IsOptional()
   secteurActivite?: ActivitySector;
 
+  @ApiPropertyOptional({ example: "Boutique principale", description: "Nom du point de vente initial. Vide → 'Boutique principale'." })
+  @IsString()
+  @IsOptional()
+  nomPointDeVente?: string;
+
   @ApiPropertyOptional({ example: "Plateau, avenue Pompidou — Dakar" })
   @IsString()
   @IsOptional()
@@ -83,6 +88,11 @@ export class CreerBoutiqueDto {
   @ApiProperty({ enum: ActivitySector })
   @IsEnum(ActivitySector)
   secteurActivite!: ActivitySector;
+
+  @ApiPropertyOptional({ example: "Boutique principale", description: "Nom du point de vente initial. Vide → 'Boutique principale'." })
+  @IsString()
+  @IsOptional()
+  nomPointDeVente?: string;
 
   @ApiPropertyOptional({ example: "Plateau, avenue Pompidou — Dakar" })
   @IsString()

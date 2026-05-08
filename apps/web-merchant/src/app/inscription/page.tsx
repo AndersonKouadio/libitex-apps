@@ -17,6 +17,7 @@ import type { SecteurActivite } from "@/features/auth/types/auth.type";
 const FORM_VIDE: InscriptionDTO = {
   nomBoutique: "",
   slugBoutique: "",
+  nomPointDeVente: "",
   adresseBoutique: "",
   email: "",
   motDePasse: "",
@@ -95,6 +96,7 @@ export default function PageInscription() {
             <ChampsBoutique
               nomBoutique={form.nomBoutique}
               slugBoutique={form.slugBoutique}
+              nomPointDeVente={form.nomPointDeVente ?? ""}
               adresseBoutique={form.adresseBoutique ?? ""}
               onChange={maj}
             />
