@@ -1,22 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Modal, Button, TextField, Label, Input } from "@heroui/react";
+import { Modal, Button, TextField, Label, Input, Skeleton } from "@heroui/react";
 import { Pencil } from "lucide-react";
 import { ChampSecteur } from "@/features/auth/components/champ-secteur";
 import type { SecteurActivite } from "@/features/auth/types/auth.type";
 import { useModifierBoutiqueMutation } from "../queries/boutique.mutations";
-import type { IBoutiqueResume, IBoutiqueDetail } from "../types/boutique.type";
+import { useBoutiqueQuery } from "../queries/boutique.query";
 
 interface Props {
   ouvert: boolean;
   onFermer: () => void;
-  /** Si fourni, modale en mode edition (boutique pre-remplie). */
-  boutique: (IBoutiqueResume & Partial<IBoutiqueDetail>) | null;
+  /** Identifiant de la boutique a modifier. Le detail (email/tel/adresse) est charge via GET /boutiques/:id. */
+  boutiqueId: string | null;
 }
 
-export function ModalModifierBoutique({ ouvert, onFermer, boutique }: Props) {
+export function ModalModifierBoutique({ ouvert, onFermer, boutiqueId }: Props) {
   const mutation = useModifierBoutiqueMutation();
+  const { data: boutique, isLoading } = useBoutiqueQuery(ouvert ? boutiqueId : null);
   const [nom, setNom] = useState("");
   const [secteur, setSecteur] = useState<SecteurActivite>("AUTRE");
   const [devise, setDevise] = useState("XOF");
@@ -61,8 +62,6 @@ export function ModalModifierBoutique({ ouvert, onFermer, boutique }: Props) {
     }
   }
 
-  if (!boutique) return null;
-
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(o) => { if (!o) onFermer(); }}>
       <Modal.Container size="md" scroll="inside">
@@ -76,49 +75,64 @@ export function ModalModifierBoutique({ ouvert, onFermer, boutique }: Props) {
           </Modal.Header>
 
           <Modal.Body className="space-y-4">
-            {erreur && (
-              <div className="px-3 py-2.5 rounded-lg bg-danger/10 text-danger text-sm">{erreur}</div>
+            {isLoading || !boutique ? (
+              <div className="space-y-3">
+                <Skeleton className="h-10 rounded-lg" />
+                <Skeleton className="h-10 rounded-lg" />
+                <Skeleton className="h-10 rounded-lg" />
+                <Skeleton className="h-10 rounded-lg" />
+              </div>
+            ) : (
+              <>
+                {erreur && (
+                  <div className="px-3 py-2.5 rounded-lg bg-danger/10 text-danger text-sm">{erreur}</div>
+                )}
+
+                <TextField isRequired value={nom} onChange={setNom}>
+                  <Label>Nom de la boutique</Label>
+                  <Input autoFocus />
+                </TextField>
+
+                <div className="flex items-center gap-2 px-1">
+                  <span className="text-xs text-muted">Identifiant URL :</span>
+                  <span className="text-xs font-mono text-foreground">{boutique.slug}</span>
+                  <span className="text-[10px] text-muted/70">(non modifiable)</span>
+                </div>
+
+                <ChampSecteur isRequired valeur={secteur} onChange={setSecteur} />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <TextField value={devise} onChange={setDevise}>
+                    <Label>Devise</Label>
+                    <Input placeholder="XOF" />
+                  </TextField>
+                  <TextField type="email" value={email} onChange={setEmail}>
+                    <Label>Email de contact</Label>
+                    <Input placeholder="contact@boutique.sn" />
+                  </TextField>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <TextField value={telephone} onChange={setTelephone}>
+                    <Label>Téléphone</Label>
+                    <Input placeholder="+221 77 000 12 34" type="tel" />
+                  </TextField>
+                  <TextField value={adresse} onChange={setAdresse}>
+                    <Label>Adresse</Label>
+                    <Input placeholder="Plateau, Dakar" />
+                  </TextField>
+                </div>
+              </>
             )}
-
-            <TextField isRequired value={nom} onChange={setNom}>
-              <Label>Nom de la boutique</Label>
-              <Input autoFocus />
-            </TextField>
-
-            <div className="flex items-center gap-2 px-1">
-              <span className="text-xs text-muted">Identifiant URL :</span>
-              <span className="text-xs font-mono text-foreground">{boutique.slug}</span>
-              <span className="text-[10px] text-muted/70">(non modifiable)</span>
-            </div>
-
-            <ChampSecteur isRequired valeur={secteur} onChange={setSecteur} />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <TextField value={devise} onChange={setDevise}>
-                <Label>Devise</Label>
-                <Input placeholder="XOF" />
-              </TextField>
-              <TextField type="email" value={email} onChange={setEmail}>
-                <Label>Email de contact</Label>
-                <Input placeholder="contact@boutique.sn" />
-              </TextField>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <TextField value={telephone} onChange={setTelephone}>
-                <Label>Téléphone</Label>
-                <Input placeholder="+221 77 000 12 34" type="tel" />
-              </TextField>
-              <TextField value={adresse} onChange={setAdresse}>
-                <Label>Adresse</Label>
-                <Input placeholder="Plateau, Dakar" />
-              </TextField>
-            </div>
           </Modal.Body>
 
           <Modal.Footer>
             <Button variant="secondary" slot="close">Annuler</Button>
-            <Button variant="primary" onPress={soumettre} isDisabled={mutation.isPending}>
+            <Button
+              variant="primary"
+              onPress={soumettre}
+              isDisabled={mutation.isPending || isLoading || !boutique}
+            >
               {mutation.isPending ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </Modal.Footer>

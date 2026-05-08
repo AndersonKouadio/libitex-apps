@@ -55,11 +55,12 @@ export function CarteBoutique({ boutique, onModifier, onSupprimer }: Props) {
             </div>
           </div>
 
-          {/* Actions edit/delete : reservees au proprietaire et a la boutique active.
-              Pour modifier une autre boutique, l'utilisateur doit d'abord switcher dessus. */}
+          {/* Actions reservees au proprietaire. Le formulaire d'edition charge les
+              details (email/telephone/adresse) via GET /boutiques/:id, pas besoin
+              de basculer dessus au prealable. */}
           {boutique.isOwner && (onModifier || onSupprimer) && (
             <div className="flex items-center gap-0.5">
-              {onModifier && estActive && (
+              {onModifier && (
                 <Button
                   variant="ghost"
                   className="text-muted hover:text-accent p-1.5 h-auto min-w-0"

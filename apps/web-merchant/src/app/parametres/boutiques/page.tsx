@@ -7,7 +7,6 @@ import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBoutiqueListQuery } from "@/features/boutique/queries/boutique-list.query";
-import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
 import { useSupprimerBoutiqueMutation } from "@/features/boutique/queries/boutique.mutations";
 import { CarteBoutique } from "@/features/boutique/components/carte-boutique";
 import { ModalCreerBoutique } from "@/features/boutique/components/modal-creer-boutique";
@@ -17,12 +16,10 @@ import type { IBoutiqueResume } from "@/features/boutique/types/boutique.type";
 export default function PageBoutiques() {
   const { boutiques: boutiquesSession } = useAuth();
   const { data: boutiquesAPI, isLoading } = useBoutiqueListQuery();
-  // Detail charge pour pre-remplir email/telephone/adresse a l'edition.
-  const { data: boutiqueActive } = useBoutiqueActiveQuery();
   const supprimer = useSupprimerBoutiqueMutation();
 
   const [modalCreationOuvert, setModalCreationOuvert] = useState(false);
-  const [enEdition, setEnEdition] = useState<IBoutiqueResume | null>(null);
+  const [boutiqueIdEdition, setBoutiqueIdEdition] = useState<string | null>(null);
 
   const boutiques = boutiquesAPI ?? boutiquesSession;
 
@@ -32,14 +29,6 @@ export default function PageBoutiques() {
     await supprimer.mutateAsync(b.id);
   }
 
-  // Le detail complet (email/telephone/adresse) n'est dispo que pour la boutique
-  // active via le JWT. Pour modifier une autre boutique il faut d'abord switcher.
-  const boutiquePourEdition = enEdition
-    ? boutiqueActive?.id === enEdition.id
-      ? { ...enEdition, ...boutiqueActive }
-      : enEdition
-    : null;
-
   return (
     <PageContainer taille="moyen">
       <PageHeader
@@ -47,7 +36,7 @@ export default function PageBoutiques() {
         description={
           <>
             Gérez plusieurs boutiques avec un même compte. Chaque boutique a son propre catalogue, son stock et ses ventes.
-            Pour modifier une boutique, basculez dessus puis cliquez sur le crayon. La suppression est réservée au propriétaire.
+            La modification est accessible depuis le crayon ; la suppression est réservée au propriétaire.
           </>
         }
         actions={
@@ -82,7 +71,7 @@ export default function PageBoutiques() {
               <CarteBoutique
                 key={b.id}
                 boutique={b}
-                onModifier={setEnEdition}
+                onModifier={(boutique) => setBoutiqueIdEdition(boutique.id)}
                 onSupprimer={handleSupprimer}
               />
             ))}
@@ -94,9 +83,9 @@ export default function PageBoutiques() {
         onFermer={() => setModalCreationOuvert(false)}
       />
       <ModalModifierBoutique
-        ouvert={!!enEdition}
-        boutique={boutiquePourEdition}
-        onFermer={() => setEnEdition(null)}
+        ouvert={!!boutiqueIdEdition}
+        boutiqueId={boutiqueIdEdition}
+        onFermer={() => setBoutiqueIdEdition(null)}
       />
     </PageContainer>
   );

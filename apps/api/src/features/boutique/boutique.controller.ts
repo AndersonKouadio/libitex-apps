@@ -37,6 +37,12 @@ export class BoutiqueController {
     return this.authService.creerBoutique(user.userId, dto);
   }
 
+  @Get(":tenantId")
+  @ApiOperation({ summary: "Détail d'une boutique (avec contact) à laquelle l'utilisateur a accès" })
+  obtenir(@CurrentUser() user: CurrentUserData, @Param("tenantId") tenantId: string) {
+    return this.boutiqueService.obtenirBoutique(user.userId, tenantId);
+  }
+
   @Patch(":tenantId")
   @ApiOperation({ summary: "Modifier une boutique (nom, devise, secteur, contact)" })
   modifier(
