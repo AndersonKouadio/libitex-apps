@@ -17,20 +17,6 @@ export class BoutiqueService {
     return this.toDetail(tenant);
   }
 
-  /**
-   * Detail d'une boutique a laquelle l'utilisateur a acces (vs obtenirBoutiqueActive
-   * qui se limite au tenant du JWT). Utilise pour pre-remplir le formulaire
-   * d'edition d'une boutique non-active.
-   */
-  async obtenirBoutique(userId: string, tenantId: string): Promise<BoutiqueDetailDto> {
-    const membership = await this.membershipRepo.trouver(userId, tenantId);
-    if (!membership) throw new ForbiddenException("Vous n'avez pas accès à cette boutique");
-
-    const tenant = await this.utilisateurRepo.trouverTenantParId(tenantId);
-    if (!tenant) throw new NotFoundException("Boutique introuvable");
-    return this.toDetail(tenant);
-  }
-
   async modifierBoutique(
     userId: string,
     tenantId: string,

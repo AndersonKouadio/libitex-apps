@@ -10,7 +10,6 @@ import { useBoutiqueListQuery } from "@/features/boutique/queries/boutique-list.
 import { useSupprimerBoutiqueMutation } from "@/features/boutique/queries/boutique.mutations";
 import { CarteBoutique } from "@/features/boutique/components/carte-boutique";
 import { ModalCreerBoutique } from "@/features/boutique/components/modal-creer-boutique";
-import { ModalModifierBoutique } from "@/features/boutique/components/modal-modifier-boutique";
 import type { IBoutiqueResume } from "@/features/boutique/types/boutique.type";
 
 export default function PageBoutiques() {
@@ -19,7 +18,6 @@ export default function PageBoutiques() {
   const supprimer = useSupprimerBoutiqueMutation();
 
   const [modalCreationOuvert, setModalCreationOuvert] = useState(false);
-  const [boutiqueIdEdition, setBoutiqueIdEdition] = useState<string | null>(null);
 
   const boutiques = boutiquesAPI ?? boutiquesSession;
 
@@ -36,7 +34,7 @@ export default function PageBoutiques() {
         description={
           <>
             Gérez plusieurs boutiques avec un même compte. Chaque boutique a son propre catalogue, son stock et ses ventes.
-            La modification est accessible depuis le crayon ; la suppression est réservée au propriétaire.
+            Pour modifier le profil (nom, secteur, contact, adresse), basculez sur la boutique puis ouvrez « Profil de la boutique » dans Paramètres.
           </>
         }
         actions={
@@ -71,7 +69,6 @@ export default function PageBoutiques() {
               <CarteBoutique
                 key={b.id}
                 boutique={b}
-                onModifier={(boutique) => setBoutiqueIdEdition(boutique.id)}
                 onSupprimer={handleSupprimer}
               />
             ))}
@@ -81,11 +78,6 @@ export default function PageBoutiques() {
       <ModalCreerBoutique
         ouvert={modalCreationOuvert}
         onFermer={() => setModalCreationOuvert(false)}
-      />
-      <ModalModifierBoutique
-        ouvert={!!boutiqueIdEdition}
-        boutiqueId={boutiqueIdEdition}
-        onFermer={() => setBoutiqueIdEdition(null)}
       />
     </PageContainer>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, Chip, Button } from "@heroui/react";
-import { Store, Crown, Check, ArrowRight, Pencil, Trash2 } from "lucide-react";
+import { Store, Crown, Check, ArrowRight, Trash2 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSwitcherBoutiqueMutation } from "../queries/boutique-switch.mutation";
 import { SECTEUR_LABELS } from "@/features/auth/utils/secteur-activite";
@@ -18,11 +18,10 @@ const ROLES_LABELS: Record<string, string> = {
 
 interface Props {
   boutique: IBoutiqueResume;
-  onModifier?: (b: IBoutiqueResume) => void;
   onSupprimer?: (b: IBoutiqueResume) => void;
 }
 
-export function CarteBoutique({ boutique, onModifier, onSupprimer }: Props) {
+export function CarteBoutique({ boutique, onSupprimer }: Props) {
   const { boutiqueActive } = useAuth();
   const switcher = useSwitcherBoutiqueMutation();
   const estActive = boutiqueActive?.id === boutique.id;
@@ -55,32 +54,15 @@ export function CarteBoutique({ boutique, onModifier, onSupprimer }: Props) {
             </div>
           </div>
 
-          {/* Actions reservees au proprietaire. Le formulaire d'edition charge les
-              details (email/telephone/adresse) via GET /boutiques/:id, pas besoin
-              de basculer dessus au prealable. */}
-          {boutique.isOwner && (onModifier || onSupprimer) && (
-            <div className="flex items-center gap-0.5">
-              {onModifier && (
-                <Button
-                  variant="ghost"
-                  className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
-                  onPress={() => onModifier(boutique)}
-                  aria-label="Modifier"
-                >
-                  <Pencil size={13} />
-                </Button>
-              )}
-              {onSupprimer && (
-                <Button
-                  variant="ghost"
-                  className="text-muted hover:text-danger p-1.5 h-auto min-w-0"
-                  onPress={() => onSupprimer(boutique)}
-                  aria-label="Supprimer"
-                >
-                  <Trash2 size={13} />
-                </Button>
-              )}
-            </div>
+          {boutique.isOwner && onSupprimer && (
+            <Button
+              variant="ghost"
+              className="text-muted hover:text-danger p-1.5 h-auto min-w-0"
+              onPress={() => onSupprimer(boutique)}
+              aria-label="Supprimer"
+            >
+              <Trash2 size={13} />
+            </Button>
           )}
         </div>
 

@@ -19,9 +19,6 @@ export const boutiqueAPI = {
   obtenirActive: (token: string) =>
     httpClient.get<IBoutiqueDetail>(`${BASE}/mienne`, { token }),
 
-  obtenir: (token: string, tenantId: string) =>
-    httpClient.get<IBoutiqueDetail>(`${BASE}/${tenantId}`, { token }),
-
   lister: (token: string) =>
     httpClient.get<IBoutiqueResume[]>(BASE, { token }),
 

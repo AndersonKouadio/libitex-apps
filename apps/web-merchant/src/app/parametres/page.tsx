@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card } from "@heroui/react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { Store, Users, ChevronRight, Tag, ShieldCheck } from "lucide-react";
+import { Store, Users, ChevronRight, Tag, ShieldCheck, Building2 } from "lucide-react";
 import { ModalChangerMotDePasse } from "@/features/auth/components/modal-changer-mot-de-passe";
 
 interface SectionConfig {
@@ -22,8 +22,15 @@ const SECTIONS: SectionConfig[] = [
     href: "/parametres/boutiques",
     icone: Store,
     titre: "Mes boutiques",
-    description: "Profil (nom, secteur, devise, contact, adresse), bascule entre boutiques, création et suppression.",
+    description: "Liste des boutiques, bascule entre elles, création et suppression.",
     classes: "bg-accent/10 text-accent",
+  },
+  {
+    href: "/parametres/profil",
+    icone: Building2,
+    titre: "Profil de la boutique",
+    description: "Nom, secteur d'activité, devise, contact et adresse de la boutique active.",
+    classes: "bg-success/10 text-success",
   },
   {
     href: "/parametres/equipe",
