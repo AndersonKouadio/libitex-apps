@@ -23,6 +23,50 @@ export class StockRepository {
     });
   }
 
+  async trouverEmplacement(tenantId: string, id: string) {
+    return this.db.query.locations.findFirst({
+      where: and(
+        eq(locations.id, id),
+        eq(locations.tenantId, tenantId),
+        isNull(locations.deletedAt),
+      ),
+    });
+  }
+
+  async modifierEmplacement(
+    tenantId: string,
+    id: string,
+    data: Partial<{ name: string; type: string; address: string }>,
+  ) {
+    const cleaned = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined),
+    );
+    const [updated] = await this.db
+      .update(locations)
+      .set({ ...cleaned, updatedAt: new Date() })
+      .where(and(eq(locations.id, id), eq(locations.tenantId, tenantId)))
+      .returning();
+    return updated;
+  }
+
+  async supprimerEmplacement(tenantId: string, id: string) {
+    await this.db
+      .update(locations)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(locations.id, id), eq(locations.tenantId, tenantId)));
+  }
+
+  async sommeStockEmplacement(tenantId: string, locationId: string): Promise<number> {
+    const [r] = await this.db
+      .select({ total: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)` })
+      .from(stockMovements)
+      .where(and(
+        eq(stockMovements.tenantId, tenantId),
+        eq(stockMovements.locationId, locationId),
+      ));
+    return Number(r?.total ?? 0);
+  }
+
   async enregistrerMouvement(data: {
     tenantId: string; variantId: string; locationId: string;
     movementType: string;

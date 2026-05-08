@@ -1,9 +1,10 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
+import { Injectable, BadRequestException, NotFoundException } from "@nestjs/common";
 import { StockRepository } from "./repositories/stock.repository";
 import { StockInsuffisantException } from "../../common/exceptions/metier.exception";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import {
-  CreerEmplacementDto, EntreeStockDto, AjustementStockDto, TransfertStockDto,
+  CreerEmplacementDto, ModifierEmplacementDto, EntreeStockDto,
+  AjustementStockDto, TransfertStockDto,
   EmplacementResponseDto, StockActuelResponseDto, MouvementResponseDto,
 } from "./dto/stock.dto";
 
@@ -24,6 +25,46 @@ export class StockService {
   async listerEmplacements(tenantId: string): Promise<EmplacementResponseDto[]> {
     const emps = await this.stockRepo.listerEmplacements(tenantId);
     return emps.map((e) => ({ id: e.id, nom: e.name, type: e.type, adresse: e.address }));
+  }
+
+  async modifierEmplacement(
+    tenantId: string,
+    id: string,
+    dto: ModifierEmplacementDto,
+  ): Promise<EmplacementResponseDto> {
+    const existant = await this.stockRepo.trouverEmplacement(tenantId, id);
+    if (!existant) throw new NotFoundException("Emplacement introuvable");
+
+    const updated = await this.stockRepo.modifierEmplacement(tenantId, id, {
+      name: dto.nom,
+      type: dto.type,
+      address: dto.adresse,
+    });
+    return { id: updated.id, nom: updated.name, type: updated.type, adresse: updated.address };
+  }
+
+  async supprimerEmplacement(tenantId: string, id: string): Promise<void> {
+    const existant = await this.stockRepo.trouverEmplacement(tenantId, id);
+    if (!existant) throw new NotFoundException("Emplacement introuvable");
+
+    // Garde-fou : refus si l'emplacement contient encore du stock (variantes ou ingredients).
+    // On verifie la somme algebrique des mouvements (entrees - sorties).
+    const stock = await this.stockRepo.sommeStockEmplacement(tenantId, id);
+    if (stock !== 0) {
+      throw new BadRequestException(
+        `Impossible de supprimer : l'emplacement contient encore ${stock} unité${Math.abs(stock) > 1 ? "s" : ""} en stock. Transférez ou ajustez d'abord.`,
+      );
+    }
+
+    // Verifier qu'il reste au moins un autre emplacement actif (pour pouvoir vendre).
+    const autres = await this.stockRepo.listerEmplacements(tenantId);
+    if (autres.length <= 1) {
+      throw new BadRequestException(
+        "Impossible de supprimer le seul emplacement de la boutique. Créez-en un autre d'abord.",
+      );
+    }
+
+    await this.stockRepo.supprimerEmplacement(tenantId, id);
   }
 
   async entreeStock(tenantId: string, userId: string, dto: EntreeStockDto): Promise<MouvementResponseDto> {

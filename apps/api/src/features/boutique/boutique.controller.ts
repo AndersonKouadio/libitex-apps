@@ -1,9 +1,12 @@
-import { Controller, Get, Post, Body, Param, UseGuards, HttpCode, HttpStatus } from "@nestjs/common";
+import {
+  Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, HttpCode, HttpStatus,
+} from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags, ApiOperation } from "@nestjs/swagger";
 import { AuthService } from "../auth/auth.service";
 import { CreerBoutiqueDto } from "../auth/dto/auth.dto";
 import { BoutiqueService } from "./boutique.service";
+import { ModifierBoutiqueDto } from "./dto/boutique.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 
 @ApiTags("Boutiques")
@@ -23,15 +26,32 @@ export class BoutiqueController {
   }
 
   @Get()
-  @ApiOperation({ summary: "Lister les boutiques accessibles a l'utilisateur connecte" })
+  @ApiOperation({ summary: "Lister les boutiques accessibles à l'utilisateur connecté" })
   listerBoutiques(@CurrentUser() user: CurrentUserData) {
     return this.authService.listerBoutiques(user.userId);
   }
 
   @Post()
-  @ApiOperation({ summary: "Créer une nouvelle boutique pour l'utilisateur connecte" })
+  @ApiOperation({ summary: "Créer une nouvelle boutique pour l'utilisateur connecté" })
   creerBoutique(@CurrentUser() user: CurrentUserData, @Body() dto: CreerBoutiqueDto) {
     return this.authService.creerBoutique(user.userId, dto);
+  }
+
+  @Patch(":tenantId")
+  @ApiOperation({ summary: "Modifier une boutique (nom, devise, secteur, contact)" })
+  modifier(
+    @CurrentUser() user: CurrentUserData,
+    @Param("tenantId") tenantId: string,
+    @Body() dto: ModifierBoutiqueDto,
+  ) {
+    return this.boutiqueService.modifierBoutique(user.userId, tenantId, dto);
+  }
+
+  @Delete(":tenantId")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Supprimer une boutique (soft delete, propriétaire seulement)" })
+  supprimer(@CurrentUser() user: CurrentUserData, @Param("tenantId") tenantId: string) {
+    return this.boutiqueService.supprimerBoutique(user.userId, tenantId);
   }
 
   @Post(":tenantId/switch")

@@ -1,9 +1,13 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from "@nestjs/common";
+import {
+  Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards,
+  HttpCode, HttpStatus,
+} from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiQuery } from "@nestjs/swagger";
 import { StockService } from "./stock.service";
 import {
-  CreerEmplacementDto, EntreeStockDto, AjustementStockDto, TransfertStockDto,
+  CreerEmplacementDto, ModifierEmplacementDto, EntreeStockDto,
+  AjustementStockDto, TransfertStockDto,
 } from "./dto/stock.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
@@ -26,6 +30,25 @@ export class StockController {
   @ApiOperation({ summary: "Lister les emplacements" })
   listerEmplacements(@CurrentUser() user: CurrentUserData) {
     return this.stockService.listerEmplacements(user.tenantId);
+  }
+
+  @Patch("emplacements/:id")
+  @ApiOperation({ summary: "Modifier un emplacement" })
+  @Roles("ADMIN", "MANAGER")
+  modifierEmplacement(
+    @CurrentUser() user: CurrentUserData,
+    @Param("id") id: string,
+    @Body() dto: ModifierEmplacementDto,
+  ) {
+    return this.stockService.modifierEmplacement(user.tenantId, id, dto);
+  }
+
+  @Delete("emplacements/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Supprimer un emplacement (refus si stock présent)" })
+  @Roles("ADMIN")
+  supprimerEmplacement(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
+    return this.stockService.supprimerEmplacement(user.tenantId, id);
   }
 
   @Post("entree")

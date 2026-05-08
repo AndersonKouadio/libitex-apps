@@ -10,6 +10,16 @@ export const stockAPI = {
   creerEmplacement: (token: string, data: { nom: string; type?: string; adresse?: string }) =>
     httpClient.post<IEmplacement>(`${BASE}/emplacements`, data, { token }),
 
+  modifierEmplacement: (
+    token: string,
+    id: string,
+    data: { nom?: string; type?: string; adresse?: string },
+  ) =>
+    httpClient.patch<IEmplacement>(`${BASE}/emplacements/${id}`, data, { token }),
+
+  supprimerEmplacement: (token: string, id: string) =>
+    httpClient.delete<void>(`${BASE}/emplacements/${id}`, { token }),
+
   entreeStock: (token: string, data: {
     varianteId: string; emplacementId: string; quantite: number; note?: string;
   }) =>

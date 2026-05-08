@@ -10,7 +10,7 @@ import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.q
 import { estDisponibleMaintenant } from "@/features/catalogue/utils/disponibilite";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import { useStockEmplacementQuery } from "@/features/stock/queries/stock-emplacement.query";
-import { ModalCreerEmplacement } from "@/features/stock/components/modal-creer-emplacement";
+import { ModalEmplacement } from "@/features/stock/components/modal-emplacement";
 import { AucunEmplacement } from "@/components/empty-states/aucun-emplacement";
 import { usePanier } from "@/features/vente/hooks/usePanier";
 import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
@@ -87,7 +87,7 @@ export default function PagePOS() {
             <AucunEmplacement onCreer={() => setModalEmpOuvert(true)} contexte="pos" />
           </div>
         </div>
-        <ModalCreerEmplacement ouvert={modalEmpOuvert} onFermer={() => setModalEmpOuvert(false)} />
+        <ModalEmplacement ouvert={modalEmpOuvert} onFermer={() => setModalEmpOuvert(false)} />
       </>
     );
   }

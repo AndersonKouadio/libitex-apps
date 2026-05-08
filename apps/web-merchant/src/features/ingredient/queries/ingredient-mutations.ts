@@ -39,6 +39,17 @@ export function useAjusterIngredientMutation() {
   });
 }
 
+export function useModifierIngredientMutation() {
+  const { token } = useAuth();
+  const invalidate = useInvalidateIngredientQuery();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreerIngredientDTO> }) =>
+      ingredientAPI.modifier(token!, id, data),
+    onSuccess: () => { invalidate(); toast.success("Ingrédient mis à jour"); },
+    onError: (err: Error) => toast.danger(err.message || "Erreur"),
+  });
+}
+
 export function useSupprimerIngredientMutation() {
   const { token } = useAuth();
   const invalidate = useInvalidateIngredientQuery();

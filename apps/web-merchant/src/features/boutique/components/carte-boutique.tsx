@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, Chip, Button } from "@heroui/react";
-import { Store, Crown, Check, ArrowRight } from "lucide-react";
+import { Store, Crown, Check, ArrowRight, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSwitcherBoutiqueMutation } from "../queries/boutique-switch.mutation";
 import { SECTEUR_LABELS } from "@/features/auth/utils/secteur-activite";
@@ -18,9 +18,11 @@ const ROLES_LABELS: Record<string, string> = {
 
 interface Props {
   boutique: IBoutiqueResume;
+  onModifier?: (b: IBoutiqueResume) => void;
+  onSupprimer?: (b: IBoutiqueResume) => void;
 }
 
-export function CarteBoutique({ boutique }: Props) {
+export function CarteBoutique({ boutique, onModifier, onSupprimer }: Props) {
   const { boutiqueActive } = useAuth();
   const switcher = useSwitcherBoutiqueMutation();
   const estActive = boutiqueActive?.id === boutique.id;
@@ -52,6 +54,33 @@ export function CarteBoutique({ boutique }: Props) {
               <span className="text-[10px] text-muted">{boutique.devise}</span>
             </div>
           </div>
+
+          {/* Actions edit/delete : reservees au proprietaire et a la boutique active.
+              Pour modifier une autre boutique, l'utilisateur doit d'abord switcher dessus. */}
+          {boutique.isOwner && (onModifier || onSupprimer) && (
+            <div className="flex items-center gap-0.5">
+              {onModifier && estActive && (
+                <Button
+                  variant="ghost"
+                  className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
+                  onPress={() => onModifier(boutique)}
+                  aria-label="Modifier"
+                >
+                  <Pencil size={13} />
+                </Button>
+              )}
+              {onSupprimer && (
+                <Button
+                  variant="ghost"
+                  className="text-muted hover:text-danger p-1.5 h-auto min-w-0"
+                  onPress={() => onSupprimer(boutique)}
+                  aria-label="Supprimer"
+                >
+                  <Trash2 size={13} />
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {!estActive && (

@@ -1,26 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal, Button, TextField, Label, Input, TextArea } from "@heroui/react";
-import { Wheat } from "lucide-react";
+import { Wheat, Pencil } from "lucide-react";
 import { creerIngredientSchema, type CreerIngredientDTO } from "../schemas/ingredient.schema";
-import { useAjouterIngredientMutation } from "../queries/ingredient-mutations";
+import {
+  useAjouterIngredientMutation, useModifierIngredientMutation,
+} from "../queries/ingredient-mutations";
 import { UniteMesure, UNITE_LABELS } from "@/features/unite/types/unite.type";
 import { SelectUnite } from "@/features/unite/components/select-unite";
+import type { IIngredient } from "../types/ingredient.type";
 
 interface Props {
   ouvert: boolean;
   onFermer: () => void;
+  /** Si fourni, modale en mode edition. Sinon mode creation. */
+  ingredient?: IIngredient | null;
 }
 
 const VIDE: CreerIngredientDTO = {
   nom: "", description: "", unite: UniteMesure.KG, prixUnitaire: 0, seuilAlerte: 0,
 };
 
-export function ModalCreerIngredient({ ouvert, onFermer }: Props) {
-  const mutation = useAjouterIngredientMutation();
+export function ModalIngredient({ ouvert, onFermer, ingredient }: Props) {
+  const ajouter = useAjouterIngredientMutation();
+  const modifier = useModifierIngredientMutation();
   const [form, setForm] = useState<CreerIngredientDTO>(VIDE);
   const [erreur, setErreur] = useState("");
+
+  const editing = !!ingredient;
+
+  useEffect(() => {
+    if (ingredient) {
+      setForm({
+        nom: ingredient.nom,
+        description: ingredient.description ?? "",
+        unite: ingredient.unite,
+        prixUnitaire: ingredient.prixUnitaire,
+        seuilAlerte: ingredient.seuilAlerte,
+      });
+    } else {
+      setForm(VIDE);
+    }
+    setErreur("");
+  }, [ingredient, ouvert]);
 
   function maj<K extends keyof CreerIngredientDTO>(champ: K, valeur: CreerIngredientDTO[K]) {
     setForm((p) => ({ ...p, [champ]: valeur }));
@@ -34,13 +57,18 @@ export function ModalCreerIngredient({ ouvert, onFermer }: Props) {
       return;
     }
     try {
-      await mutation.mutateAsync(validation.data);
-      setForm(VIDE);
+      if (editing && ingredient) {
+        await modifier.mutateAsync({ id: ingredient.id, data: validation.data });
+      } else {
+        await ajouter.mutateAsync(validation.data);
+      }
       onFermer();
     } catch (err) {
       setErreur(err instanceof Error ? err.message : "Erreur");
     }
   }
+
+  const enCours = ajouter.isPending || modifier.isPending;
 
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(open) => { if (!open) onFermer(); }}>
@@ -48,8 +76,10 @@ export function ModalCreerIngredient({ ouvert, onFermer }: Props) {
         <Modal.Dialog>
           <Modal.CloseTrigger />
           <Modal.Header>
-            <Modal.Icon className="bg-warning/10 text-warning"><Wheat className="size-5" /></Modal.Icon>
-            <Modal.Heading>Nouvel ingrédient</Modal.Heading>
+            <Modal.Icon className="bg-warning/10 text-warning">
+              {editing ? <Pencil className="size-5" /> : <Wheat className="size-5" />}
+            </Modal.Icon>
+            <Modal.Heading>{editing ? "Modifier l'ingrédient" : "Nouvel ingrédient"}</Modal.Heading>
           </Modal.Header>
           <Modal.Body className="space-y-4">
             {erreur && <div className="px-3 py-2.5 rounded-lg bg-danger/10 text-danger text-sm">{erreur}</div>}
@@ -95,8 +125,8 @@ export function ModalCreerIngredient({ ouvert, onFermer }: Props) {
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" slot="close">Annuler</Button>
-            <Button variant="primary" onPress={soumettre} isDisabled={mutation.isPending}>
-              {mutation.isPending ? "Création..." : "Créer l'ingrédient"}
+            <Button variant="primary" onPress={soumettre} isDisabled={enCours}>
+              {enCours ? "Enregistrement..." : editing ? "Enregistrer" : "Créer l'ingrédient"}
             </Button>
           </Modal.Footer>
         </Modal.Dialog>

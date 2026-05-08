@@ -100,4 +100,32 @@ export class UtilisateurRepository {
       })
       .where(eq(users.id, userId));
   }
+
+  async modifierTenant(id: string, data: Partial<{
+    name: string;
+    currency: string;
+    activitySector: string;
+    productTypesAllowed: string[];
+    email: string;
+    phone: string;
+    address: string;
+  }>) {
+    const cleaned = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined),
+    );
+    const [updated] = await this.db
+      .update(tenants)
+      .set({ ...cleaned, updatedAt: new Date() })
+      .where(eq(tenants.id, id))
+      .returning();
+    return updated;
+  }
+
+  async supprimerTenant(id: string) {
+    // Soft delete : on ajoute un timestamp deletedAt sans casser les references.
+    await this.db
+      .update(tenants)
+      .set({ deletedAt: new Date() })
+      .where(eq(tenants.id, id));
+  }
 }

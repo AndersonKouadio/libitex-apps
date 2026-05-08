@@ -4,11 +4,16 @@ import { useState } from "react";
 import { Topbar } from "@/components/layout/topbar";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import { useStockEmplacementQuery } from "@/features/stock/queries/stock-emplacement.query";
+import { useSupprimerEmplacementMutation } from "@/features/stock/queries/emplacement.mutations";
 import { ModalEntreeStock } from "@/features/stock/components/modal-entree-stock";
-import { ModalCreerEmplacement } from "@/features/stock/components/modal-creer-emplacement";
+import { ModalEmplacement } from "@/features/stock/components/modal-emplacement";
 import { ModalTransfertStock } from "@/features/stock/components/modal-transfert-stock";
+import type { IEmplacement } from "@/features/stock/types/stock.type";
 import { Table, Chip, Card, Button, Skeleton } from "@heroui/react";
-import { MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus, Plus } from "lucide-react";
+import {
+  MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus, Plus,
+  Pencil, Trash2,
+} from "lucide-react";
 
 const LABELS_TYPE: Record<string, string> = {
   SIMPLE: "Standard", VARIANT: "Variantes", SERIALIZED: "Sérialisé", PERISHABLE: "Périssable",
@@ -16,12 +21,34 @@ const LABELS_TYPE: Record<string, string> = {
 
 export default function PageStock() {
   const { data: emplacements } = useEmplacementListQuery();
+  const supprimer = useSupprimerEmplacementMutation();
   const [empSelectionne, setEmpSelectionne] = useState("");
   const [modalOuvert, setModalOuvert] = useState(false);
   const [modalEmpOuvert, setModalEmpOuvert] = useState(false);
+  const [empEnEdition, setEmpEnEdition] = useState<IEmplacement | null>(null);
   const [modalTransfertOuvert, setModalTransfertOuvert] = useState(false);
 
   const { data: stockDetail, isLoading: chargementStock } = useStockEmplacementQuery(empSelectionne || undefined);
+
+  function ouvrirCreation() {
+    setEmpEnEdition(null);
+    setModalEmpOuvert(true);
+  }
+
+  function ouvrirEdition(emp: IEmplacement) {
+    setEmpEnEdition(emp);
+    setModalEmpOuvert(true);
+  }
+
+  async function supprimerEmplacement(emp: IEmplacement) {
+    if (!window.confirm(`Supprimer l'emplacement « ${emp.nom} » ?`)) return;
+    try {
+      await supprimer.mutateAsync(emp.id);
+      if (empSelectionne === emp.id) setEmpSelectionne("");
+    } catch {
+      // toast deja affiche par la mutation
+    }
+  }
 
   return (
     <>
@@ -32,7 +59,7 @@ export default function PageStock() {
             Emplacements ({emplacements?.length ?? 0})
           </p>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="ghost" className="gap-1.5" onPress={() => setModalEmpOuvert(true)}>
+            <Button variant="ghost" className="gap-1.5" onPress={ouvrirCreation}>
               <Plus size={16} />
               Emplacement
             </Button>
@@ -58,24 +85,46 @@ export default function PageStock() {
             {(emplacements ?? []).map((emp) => {
               const actif = empSelectionne === emp.id;
               return (
-                <Button
+                <div
                   key={emp.id}
-                  variant={actif ? "outline" : "ghost"}
-                  className={`w-full justify-start gap-3 px-4 py-3 h-auto bg-surface ${
+                  className={`flex items-center gap-1 rounded-lg border bg-surface group ${
                     actif ? "border-accent shadow-sm" : "border-border hover:border-foreground/20"
                   }`}
-                  onPress={() => setEmpSelectionne(emp.id)}
                 >
-                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                    actif ? "bg-accent/10 text-accent" : "bg-surface-secondary text-muted"
-                  }`}>
-                    <MapPin size={16} />
-                  </span>
-                  <span className="min-w-0 text-left">
-                    <span className="block text-sm font-medium text-foreground truncate">{emp.nom}</span>
-                    <span className="block text-xs text-muted capitalize">{emp.type.toLowerCase()}</span>
-                  </span>
-                </Button>
+                  <Button
+                    variant="ghost"
+                    className="flex-1 justify-start gap-3 px-3 py-3 h-auto rounded-l-lg rounded-r-none"
+                    onPress={() => setEmpSelectionne(emp.id)}
+                  >
+                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      actif ? "bg-accent/10 text-accent" : "bg-surface-secondary text-muted"
+                    }`}>
+                      <MapPin size={16} />
+                    </span>
+                    <span className="min-w-0 text-left">
+                      <span className="block text-sm font-medium text-foreground truncate">{emp.nom}</span>
+                      <span className="block text-xs text-muted capitalize">{emp.type.toLowerCase()}</span>
+                    </span>
+                  </Button>
+                  <div className="flex items-center pr-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
+                      onPress={() => ouvrirEdition(emp)}
+                      aria-label={`Modifier ${emp.nom}`}
+                    >
+                      <Pencil size={13} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="text-muted hover:text-danger p-1.5 h-auto min-w-0"
+                      onPress={() => supprimerEmplacement(emp)}
+                      aria-label={`Supprimer ${emp.nom}`}
+                    >
+                      <Trash2 size={13} />
+                    </Button>
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -150,7 +199,11 @@ export default function PageStock() {
       </div>
 
       <ModalEntreeStock ouvert={modalOuvert} onFermer={() => setModalOuvert(false)} />
-      <ModalCreerEmplacement ouvert={modalEmpOuvert} onFermer={() => setModalEmpOuvert(false)} />
+      <ModalEmplacement
+        ouvert={modalEmpOuvert}
+        emplacement={empEnEdition}
+        onFermer={() => setModalEmpOuvert(false)}
+      />
       <ModalTransfertStock
         ouvert={modalTransfertOuvert}
         onFermer={() => setModalTransfertOuvert(false)}

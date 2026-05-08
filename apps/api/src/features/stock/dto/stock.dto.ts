@@ -18,6 +18,23 @@ export class CreerEmplacementDto {
   adresse?: string;
 }
 
+export class ModifierEmplacementDto {
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  nom?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  type?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  adresse?: string;
+}
+
 export class EntreeStockDto {
   @ApiProperty()
   @IsUUID("4", { message: "Identifiant variante invalide" })

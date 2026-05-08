@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button, Table, Chip, Card, Skeleton } from "@heroui/react";
-import { Plus, PackagePlus, Wheat, AlertTriangle, MapPin } from "lucide-react";
+import { Plus, PackagePlus, Wheat, AlertTriangle, MapPin, Pencil, Trash2 } from "lucide-react";
 import { Topbar } from "@/components/layout/topbar";
 import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
@@ -10,18 +10,37 @@ import {
   useIngredientListQuery,
   useStockIngredientsQuery,
 } from "@/features/ingredient/queries/ingredient-list.query";
-import { ModalCreerIngredient } from "@/features/ingredient/components/modal-creer-ingredient";
+import { useSupprimerIngredientMutation } from "@/features/ingredient/queries/ingredient-mutations";
+import { ModalIngredient } from "@/features/ingredient/components/modal-ingredient";
 import { ModalReceptionIngredient } from "@/features/ingredient/components/modal-reception-ingredient";
+import type { IIngredient } from "@/features/ingredient/types/ingredient.type";
 import { UNITE_LABELS } from "@/features/unite/types/unite.type";
 
 export default function PageIngredients() {
   const { data: boutique } = useBoutiqueActiveQuery();
   const { data: emplacements } = useEmplacementListQuery();
   const { data: ingredients, isLoading } = useIngredientListQuery();
+  const supprimer = useSupprimerIngredientMutation();
 
   const [empSelectionne, setEmpSelectionne] = useState("");
-  const [modalCreerOuvert, setModalCreerOuvert] = useState(false);
+  const [modalIngredientOuvert, setModalIngredientOuvert] = useState(false);
+  const [enEdition, setEnEdition] = useState<IIngredient | null>(null);
   const [modalReceptionOuvert, setModalReceptionOuvert] = useState(false);
+
+  function ouvrirCreation() {
+    setEnEdition(null);
+    setModalIngredientOuvert(true);
+  }
+
+  function ouvrirEdition(i: IIngredient) {
+    setEnEdition(i);
+    setModalIngredientOuvert(true);
+  }
+
+  async function handleSupprimer(i: IIngredient) {
+    if (!window.confirm(`Supprimer l'ingrédient « ${i.nom} » ?`)) return;
+    await supprimer.mutateAsync(i.id);
+  }
 
   const empActif = empSelectionne || emplacements?.[0]?.id || "";
   const { data: stocks } = useStockIngredientsQuery(empActif || undefined);
@@ -66,7 +85,7 @@ export default function PageIngredients() {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button variant="ghost" className="gap-1.5" onPress={() => setModalCreerOuvert(true)}>
+            <Button variant="ghost" className="gap-1.5" onPress={() => ouvrirCreation()}>
               <Plus size={16} />
               Ingrédient
             </Button>
@@ -109,7 +128,7 @@ export default function PageIngredients() {
               <p className="text-sm text-muted mt-1 mb-4">
                 Commencez par déclarer vos matières premières (farine, huile, viandes, légumes...)
               </p>
-              <Button variant="primary" className="gap-1.5" onPress={() => setModalCreerOuvert(true)}>
+              <Button variant="primary" className="gap-1.5" onPress={() => ouvrirCreation()}>
                 <Plus size={16} />
                 Créer un ingrédient
               </Button>
@@ -125,6 +144,7 @@ export default function PageIngredients() {
                   <Table.Column>Stock actuel</Table.Column>
                   <Table.Column>Seuil alerte</Table.Column>
                   <Table.Column>Coût unitaire</Table.Column>
+                  <Table.Column className="w-20"> </Table.Column>
                 </Table.Header>
                 <Table.Body>
                   {(ingredients ?? []).map((i) => {
@@ -171,6 +191,26 @@ export default function PageIngredients() {
                               : "—"}
                           </span>
                         </Table.Cell>
+                        <Table.Cell>
+                          <div className="flex items-center gap-0.5 justify-end">
+                            <Button
+                              variant="ghost"
+                              className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
+                              aria-label={`Modifier ${i.nom}`}
+                              onPress={() => ouvrirEdition(i)}
+                            >
+                              <Pencil size={14} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className="text-muted hover:text-danger p-1.5 h-auto min-w-0"
+                              aria-label={`Supprimer ${i.nom}`}
+                              onPress={() => handleSupprimer(i)}
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
+                        </Table.Cell>
                       </Table.Row>
                     );
                   })}
@@ -181,7 +221,11 @@ export default function PageIngredients() {
         )}
       </div>
 
-      <ModalCreerIngredient ouvert={modalCreerOuvert} onFermer={() => setModalCreerOuvert(false)} />
+      <ModalIngredient
+        ouvert={modalIngredientOuvert}
+        ingredient={enEdition}
+        onFermer={() => setModalIngredientOuvert(false)}
+      />
       <ModalReceptionIngredient ouvert={modalReceptionOuvert} onFermer={() => setModalReceptionOuvert(false)} />
     </>
   );

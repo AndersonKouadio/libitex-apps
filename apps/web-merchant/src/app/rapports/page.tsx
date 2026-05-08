@@ -6,7 +6,7 @@ import { Topbar } from "@/components/layout/topbar";
 import { ChampDate } from "@/components/forms/champ-date";
 import { AucunEmplacement } from "@/components/empty-states/aucun-emplacement";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
-import { ModalCreerEmplacement } from "@/features/stock/components/modal-creer-emplacement";
+import { ModalEmplacement } from "@/features/stock/components/modal-emplacement";
 import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
 import { useRapportZQuery } from "@/features/vente/queries/rapport-z.query";
 import { RapportZResume } from "@/features/vente/components/rapport-z-resume";
@@ -44,7 +44,7 @@ export default function PageRapports() {
         <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
           <AucunEmplacement onCreer={() => setModalEmpOuvert(true)} contexte="rapports" />
         </div>
-        <ModalCreerEmplacement ouvert={modalEmpOuvert} onFermer={() => setModalEmpOuvert(false)} />
+        <ModalEmplacement ouvert={modalEmpOuvert} onFermer={() => setModalEmpOuvert(false)} />
       </>
     );
   }

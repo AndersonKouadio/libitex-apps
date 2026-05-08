@@ -3,16 +3,28 @@
 import { useState } from "react";
 import { Topbar } from "@/components/layout/topbar";
 import { Button, TextField, Label, Input, FieldError, Table, Skeleton } from "@heroui/react";
-import { Users, UserPlus, Search, Phone, Mail, MapPin, Trash2 } from "lucide-react";
+import { Users, UserPlus, Phone, Mail, MapPin, Trash2, Pencil } from "lucide-react";
 import { useClientListQuery, useSupprimerClientMutation } from "@/features/client/queries/client.query";
-import { ModalCreerClient } from "@/features/client/components/modal-creer-client";
+import { ModalClient } from "@/features/client/components/modal-client";
+import type { IClient } from "@/features/client/types/client.type";
 
 export default function PageClients() {
   const [recherche, setRecherche] = useState("");
   const [modalOuvert, setModalOuvert] = useState(false);
+  const [enEdition, setEnEdition] = useState<IClient | null>(null);
   const { data, isLoading } = useClientListQuery(1, recherche || undefined);
   const supprimer = useSupprimerClientMutation();
   const clients = data?.data ?? [];
+
+  function ouvrirCreation() {
+    setEnEdition(null);
+    setModalOuvert(true);
+  }
+
+  function ouvrirEdition(c: IClient) {
+    setEnEdition(c);
+    setModalOuvert(true);
+  }
 
   async function handleSupprimer(id: string, nom: string) {
     if (!window.confirm(`Supprimer le client ${nom} ?`)) return;
@@ -32,7 +44,7 @@ export default function PageClients() {
               Coordonnées et historique des clients réguliers de votre boutique.
             </p>
           </div>
-          <Button variant="primary" className="gap-2" onPress={() => setModalOuvert(true)}>
+          <Button variant="primary" className="gap-2" onPress={ouvrirCreation}>
             <UserPlus size={16} />
             Nouveau client
           </Button>
@@ -120,14 +132,24 @@ export default function PageClients() {
                         <span className="text-xs text-muted line-clamp-2">{c.notes ?? "—"}</span>
                       </Table.Cell>
                       <Table.Cell>
-                        <Button
-                          variant="ghost"
-                          className="text-muted hover:text-danger p-1.5 h-auto min-w-0"
-                          aria-label={`Supprimer ${c.prenom}`}
-                          onPress={() => handleSupprimer(c.id, `${c.prenom} ${c.nomFamille ?? ""}`.trim())}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
+                        <div className="flex items-center gap-0.5 justify-end">
+                          <Button
+                            variant="ghost"
+                            className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
+                            aria-label={`Modifier ${c.prenom}`}
+                            onPress={() => ouvrirEdition(c)}
+                          >
+                            <Pencil size={14} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="text-muted hover:text-danger p-1.5 h-auto min-w-0"
+                            aria-label={`Supprimer ${c.prenom}`}
+                            onPress={() => handleSupprimer(c.id, `${c.prenom} ${c.nomFamille ?? ""}`.trim())}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
                       </Table.Cell>
                     </Table.Row>
                   ))}
@@ -138,7 +160,11 @@ export default function PageClients() {
         )}
       </div>
 
-      <ModalCreerClient ouvert={modalOuvert} onFermer={() => setModalOuvert(false)} />
+      <ModalClient
+        ouvert={modalOuvert}
+        client={enEdition}
+        onFermer={() => setModalOuvert(false)}
+      />
     </>
   );
 }

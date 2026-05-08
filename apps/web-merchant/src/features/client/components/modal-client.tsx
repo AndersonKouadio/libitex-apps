@@ -1,14 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { Modal, Button, TextField, Label, Input, FieldError, TextArea } from "@heroui/react";
-import { UserPlus } from "lucide-react";
-import { useCreerClientMutation } from "../queries/client.query";
+import { useState, useEffect } from "react";
+import {
+  Modal, Button, TextField, Label, Input, FieldError, TextArea,
+} from "@heroui/react";
+import { UserPlus, Pencil } from "lucide-react";
+import { useCreerClientMutation, useModifierClientMutation } from "../queries/client.query";
 import { creerClientSchema, type CreerClientDTO } from "../schemas/client.schema";
+import type { IClient } from "../types/client.type";
 
 interface Props {
   ouvert: boolean;
   onFermer: () => void;
+  /** Si fourni, modal en mode edition. Sinon mode creation. */
+  client?: IClient | null;
 }
 
 const VIDE: CreerClientDTO = {
@@ -20,10 +25,29 @@ const VIDE: CreerClientDTO = {
   notes: "",
 };
 
-export function ModalCreerClient({ ouvert, onFermer }: Props) {
-  const mutation = useCreerClientMutation();
+export function ModalClient({ ouvert, onFermer, client }: Props) {
+  const creer = useCreerClientMutation();
+  const modifier = useModifierClientMutation();
   const [form, setForm] = useState<CreerClientDTO>(VIDE);
   const [erreur, setErreur] = useState("");
+
+  const editing = !!client;
+
+  useEffect(() => {
+    if (client) {
+      setForm({
+        prenom: client.prenom,
+        nomFamille: client.nomFamille ?? "",
+        telephone: client.telephone ?? "",
+        email: client.email ?? "",
+        adresse: client.adresse ?? "",
+        notes: client.notes ?? "",
+      });
+    } else {
+      setForm(VIDE);
+    }
+    setErreur("");
+  }, [client, ouvert]);
 
   function maj<K extends keyof CreerClientDTO>(champ: K, valeur: CreerClientDTO[K]) {
     setForm((p) => ({ ...p, [champ]: valeur }));
@@ -39,13 +63,18 @@ export function ModalCreerClient({ ouvert, onFermer }: Props) {
     const data = { ...validation.data };
     if (data.email === "") data.email = undefined;
     try {
-      await mutation.mutateAsync(data);
-      setForm(VIDE);
+      if (editing && client) {
+        await modifier.mutateAsync({ id: client.id, data });
+      } else {
+        await creer.mutateAsync(data);
+      }
       onFermer();
     } catch (err) {
-      setErreur(err instanceof Error ? err.message : "Erreur lors de la création");
+      setErreur(err instanceof Error ? err.message : "Erreur");
     }
   }
+
+  const enCours = creer.isPending || modifier.isPending;
 
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(o) => { if (!o) onFermer(); }}>
@@ -54,9 +83,9 @@ export function ModalCreerClient({ ouvert, onFermer }: Props) {
           <Modal.CloseTrigger />
           <Modal.Header>
             <Modal.Icon className="bg-accent/10 text-accent">
-              <UserPlus className="size-5" />
+              {editing ? <Pencil className="size-5" /> : <UserPlus className="size-5" />}
             </Modal.Icon>
-            <Modal.Heading>Nouveau client</Modal.Heading>
+            <Modal.Heading>{editing ? "Modifier le client" : "Nouveau client"}</Modal.Heading>
           </Modal.Header>
 
           <Modal.Body className="space-y-4">
@@ -105,8 +134,10 @@ export function ModalCreerClient({ ouvert, onFermer }: Props) {
 
           <Modal.Footer>
             <Button variant="secondary" slot="close">Annuler</Button>
-            <Button variant="primary" onPress={soumettre} isDisabled={mutation.isPending}>
-              {mutation.isPending ? "Création..." : "Ajouter le client"}
+            <Button variant="primary" onPress={soumettre} isDisabled={enCours}>
+              {enCours
+                ? "Enregistrement..."
+                : editing ? "Enregistrer" : "Ajouter le client"}
             </Button>
           </Modal.Footer>
         </Modal.Dialog>
