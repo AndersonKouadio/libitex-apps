@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { Card } from "@heroui/react";
 import { Topbar } from "@/components/layout/topbar";
-import { Store, Users, ChevronRight, Building2, Tag } from "lucide-react";
+import { Store, Users, ChevronRight, Building2, Tag, ShieldCheck } from "lucide-react";
 
 const SECTIONS = [
   {
     href: "/parametres/boutiques",
     icone: Store,
     titre: "Mes boutiques",
-    description: "Gérez vos boutiques, basculez entre elles ou creez-en une nouvelle.",
+    description: "Gérez vos boutiques, basculez entre elles ou créez-en une nouvelle.",
     classes: "bg-accent/10 text-accent",
   },
   {
@@ -21,10 +21,17 @@ const SECTIONS = [
     classes: "bg-warning/10 text-warning",
   },
   {
+    href: "/changer-mot-de-passe",
+    icone: ShieldCheck,
+    titre: "Sécurité",
+    description: "Changer votre mot de passe et protéger votre compte.",
+    classes: "bg-primary-500/10 text-primary-500",
+  },
+  {
     href: "/parametres",
     icone: Building2,
     titre: "Profil de la boutique",
-    description: "Nom, adresse, devise, secteur d'activité et types de produits autorises.",
+    description: "Nom, adresse, devise, secteur d'activité et types de produits autorisés.",
     classes: "bg-success/10 text-success",
     enConstruction: true,
   },
@@ -32,7 +39,7 @@ const SECTIONS = [
     href: "/parametres",
     icone: Tag,
     titre: "Catégories",
-    description: "Organisez votre catalogue par catégories et sous-categories.",
+    description: "Organisez votre catalogue par catégories et sous-catégories.",
     classes: "bg-muted/10 text-muted",
     enConstruction: true,
   },

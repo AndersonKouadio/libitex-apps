@@ -17,10 +17,16 @@ export class ProduitRepository {
     barcodeEan13?: string;
     taxRate?: string;
     images?: string[];
+    sectorMetadata?: Record<string, unknown>;
   }) {
     const [produit] = await this.db
       .insert(products)
-      .values({ tenantId, ...data, images: data.images || [] })
+      .values({
+        tenantId,
+        ...data,
+        images: data.images || [],
+        sectorMetadata: data.sectorMetadata || {},
+      })
       .returning();
     return produit;
   }
@@ -89,11 +95,17 @@ export class ProduitRepository {
     description: string;
     categoryId: string;
     brand: string;
+    images: string[];
+    sectorMetadata: Record<string, unknown>;
     isActive: boolean;
   }>) {
+    // Filtre les undefined : sinon Drizzle ecrase a NULL les champs non fournis.
+    const cleaned = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined),
+    );
     const [updated] = await this.db
       .update(products)
-      .set({ ...data, updatedAt: new Date() })
+      .set({ ...cleaned, updatedAt: new Date() })
       .where(and(eq(products.id, id), eq(products.tenantId, tenantId)))
       .returning();
     return updated;

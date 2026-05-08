@@ -52,7 +52,7 @@ export default function PageChangerMotDePasse() {
         motDePasseActuel: validation.data.motDePasseActuel,
         nouveauMotDePasse: validation.data.nouveauMotDePasse,
       });
-      router.push("/dashboard");
+      router.push(obligatoire ? "/dashboard" : "/parametres");
     } catch (err) {
       setErreur(err instanceof Error ? err.message : "Erreur");
     }

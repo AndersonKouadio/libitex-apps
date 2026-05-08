@@ -41,7 +41,22 @@ export const changerMotDePasseSchema = z.object({
   { message: "Le nouveau mot de passe doit être différent de l'actuel", path: ["nouveauMotDePasse"] },
 );
 
+export const motDePasseOublieSchema = z.object({
+  email: z.string().email("Adresse email invalide"),
+});
+
+export const reinitialiserMotDePasseSchema = z.object({
+  token: z.string().min(1, "Lien invalide"),
+  nouveauMotDePasse: z.string().min(8, "8 caractères minimum"),
+  confirmation: z.string(),
+}).refine(
+  (d) => d.nouveauMotDePasse === d.confirmation,
+  { message: "Les deux mots de passe ne correspondent pas", path: ["confirmation"] },
+);
+
 export type ConnexionDTO = z.infer<typeof connexionSchema>;
 export type InscriptionDTO = z.infer<typeof inscriptionSchema>;
 export type CreerBoutiqueDTO = z.infer<typeof creerBoutiqueSchema>;
 export type ChangerMotDePasseDTO = z.infer<typeof changerMotDePasseSchema>;
+export type MotDePasseOublieDTO = z.infer<typeof motDePasseOublieSchema>;
+export type ReinitialiserMotDePasseDTO = z.infer<typeof reinitialiserMotDePasseSchema>;

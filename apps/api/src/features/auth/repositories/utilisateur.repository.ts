@@ -71,4 +71,33 @@ export class UtilisateurRepository {
   async sauvegarderRefreshToken(userId: string, hash: string) {
     await this.db.update(users).set({ refreshToken: hash }).where(eq(users.id, userId));
   }
+
+  async sauvegarderTokenReset(userId: string, tokenHash: string, expiresAt: Date) {
+    await this.db
+      .update(users)
+      .set({ passwordResetTokenHash: tokenHash, passwordResetExpiresAt: expiresAt })
+      .where(eq(users.id, userId));
+  }
+
+  async trouverParTokenResetHash(tokenHash: string) {
+    return this.db.query.users.findFirst({
+      where: and(
+        eq(users.passwordResetTokenHash, tokenHash),
+        eq(users.isActive, true),
+      ),
+    });
+  }
+
+  async invaliderTokenReset(userId: string, passwordHash: string) {
+    await this.db
+      .update(users)
+      .set({
+        passwordHash,
+        mustChangePassword: false,
+        passwordResetTokenHash: null,
+        passwordResetExpiresAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
+  }
 }

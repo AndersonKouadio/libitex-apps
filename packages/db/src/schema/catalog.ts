@@ -54,6 +54,10 @@ export const products = pgTable("products", {
   taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).default("0"),
   weight: numeric("weight", { precision: 10, scale: 3 }),
   images: jsonb("images").$type<string[]>().default([]),
+  // Metadonnees specifiques au secteur (DCI/dosage pour pharmacie, matiere/carat
+  // pour bijouterie, ISBN/auteur pour librairie, etc.). Forme libre, le frontend
+  // affiche les champs adaptes au secteur de la boutique.
+  sectorMetadata: jsonb("sector_metadata").$type<Record<string, unknown>>().default({}),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

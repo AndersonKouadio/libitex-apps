@@ -5,8 +5,9 @@ import { Topbar } from "@/components/layout/topbar";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
 import type { IProduit } from "@/features/catalogue/types/produit.type";
 import { ModalCreerProduit } from "@/features/catalogue/components/modal-creer-produit";
+import { ModalModifierProduit } from "@/features/catalogue/components/modal-modifier-produit";
 import { Table, Chip, Button, Skeleton, SearchField, Input } from "@heroui/react";
-import { Package, Plus } from "lucide-react";
+import { Package, Plus, Pencil } from "lucide-react";
 
 function formatPrix(n: number) {
   return new Intl.NumberFormat("fr-FR").format(n);
@@ -23,6 +24,7 @@ export default function PageCatalogue() {
   const [page, setPage] = useState(1);
   const [recherche, setRecherche] = useState("");
   const [modalOuvert, setModalOuvert] = useState(false);
+  const [produitEnEdition, setProduitEnEdition] = useState<IProduit | null>(null);
   const { data, isLoading } = useProduitListQuery(page, recherche || undefined);
 
   const produits = data?.data ?? [];
@@ -81,6 +83,7 @@ export default function PageCatalogue() {
                   <Table.Column>Type</Table.Column>
                   <Table.Column>Variantes</Table.Column>
                   <Table.Column>Prix détail</Table.Column>
+                  <Table.Column className="w-12"> </Table.Column>
                 </Table.Header>
                 <Table.Body>
                   {produits.map((p: IProduit) => {
@@ -117,6 +120,16 @@ export default function PageCatalogue() {
                             {variante ? formatPrix(variante.prixDetail) : "--"} F
                           </span>
                         </Table.Cell>
+                        <Table.Cell>
+                          <Button
+                            variant="ghost"
+                            className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
+                            aria-label={`Modifier ${p.nom}`}
+                            onPress={() => setProduitEnEdition(p)}
+                          >
+                            <Pencil size={14} />
+                          </Button>
+                        </Table.Cell>
                       </Table.Row>
                     );
                   })}
@@ -151,6 +164,11 @@ export default function PageCatalogue() {
       <ModalCreerProduit
         ouvert={modalOuvert}
         onFermer={() => setModalOuvert(false)}
+      />
+
+      <ModalModifierProduit
+        produit={produitEnEdition}
+        onFermer={() => setProduitEnEdition(null)}
       />
     </>
   );

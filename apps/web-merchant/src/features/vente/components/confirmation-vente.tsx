@@ -1,18 +1,29 @@
 "use client";
 
 import { Modal } from "@heroui/react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Printer } from "lucide-react";
 import { formatMontant } from "../utils/format";
+import { imprimerTicket } from "../utils/imprimer-ticket";
 import { BoutonPOS } from "./bouton-pos";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import type { ITicket } from "../types/vente.type";
 
 interface Props {
   numeroTicket: string;
   total: number;
   monnaie: number;
+  ticket?: ITicket;
   onNouvelle: () => void;
 }
 
-export function ConfirmationVente({ numeroTicket, total, monnaie, onNouvelle }: Props) {
+export function ConfirmationVente({ numeroTicket, total, monnaie, ticket, onNouvelle }: Props) {
+  const { boutiqueActive } = useAuth();
+
+  function handleImprimer() {
+    if (!ticket || !boutiqueActive) return;
+    imprimerTicket(ticket, { nom: boutiqueActive.nom, devise: boutiqueActive.devise }, monnaie);
+  }
+
   return (
     <Modal.Backdrop isOpen onOpenChange={(open) => { if (!open) onNouvelle(); }}>
       <Modal.Container size="sm">
@@ -33,7 +44,17 @@ export function ConfirmationVente({ numeroTicket, total, monnaie, onNouvelle }: 
               </p>
             )}
           </Modal.Body>
-          <Modal.Footer>
+          <Modal.Footer className="flex-col gap-2">
+            {ticket && (
+              <BoutonPOS
+                variant="outline"
+                className="w-full gap-2"
+                onPress={handleImprimer}
+              >
+                <Printer size={16} />
+                Imprimer le ticket
+              </BoutonPOS>
+            )}
             <BoutonPOS variant="primary" className="w-full" onPress={onNouvelle}>
               Nouvelle vente
             </BoutonPOS>

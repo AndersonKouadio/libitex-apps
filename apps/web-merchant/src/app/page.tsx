@@ -95,12 +95,21 @@ export default function PageConnexion() {
             >
               {soumission ? "Connexion en cours..." : "Se connecter"}
             </Button>
+
+            <div className="text-center">
+              <Link
+                href="/mot-de-passe-oublie"
+                className="text-xs text-muted hover:text-accent hover:underline"
+              >
+                Mot de passe oublié ?
+              </Link>
+            </div>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted">
             Pas encore de boutique ?{" "}
             <Link href="/inscription" className="font-medium text-accent hover:underline">
-              Creer un compte
+              Créer un compte
             </Link>
           </p>
         </div>

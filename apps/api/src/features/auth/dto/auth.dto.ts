@@ -110,6 +110,24 @@ export class ChangerMotDePasseDto {
   nouveauMotDePasse!: string;
 }
 
+export class DemanderResetDto {
+  @ApiProperty({ example: "amadou@boutique-dakar.sn" })
+  @IsEmail({}, { message: "Adresse email invalide" })
+  email!: string;
+}
+
+export class ReinitialiserMotDePasseDto {
+  @ApiProperty({ description: "Token reçu par email" })
+  @IsString()
+  @MinLength(1)
+  token!: string;
+
+  @ApiProperty({ example: "nouveauMotDePasse123" })
+  @IsString()
+  @MinLength(8, { message: "Le nouveau mot de passe doit contenir au moins 8 caractères" })
+  nouveauMotDePasse!: string;
+}
+
 export class BoutiqueResumeDto {
   id!: string;
   nom!: string;

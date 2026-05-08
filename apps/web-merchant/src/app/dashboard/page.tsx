@@ -1,50 +1,39 @@
 "use client";
 
-import Link from "next/link";
 import {
   Banknote, Receipt, Package, MapPin, Coins,
   ShoppingCart, Warehouse, BarChart3,
 } from "lucide-react";
 import { Card, Skeleton } from "@heroui/react";
 import { Topbar } from "@/components/layout/topbar";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useKpisQuery, useVentesParJourQuery } from "@/features/tableau-de-bord/queries/kpis.query";
 import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
 import { CarteKpi } from "@/features/tableau-de-bord/components/carte-kpi";
 import { LienRapide } from "@/features/tableau-de-bord/components/lien-rapide";
 import { CourbeVentes } from "@/features/tableau-de-bord/components/courbe-ventes";
+import { CarteOnboarding } from "@/features/tableau-de-bord/components/carte-onboarding";
 import { HistoriqueTickets } from "@/features/vente/components/historique-tickets";
 import { formatMontant } from "@/features/vente/utils/format";
 
 export default function TableauDeBordPage() {
+  const { boutiqueActive } = useAuth();
   const { data: kpis, isLoading: kpisChargement } = useKpisQuery();
   const { data: ventes, isLoading: ventesChargement } = useVentesParJourQuery(7);
   const { data: ticketsData } = useTicketListQuery({ page: 1 });
 
   const tickets = (ticketsData?.data ?? []).slice(0, 5);
-  const catalogueVide = !kpisChargement && (kpis?.nombreProduits ?? 0) === 0;
 
   return (
     <>
       <Topbar titre="Tableau de bord" />
       <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        {catalogueVide && (
-          <Card className="mb-6 border-accent/20 bg-accent/5">
-            <Card.Content className="p-5">
-              <p className="text-sm font-semibold text-foreground">Bienvenue sur LIBITEX</p>
-              <p className="text-sm text-muted mt-1">
-                Commencez par ajouter vos produits dans le catalogue, puis recevez du stock pour pouvoir vendre.
-              </p>
-              <div className="flex flex-wrap items-center gap-2 mt-3">
-                <Link href="/catalogue" className="text-sm font-medium text-accent hover:underline">
-                  Ajouter un produit
-                </Link>
-                <span className="text-muted text-sm">puis</span>
-                <Link href="/stock" className="text-sm font-medium text-accent hover:underline">
-                  Recevoir du stock
-                </Link>
-              </div>
-            </Card.Content>
-          </Card>
+        {!kpisChargement && (
+          <CarteOnboarding
+            nombreProduits={kpis?.nombreProduits ?? 0}
+            nombreEmplacements={kpis?.nombreEmplacements ?? 0}
+            nomBoutique={boutiqueActive?.nom}
+          />
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

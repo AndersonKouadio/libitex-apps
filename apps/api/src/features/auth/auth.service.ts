@@ -1,12 +1,14 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcryptjs";
+import { randomBytes, createHash } from "node:crypto";
 import { ActivitySector, ACTIVITY_SECTOR_PRODUCT_TYPES } from "@libitex/shared";
 import { UtilisateurRepository } from "./repositories/utilisateur.repository";
 import { MembershipRepository } from "./repositories/membership.repository";
 import { StockService } from "../stock/stock.service";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
+import { EmailService } from "../../common/email/email.service";
 import {
   IdentifiantsInvalidesException,
   EmailDejaUtiliseException,
@@ -28,6 +30,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly audit: AuditService,
+    private readonly email: EmailService,
   ) {}
 
   async inscrire(dto: InscriptionDto): Promise<AuthResponseDto> {
@@ -222,6 +225,64 @@ export class AuthService {
       boutiques,
       boutiqueActive,
     };
+  }
+
+  /**
+   * Genere un token de reinitialisation et l'envoie par email.
+   * Repond toujours OK (meme si email inconnu) pour eviter l'enumeration de comptes.
+   */
+  async demanderReinitialisation(email: string): Promise<{ ok: true }> {
+    const user = await this.utilisateurRepo.trouverParEmail(email);
+    if (!user) return { ok: true };
+
+    const token = randomBytes(32).toString("base64url");
+    const tokenHash = createHash("sha256").update(token).digest("hex");
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1h
+    await this.utilisateurRepo.sauvegarderTokenReset(user.id, tokenHash, expiresAt);
+
+    const baseUrl = this.config.get<string>("APP_URL", "http://localhost:3001");
+    const lien = `${baseUrl}/reinitialiser-mot-de-passe?token=${token}`;
+
+    await this.email.envoyer({
+      destinataire: user.email,
+      sujet: "Reinitialisation de votre mot de passe LIBITEX",
+      texte:
+        `Bonjour ${user.firstName},\n\n` +
+        `Vous avez demande la reinitialisation de votre mot de passe LIBITEX.\n` +
+        `Cliquez sur le lien ci-dessous pour choisir un nouveau mot de passe (valable 1 heure):\n\n` +
+        `${lien}\n\n` +
+        `Si vous n'avez pas fait cette demande, ignorez cet email.\n`,
+    });
+
+    if (user.tenantId) {
+      await this.audit.log({
+        tenantId: user.tenantId, userId: user.id,
+        action: AUDIT_ACTIONS.PASSWORD_RESET_REQUESTED,
+        entityType: "USER", entityId: user.id,
+        after: { email: user.email },
+      });
+    }
+    return { ok: true };
+  }
+
+  async reinitialiserMotDePasse(token: string, nouveauMotDePasse: string): Promise<{ ok: true }> {
+    const tokenHash = createHash("sha256").update(token).digest("hex");
+    const user = await this.utilisateurRepo.trouverParTokenResetHash(tokenHash);
+    if (!user || !user.passwordResetExpiresAt || user.passwordResetExpiresAt < new Date()) {
+      throw new BadRequestException("Lien invalide ou expire");
+    }
+
+    const hash = await bcrypt.hash(nouveauMotDePasse, 12);
+    await this.utilisateurRepo.invaliderTokenReset(user.id, hash);
+
+    if (user.tenantId) {
+      await this.audit.log({
+        tenantId: user.tenantId, userId: user.id,
+        action: AUDIT_ACTIONS.PASSWORD_RESET_COMPLETED,
+        entityType: "USER", entityId: user.id,
+      });
+    }
+    return { ok: true };
   }
 
   async changerMotDePasse(

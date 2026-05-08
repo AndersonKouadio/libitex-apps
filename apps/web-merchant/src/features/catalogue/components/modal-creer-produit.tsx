@@ -13,7 +13,9 @@ import { ChampsInfoProduit } from "./champs-info-produit";
 import { SectionVarianteUnique } from "./section-variante-unique";
 import { SectionVariantesAttributs } from "./section-variantes-attributs";
 import { SectionRecetteMenu } from "./section-recette-menu";
+import { SectionMetadataSecteur } from "./section-metadata-secteur";
 import { ZoneUploadImages } from "@/features/upload/components/zone-upload-images";
+import type { SecteurActivite } from "@/features/auth/types/auth.type";
 
 interface Props {
   ouvert: boolean;
@@ -57,8 +59,10 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
   }
 
   const {
-    typeProduit, varianteUnique, axes, prefixeSku, variantesGenerees, images, lignesRecette, erreur,
+    typeProduit, varianteUnique, axes, prefixeSku, variantesGenerees, images,
+    metadataSecteur, lignesRecette, erreur,
   } = form.valeurs;
+  const secteur = boutique?.secteurActivite as SecteurActivite | undefined;
 
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(open) => { if (!open) onFermer(); }}>
@@ -125,6 +129,12 @@ export function ModalCreerProduit({ ouvert, onFermer }: Props) {
             {typeProduit === "MENU" && (
               <SectionRecetteMenu lignes={lignesRecette} onChange={form.setLignesRecette} />
             )}
+
+            <SectionMetadataSecteur
+              secteur={secteur}
+              metadata={metadataSecteur}
+              onChange={form.setMetadataSecteur}
+            />
           </Modal.Body>
 
           <Modal.Footer>

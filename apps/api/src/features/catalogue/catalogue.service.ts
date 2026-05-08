@@ -25,6 +25,7 @@ export class CatalogueService {
       barcodeEan13: dto.codeBarresEan13,
       taxRate: dto.tauxTva?.toString(),
       images: dto.images ?? [],
+      sectorMetadata: dto.metadataSecteur ?? {},
     });
 
     const variantes: VarianteResponseDto[] = [];
@@ -86,6 +87,8 @@ export class CatalogueService {
       description: dto.description,
       categoryId: dto.categorieId,
       brand: dto.marque,
+      images: dto.images,
+      sectorMetadata: dto.metadataSecteur,
       isActive: dto.actif,
     });
 
@@ -129,6 +132,9 @@ export class CatalogueService {
       categorieId: raw.categoryId,
       tauxTva: Number(raw.taxRate ?? 0),
       images: Array.isArray(raw.images) ? raw.images : [],
+      metadataSecteur: (raw.sectorMetadata && typeof raw.sectorMetadata === "object")
+        ? raw.sectorMetadata as Record<string, unknown>
+        : {},
       actif: raw.isActive,
       variantes,
       creeLe: raw.createdAt?.toISOString?.() ?? raw.createdAt,

@@ -48,6 +48,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
   const [axes, setAxes] = useState<AxeAttribut[]>(AXES_VIDES);
   const [varianteUnique, setVarianteUnique] = useState<CreerVarianteDTO>({ ...VARIANTE_VIDE });
   const [images, setImages] = useState<string[]>([]);
+  const [metadataSecteur, setMetadataSecteur] = useState<Record<string, unknown>>({});
   const [lignesRecette, setLignesRecette] = useState<LigneRecetteDTO[]>([]);
   const [erreur, setErreur] = useState("");
 
@@ -81,7 +82,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
     setNom(""); setDescription(""); setTypeProduit(typeParDefaut); setMarque("");
     setCategorieId(""); setCodeBarresEan13(""); setTauxTva("0"); setPrefixeSku("");
     setAxes(AXES_VIDES); setVarianteUnique({ ...VARIANTE_VIDE }); setImages([]);
-    setLignesRecette([]); setErreur("");
+    setMetadataSecteur({}); setLignesRecette([]); setErreur("");
   }, [typeParDefaut]);
 
   const valider = useCallback((): CreerProduitDTO | null => {
@@ -104,6 +105,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
       codeBarresEan13: codeBarresEan13 || undefined,
       tauxTva: tauxTva ? Number(tauxTva) : undefined,
       images: images.length > 0 ? images : undefined,
+      metadataSecteur: Object.keys(metadataSecteur).length > 0 ? metadataSecteur : undefined,
       variantes,
     };
 
@@ -114,15 +116,17 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
     }
     setErreur("");
     return validation.data;
-  }, [nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva, images, lignesRecette, variantesGenerees]);
+  }, [nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva, images, metadataSecteur, lignesRecette, variantesGenerees]);
 
   return {
     valeurs: {
       nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva,
-      prefixeSku, axes, varianteUnique, variantesGenerees, images, lignesRecette, erreur,
+      prefixeSku, axes, varianteUnique, variantesGenerees, images, metadataSecteur,
+      lignesRecette, erreur,
     },
     setNom, setDescription, setTypeProduit, setMarque, setCategorieId,
-    setCodeBarresEan13, setTauxTva, setPrefixeSku, setVarianteUnique, setImages, setLignesRecette,
+    setCodeBarresEan13, setTauxTva, setPrefixeSku, setVarianteUnique, setImages,
+    setMetadataSecteur, setLignesRecette,
     ajouterAxe, retirerAxe, modifierAxe,
     reinitialiser, valider, setErreur,
   };

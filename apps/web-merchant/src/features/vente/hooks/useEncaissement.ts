@@ -6,6 +6,7 @@ import { venteAPI } from "../apis/vente.api";
 import { creerTicketSchema } from "../schemas/vente.schema";
 import { useInvalidateVenteQuery } from "../queries/index.query";
 import type { ArticlePanier } from "./usePanier";
+import type { ITicket } from "../types/vente.type";
 
 interface PanierActions {
   articles: ArticlePanier[];
@@ -16,6 +17,7 @@ interface DerniereVente {
   numero: string;
   total: number;
   monnaie: number;
+  ticket: ITicket;
 }
 
 /**
@@ -50,6 +52,7 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
         numero: resultat.numeroTicket,
         total: resultat.total,
         monnaie: resultat.monnaie ?? 0,
+        ticket: resultat,
       });
       panier.vider();
     } catch (err: unknown) {

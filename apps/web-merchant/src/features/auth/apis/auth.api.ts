@@ -15,4 +15,10 @@ export const authAPI = {
     token: string,
     data: { motDePasseActuel: string; nouveauMotDePasse: string },
   ) => httpClient.post<{ ok: true }>(`${BASE}/changer-mot-de-passe`, data, { token }),
+
+  demanderReset: (email: string) =>
+    httpClient.post<{ ok: true }>(`${BASE}/mot-de-passe-oublie`, { email }),
+
+  reinitialiser: (data: { token: string; nouveauMotDePasse: string }) =>
+    httpClient.post<{ ok: true }>(`${BASE}/reinitialiser-mot-de-passe`, data),
 };

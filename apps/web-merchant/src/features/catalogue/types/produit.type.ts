@@ -33,6 +33,7 @@ export interface IProduit {
   categorieId: string | null;
   tauxTva: number;
   images: string[];
+  metadataSecteur: Record<string, unknown>;
   actif: boolean;
   variantes: IVariante[];
   creeLe: string;

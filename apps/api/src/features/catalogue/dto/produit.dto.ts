@@ -128,6 +128,13 @@ export class CreerProduitDto {
   @IsUrl({}, { each: true, message: "URL d'image invalide" })
   images?: string[];
 
+  @ApiPropertyOptional({
+    description: "Métadonnées spécifiques au secteur (DCI/dosage pour pharmacie, matière/carat pour bijouterie, ISBN/auteur pour librairie...)",
+    example: { dci: "Paracétamol", dosage: "500mg", surOrdonnance: false },
+  })
+  @IsOptional()
+  metadataSecteur?: Record<string, unknown>;
+
   @ApiProperty({ type: [CreerVarianteDto] })
   @ValidateNested({ each: true })
   @Type(() => CreerVarianteDto)
@@ -155,6 +162,17 @@ export class ModifierProduitDto {
   @IsString()
   @IsOptional()
   marque?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsArray()
+  @IsOptional()
+  @ArrayMaxSize(6)
+  @IsUrl({}, { each: true, message: "URL d'image invalide" })
+  images?: string[];
+
+  @ApiPropertyOptional({ description: "Métadonnées spécifiques au secteur" })
+  @IsOptional()
+  metadataSecteur?: Record<string, unknown>;
 
   @ApiPropertyOptional()
   @IsBoolean()
@@ -200,6 +218,7 @@ export class ProduitResponseDto {
   categorieId!: string | null;
   tauxTva!: number;
   images!: string[];
+  metadataSecteur!: Record<string, unknown>;
   actif!: boolean;
   variantes!: VarianteResponseDto[];
   creeLe!: string;

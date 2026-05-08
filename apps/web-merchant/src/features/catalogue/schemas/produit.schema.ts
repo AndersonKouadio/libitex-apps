@@ -24,8 +24,20 @@ export const creerProduitSchema = z.object({
   codeBarresEan13: z.string().optional(),
   tauxTva: z.number().min(0).optional(),
   images: z.array(z.string().url("URL d'image invalide")).max(6, "6 images maximum").optional(),
+  metadataSecteur: z.record(z.string(), z.unknown()).optional(),
   variantes: z.array(creerVarianteSchema).min(1, "Au moins une variante requise"),
+});
+
+export const modifierProduitSchema = z.object({
+  nom: z.string().min(2, "Nom du produit requis (2 caractères min.)").optional(),
+  description: z.string().optional(),
+  marque: z.string().optional(),
+  categorieId: z.string().optional(),
+  images: z.array(z.string().url("URL d'image invalide")).max(6, "6 images maximum").optional(),
+  metadataSecteur: z.record(z.string(), z.unknown()).optional(),
+  actif: z.boolean().optional(),
 });
 
 export type CreerProduitDTO = z.infer<typeof creerProduitSchema>;
 export type CreerVarianteDTO = z.infer<typeof creerVarianteSchema>;
+export type ModifierProduitDTO = z.infer<typeof modifierProduitSchema>;

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { DatabaseModule } from "./database/database.module";
 import { AuditModule } from "./common/audit/audit.module";
+import { EmailModule } from "./common/email/email.module";
 import { AuthModule } from "./features/auth/auth.module";
 import { CatalogueModule } from "./features/catalogue/catalogue.module";
 import { StockModule } from "./features/stock/stock.module";
@@ -11,6 +12,7 @@ import { BoutiqueModule } from "./features/boutique/boutique.module";
 import { UploadModule } from "./features/upload/upload.module";
 import { IngredientModule } from "./features/ingredient/ingredient.module";
 import { EquipeModule } from "./features/equipe/equipe.module";
+import { ClientModule } from "./features/client/client.module";
 
 @Module({
   imports: [
@@ -20,6 +22,7 @@ import { EquipeModule } from "./features/equipe/equipe.module";
     }),
     DatabaseModule,
     AuditModule,
+    EmailModule,
     AuthModule,
     CatalogueModule,
     StockModule,
@@ -29,6 +32,7 @@ import { EquipeModule } from "./features/equipe/equipe.module";
     UploadModule,
     IngredientModule,
     EquipeModule,
+    ClientModule,
   ],
 })
 export class AppModule {}

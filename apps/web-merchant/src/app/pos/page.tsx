@@ -230,6 +230,7 @@ export default function PagePOS() {
           numeroTicket={encaissement.derniereVente.numero}
           total={encaissement.derniereVente.total}
           monnaie={encaissement.derniereVente.monnaie}
+          ticket={encaissement.derniereVente.ticket}
           onNouvelle={encaissement.fermerDerniereVente}
         />
       )}
