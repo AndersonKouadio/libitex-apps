@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Topbar } from "@/components/layout/topbar";
+import { PageContainer } from "@/components/layout/page-container";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import { useStockEmplacementQuery } from "@/features/stock/queries/stock-emplacement.query";
 import { useSupprimerEmplacementMutation } from "@/features/stock/queries/emplacement.mutations";
@@ -51,9 +51,7 @@ export default function PageStock() {
   }
 
   return (
-    <>
-      <Topbar titre="Gestion du stock" />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+    <PageContainer>
         <div className="flex items-center justify-between mb-5">
           <p className="text-xs font-semibold text-muted uppercase tracking-wider">
             Emplacements ({emplacements?.length ?? 0})
@@ -196,7 +194,6 @@ export default function PageStock() {
             )}
           </div>
         </div>
-      </div>
 
       <ModalEntreeStock ouvert={modalOuvert} onFermer={() => setModalOuvert(false)} />
       <ModalEmplacement
@@ -209,6 +206,6 @@ export default function PageStock() {
         onFermer={() => setModalTransfertOuvert(false)}
         emplacementSourceParDefaut={empSelectionne}
       />
-    </>
+    </PageContainer>
   );
 }

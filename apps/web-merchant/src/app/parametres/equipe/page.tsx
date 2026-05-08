@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button, Card, Skeleton } from "@heroui/react";
 import { UserPlus, Users } from "lucide-react";
-import { Topbar } from "@/components/layout/topbar";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import {
@@ -31,28 +32,17 @@ export default function PageEquipe() {
   }
 
   return (
-    <>
-      <Topbar titre="Équipe" />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-        <header className="flex items-start justify-between gap-3 mb-6 flex-wrap">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-base font-semibold text-foreground">
-              {(membres ?? []).length} membre{(membres ?? []).length > 1 ? "s" : ""}
-            </h1>
-            <p className="text-xs text-muted mt-0.5 max-w-2xl">
-              Invitez vos collaborateurs, attribuez-leur un rôle et limitez leur accès
-              aux bons points de vente.
-            </p>
-          </div>
-          <Button
-            variant="primary"
-            className="gap-1.5 shrink-0"
-            onPress={() => setModalInviter(true)}
-          >
+    <PageContainer taille="moyen">
+      <PageHeader
+        titre={`${(membres ?? []).length} membre${(membres ?? []).length > 1 ? "s" : ""}`}
+        description="Invitez vos collaborateurs, attribuez-leur un rôle et limitez leur accès aux bons points de vente."
+        actions={
+          <Button variant="primary" className="gap-1.5" onPress={() => setModalInviter(true)}>
             <UserPlus size={16} />
             Inviter un membre
           </Button>
-        </header>
+        }
+      />
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -86,10 +76,9 @@ export default function PageEquipe() {
             ))}
           </div>
         )}
-      </div>
 
       <ModalInviterMembre ouvert={modalInviter} onFermer={() => setModalInviter(false)} />
       <ModalModifierMembre membre={membreModif} onFermer={() => setMembreModif(null)} />
-    </>
+    </PageContainer>
   );
 }

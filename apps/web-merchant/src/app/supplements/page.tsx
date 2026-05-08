@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Topbar } from "@/components/layout/topbar";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button, Skeleton, Chip } from "@heroui/react";
 import { Plus, Pencil, Trash2, UtensilsCrossed, Package } from "lucide-react";
 import {
@@ -42,23 +43,17 @@ export default function PageSupplements() {
   }
 
   return (
-    <>
-      <Topbar titre="Suppléments" />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-        <header className="flex items-start justify-between gap-3 mb-6 flex-wrap">
-          <div>
-            <h1 className="text-base font-semibold text-foreground">
-              {supplements.length} supplément{supplements.length > 1 ? "s" : ""}
-            </h1>
-            <p className="text-xs text-muted mt-0.5 max-w-2xl">
-              Sauces, accompagnements, boissons et options en surcoût proposés sur les menus.
-            </p>
-          </div>
-          <Button variant="primary" className="gap-1.5 shrink-0" onPress={ouvrirCreation}>
+    <PageContainer>
+      <PageHeader
+        titre={`${supplements.length} supplément${supplements.length > 1 ? "s" : ""}`}
+        description="Sauces, accompagnements, boissons et options en surcoût proposés à la commande."
+        actions={
+          <Button variant="primary" className="gap-1.5" onPress={ouvrirCreation}>
             <Plus size={16} />
             Nouveau supplément
           </Button>
-        </header>
+        }
+      />
 
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -136,13 +131,12 @@ export default function PageSupplements() {
             ))}
           </div>
         )}
-      </div>
 
       <ModalSupplement
         ouvert={modalOuvert}
         onFermer={() => setModalOuvert(false)}
         supplement={enEdition}
       />
-    </>
+    </PageContainer>
   );
 }

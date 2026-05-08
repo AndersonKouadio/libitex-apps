@@ -1,40 +1,44 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Avatar, Button, Dropdown, Kbd } from "@heroui/react";
-import { Search, Bell, Store, Settings, LogOut, Check } from "lucide-react";
+import { useRouter, usePathname } from "next/navigation";
+import { Avatar, Button, Dropdown } from "@heroui/react";
+import { Bell, Store, Settings, LogOut, Check } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSwitcherBoutiqueMutation } from "@/features/boutique/queries/boutique-switch.mutation";
 import { SECTEUR_LABELS } from "@/features/auth/utils/secteur-activite";
 import type { SecteurActivite } from "@/features/auth/types/auth.type";
+import { Breadcrumbs } from "./breadcrumbs";
+import { obtenirTitre } from "./route-meta";
 
-export function Topbar({ titre }: { titre?: string }) {
+interface Props {
+  /** Surcharge le titre auto-resolu depuis la route. */
+  titre?: string;
+}
+
+export function Topbar({ titre: titreManuel }: Props = {}) {
   const router = useRouter();
+  const pathname = usePathname();
   const { utilisateur, boutiques, boutiqueActive, deconnecter } = useAuth();
   const switcher = useSwitcherBoutiqueMutation();
   const initiales = `${utilisateur?.prenom?.charAt(0) ?? ""}${utilisateur?.nomFamille?.charAt(0) ?? ""}`;
+  const titre = titreManuel ?? obtenirTitre(pathname);
 
   return (
     <header className="sticky top-0 z-10 bg-surface border-b border-border safe-top">
-      <div className="h-14 flex items-center justify-between px-4 lg:px-6 gap-3">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+      <div className="flex items-center justify-between px-4 lg:px-6 gap-3 py-2.5">
+        <div className="flex flex-col min-w-0 flex-1 gap-0.5 pl-12 lg:pl-0">
           {titre && (
-            <h1 className="text-base lg:text-lg font-semibold text-foreground truncate">
+            <h1 className="text-base lg:text-lg font-semibold text-foreground truncate leading-none">
               {titre}
             </h1>
           )}
+          <Breadcrumbs />
         </div>
 
-        <div className="flex items-center gap-2 lg:gap-3 shrink-0">
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border text-sm text-muted">
-            <Search size={16} />
-            <span>Rechercher...</span>
-            <Kbd>/</Kbd>
-          </div>
-
+        <div className="flex items-center gap-1.5 shrink-0">
           <Button
             variant="ghost"
-            className="p-2 h-auto min-w-0 text-muted"
+            className="w-9 h-9 min-w-0 p-0 text-muted hover:text-foreground"
             aria-label="Notifications"
           >
             <Bell size={18} />
@@ -47,7 +51,7 @@ export function Topbar({ titre }: { titre?: string }) {
                 aria-label="Mon compte"
                 className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
-                <Avatar className="bg-accent text-accent-foreground text-xs font-semibold w-8 h-8">
+                <Avatar className="bg-accent text-accent-foreground text-xs font-semibold w-9 h-9">
                   {initiales || "•"}
                 </Avatar>
               </button>

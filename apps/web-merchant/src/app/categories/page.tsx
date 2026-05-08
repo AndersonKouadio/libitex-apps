@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Topbar } from "@/components/layout/topbar";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button, Skeleton } from "@heroui/react";
 import { Plus, Pencil, Trash2, FolderTree, Folder, ChevronRight } from "lucide-react";
 import { useCategorieListQuery } from "@/features/catalogue/queries/categorie-list.query";
@@ -55,23 +56,17 @@ export default function PageCategories() {
   }
 
   return (
-    <>
-      <Topbar titre="Catégories" />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
-        <header className="flex items-start justify-between gap-3 mb-6 flex-wrap">
-          <div>
-            <h1 className="text-base font-semibold text-foreground">
-              {categories.length} catégorie{categories.length > 1 ? "s" : ""}
-            </h1>
-            <p className="text-xs text-muted mt-0.5 max-w-xl">
-              Structurez votre catalogue en familles et sous-familles. Une catégorie ne peut être supprimée que si aucun produit n'y est rattaché.
-            </p>
-          </div>
-          <Button variant="primary" className="gap-1.5 shrink-0" onPress={ouvrirCreation}>
+    <PageContainer taille="moyen">
+      <PageHeader
+        titre={`${categories.length} catégorie${categories.length > 1 ? "s" : ""}`}
+        description="Structurez votre catalogue en familles et sous-familles. Une catégorie ne peut être supprimée que si aucun produit n'y est rattaché."
+        actions={
+          <Button variant="primary" className="gap-1.5" onPress={ouvrirCreation}>
             <Plus size={16} />
             Nouvelle catégorie
           </Button>
-        </header>
+        }
+      />
 
         {isLoading ? (
           <div className="space-y-2">
@@ -107,14 +102,13 @@ export default function PageCategories() {
             </ul>
           </div>
         )}
-      </div>
 
       <ModalCategorie
         ouvert={modalOuvert}
         onFermer={() => setModalOuvert(false)}
         categorie={enEdition}
       />
-    </>
+    </PageContainer>
   );
 }
 

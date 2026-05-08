@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button, Skeleton } from "@heroui/react";
 import { Plus, Store } from "lucide-react";
-import { Topbar } from "@/components/layout/topbar";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useBoutiqueListQuery } from "@/features/boutique/queries/boutique-list.query";
 import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
@@ -40,24 +41,22 @@ export default function PageBoutiques() {
     : null;
 
   return (
-    <>
-      <Topbar titre="Mes boutiques" />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-        <div className="flex items-start justify-between mb-6 gap-4">
-          <div>
-            <p className="text-sm text-muted max-w-xl">
-              Vous pouvez gérer plusieurs boutiques avec un même compte. Chaque boutique a son
-              propre catalogue, son stock et ses ventes.
-            </p>
-            <p className="text-xs text-muted mt-1">
-              Pour modifier une boutique, basculez dessus puis cliquez sur le crayon. La suppression est réservée au propriétaire.
-            </p>
-          </div>
-          <Button variant="primary" className="gap-1.5 shrink-0" onPress={() => setModalCreationOuvert(true)}>
+    <PageContainer taille="moyen">
+      <PageHeader
+        titre={`${boutiques.length} boutique${boutiques.length > 1 ? "s" : ""}`}
+        description={
+          <>
+            Gérez plusieurs boutiques avec un même compte. Chaque boutique a son propre catalogue, son stock et ses ventes.
+            Pour modifier une boutique, basculez dessus puis cliquez sur le crayon. La suppression est réservée au propriétaire.
+          </>
+        }
+        actions={
+          <Button variant="primary" className="gap-1.5" onPress={() => setModalCreationOuvert(true)}>
             <Plus size={16} />
             Nouvelle boutique
           </Button>
-        </div>
+        }
+      />
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -89,7 +88,6 @@ export default function PageBoutiques() {
             ))}
           </div>
         )}
-      </div>
 
       <ModalCreerBoutique
         ouvert={modalCreationOuvert}
@@ -100,6 +98,6 @@ export default function PageBoutiques() {
         boutique={boutiquePourEdition}
         onFermer={() => setEnEdition(null)}
       />
-    </>
+    </PageContainer>
   );
 }

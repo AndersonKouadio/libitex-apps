@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Sidebar } from "./sidebar";
+import { Topbar } from "./topbar";
 import { BottomNavMobile } from "./bottom-nav-mobile";
 
 interface Props {
@@ -63,10 +64,11 @@ export function AppShell({ children, pleinEcran = false }: Props) {
         <Sidebar onNavigate={() => setTiroirOuvert(false)} />
       </aside>
 
-      {/* Contenu principal */}
-      <main className={`min-h-screen lg:ml-[256px] ${pleinEcran ? "" : "pb-20 lg:pb-0"}`}>
-        {children}
-      </main>
+      {/* Contenu principal : Topbar (avec breadcrumbs) + page */}
+      <div className={`min-h-screen flex flex-col lg:ml-[256px] ${pleinEcran ? "" : "pb-20 lg:pb-0"}`}>
+        {!pleinEcran && <Topbar />}
+        <main className="flex-1">{children}</main>
+      </div>
 
       {/* Bottom nav mobile (sauf POS) */}
       {!pleinEcran && <BottomNavMobile onPlus={() => setTiroirOuvert(true)} />}

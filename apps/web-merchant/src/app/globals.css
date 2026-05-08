@@ -137,15 +137,6 @@
     font-weight: 600;
   }
 
-  /* Modal: laisser respirer le focus ring des inputs lorsque le body
-     defile (overflow-y/x auto sinon coupe les box-shadow rings) */
-  .modal__body {
-    padding-inline: 2px;
-    margin-inline: -2px;
-    padding-block: 2px;
-    margin-block: -2px;
-  }
-
   /* Modal Header : icone + titre cote a cote (par defaut HeroUI les empile).
      Plus lisible et plus dense pour les petites modales metier. */
   .modal__header {
@@ -155,6 +146,25 @@
   }
   .modal__header > .modal__icon {
     margin-bottom: 0;
+  }
+
+  /* Modale plus aerees : header + body + footer respirent davantage.
+     Les formulaires denses tenaient sur trop peu de hauteur avant.
+     Le padding-block:2px / margin-block:-2px du body laisse respirer le focus
+     ring des inputs (les box-shadow sont sinon coupees par overflow-y:auto). */
+  .modal__dialog {
+    padding: 1.25rem;
+  }
+  @media (min-width: 640px) {
+    .modal__dialog {
+      padding: 1.5rem;
+    }
+  }
+  .modal__body {
+    padding-inline: 2px;
+    margin-inline: -2px;
+    padding-block: 2px;
+    margin-block: -2px;
   }
 
   /* Toast close button : toujours visible (HeroUI le cache hors hover sur sm).

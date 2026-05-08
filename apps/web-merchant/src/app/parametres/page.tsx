@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Card } from "@heroui/react";
-import { Topbar } from "@/components/layout/topbar";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { Store, Users, ChevronRight, Building2, Tag, ShieldCheck } from "lucide-react";
 import { ModalChangerMotDePasse } from "@/features/auth/components/modal-changer-mot-de-passe";
 
@@ -60,10 +61,12 @@ export default function PageParametres() {
   const [modalMotDePasse, setModalMotDePasse] = useState(false);
 
   return (
-    <>
-      <Topbar titre="Paramètres" />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <PageContainer taille="moyen">
+      <PageHeader
+        titre="Configuration"
+        description="Gérez vos boutiques, votre équipe, votre profil et la sécurité de votre compte."
+      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {SECTIONS.map((s) => {
             const Icone = s.icone;
             const contenu = (
@@ -107,12 +110,11 @@ export default function PageParametres() {
             );
           })}
         </div>
-      </div>
 
       <ModalChangerMotDePasse
         ouvert={modalMotDePasse}
         onFermer={() => setModalMotDePasse(false)}
       />
-    </>
+    </PageContainer>
   );
 }

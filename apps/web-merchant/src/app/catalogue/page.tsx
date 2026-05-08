@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Topbar } from "@/components/layout/topbar";
+import { PageContainer } from "@/components/layout/page-container";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
 import type { IProduit } from "@/features/catalogue/types/produit.type";
 import { ModalCreerProduit } from "@/features/catalogue/components/modal-creer-produit";
@@ -31,9 +31,7 @@ export default function PageCatalogue() {
   const meta = data?.meta;
 
   return (
-    <>
-      <Topbar titre="Catalogue" />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
+    <PageContainer>
         <div className="flex items-center justify-between gap-3 mb-5">
           <SearchField
             value={recherche}
@@ -159,7 +157,6 @@ export default function PageCatalogue() {
             </div>
           </div>
         )}
-      </div>
 
       <ModalCreerProduit
         ouvert={modalOuvert}
@@ -170,6 +167,6 @@ export default function PageCatalogue() {
         produit={produitEnEdition}
         onFermer={() => setProduitEnEdition(null)}
       />
-    </>
+    </PageContainer>
   );
 }

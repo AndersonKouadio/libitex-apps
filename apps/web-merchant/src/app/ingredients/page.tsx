@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button, Table, Chip, Card, Skeleton } from "@heroui/react";
 import { Plus, PackagePlus, Wheat, AlertTriangle, MapPin, Pencil, Trash2 } from "lucide-react";
-import { Topbar } from "@/components/layout/topbar";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import {
@@ -53,38 +54,30 @@ export default function PageIngredients() {
 
   if (boutique && !moduleDisponible) {
     return (
-      <>
-        <Topbar titre="Ingrédients" />
-        <div className="p-6 max-w-2xl mx-auto">
-          <Card>
-            <Card.Content className="py-12 text-center">
-              <Wheat size={32} className="text-muted/30 mx-auto mb-3" />
-              <p className="text-sm font-medium text-foreground">
-                Module non disponible pour ce secteur
-              </p>
-              <p className="text-sm text-muted mt-1 max-w-md mx-auto">
-                La gestion d'ingrédients et de recettes est réservée aux secteurs Restauration
-                et Multi-activités. Modifiez le secteur de votre boutique pour y accéder.
-              </p>
-            </Card.Content>
-          </Card>
-        </div>
-      </>
+      <PageContainer taille="etroit">
+        <Card>
+          <Card.Content className="py-12 text-center">
+            <Wheat size={32} className="text-muted/30 mx-auto mb-3" />
+            <p className="text-sm font-medium text-foreground">
+              Module non disponible pour ce secteur
+            </p>
+            <p className="text-sm text-muted mt-1 max-w-md mx-auto">
+              La gestion d'ingrédients et de recettes est réservée aux secteurs Restauration
+              et Multi-activités. Modifiez le secteur de votre boutique pour y accéder.
+            </p>
+          </Card.Content>
+        </Card>
+      </PageContainer>
     );
   }
 
   return (
-    <>
-      <Topbar titre="Ingrédients & recettes" />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
-          <div>
-            <p className="text-sm text-muted max-w-2xl">
-              Gérez les matières premières (farine, huile, viande...) en grammes ou litres.
-              Les menus consomment automatiquement leurs ingrédients à chaque vente selon la recette définie.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
+    <PageContainer>
+      <PageHeader
+        titre={`${(ingredients ?? []).length} ingrédient${(ingredients ?? []).length > 1 ? "s" : ""}`}
+        description="Matières premières en grammes ou litres. Les menus consomment leurs ingrédients à chaque vente selon la recette définie."
+        actions={
+          <>
             <Button variant="ghost" className="gap-1.5" onPress={() => ouvrirCreation()}>
               <Plus size={16} />
               Ingrédient
@@ -93,8 +86,9 @@ export default function PageIngredients() {
               <PackagePlus size={16} />
               Réceptionner
             </Button>
-          </div>
-        </div>
+          </>
+        }
+      />
 
         {(emplacements?.length ?? 0) > 1 && (
           <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -219,7 +213,6 @@ export default function PageIngredients() {
             </Table.ScrollContainer>
           </Table>
         )}
-      </div>
 
       <ModalIngredient
         ouvert={modalIngredientOuvert}
@@ -227,6 +220,6 @@ export default function PageIngredients() {
         onFermer={() => setModalIngredientOuvert(false)}
       />
       <ModalReceptionIngredient ouvert={modalReceptionOuvert} onFermer={() => setModalReceptionOuvert(false)} />
-    </>
+    </PageContainer>
   );
 }

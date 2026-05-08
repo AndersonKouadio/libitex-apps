@@ -5,7 +5,7 @@ import {
   ShoppingCart, Warehouse, BarChart3,
 } from "lucide-react";
 import { Card, Skeleton } from "@heroui/react";
-import { Topbar } from "@/components/layout/topbar";
+import { PageContainer } from "@/components/layout/page-container";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useKpisQuery, useVentesParJourQuery } from "@/features/tableau-de-bord/queries/kpis.query";
 import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
@@ -25,10 +25,8 @@ export default function TableauDeBordPage() {
   const tickets = (ticketsData?.data ?? []).slice(0, 5);
 
   return (
-    <>
-      <Topbar titre="Tableau de bord" />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        {!kpisChargement && (
+    <PageContainer>
+      {!kpisChargement && (
           <CarteOnboarding
             nombreProduits={kpis?.nombreProduits ?? 0}
             nombreEmplacements={kpis?.nombreEmplacements ?? 0}
@@ -103,7 +101,6 @@ export default function TableauDeBordPage() {
             </Card.Content>
           </Card>
         </div>
-      </div>
-    </>
+    </PageContainer>
   );
 }

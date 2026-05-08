@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Topbar } from "@/components/layout/topbar";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { Button, TextField, Label, Input, FieldError, Table, Skeleton } from "@heroui/react";
 import { Users, UserPlus, Phone, Mail, MapPin, Trash2, Pencil } from "lucide-react";
 import { useClientListQuery, useSupprimerClientMutation } from "@/features/client/queries/client.query";
@@ -32,23 +33,17 @@ export default function PageClients() {
   }
 
   return (
-    <>
-      <Topbar titre="Clients" />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
-        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-base font-semibold text-foreground">
-              {data?.meta.total ?? 0} client{(data?.meta.total ?? 0) > 1 ? "s" : ""}
-            </h1>
-            <p className="text-xs text-muted mt-0.5">
-              Coordonnées et historique des clients réguliers de votre boutique.
-            </p>
-          </div>
+    <PageContainer>
+      <PageHeader
+        titre={`${data?.meta.total ?? 0} client${(data?.meta.total ?? 0) > 1 ? "s" : ""}`}
+        description="Coordonnées et historique des clients réguliers de votre boutique."
+        actions={
           <Button variant="primary" className="gap-2" onPress={ouvrirCreation}>
             <UserPlus size={16} />
             Nouveau client
           </Button>
-        </header>
+        }
+      />
 
         <div className="mb-4 max-w-md">
           <TextField value={recherche} onChange={setRecherche}>
@@ -158,13 +153,12 @@ export default function PageClients() {
             </Table.ScrollContainer>
           </Table>
         )}
-      </div>
 
       <ModalClient
         ouvert={modalOuvert}
         client={enEdition}
         onFermer={() => setModalOuvert(false)}
       />
-    </>
+    </PageContainer>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Select, ListBox, Label, Button, Spinner } from "@heroui/react";
-import { Topbar } from "@/components/layout/topbar";
+import { PageContainer } from "@/components/layout/page-container";
 import { ChampDate } from "@/components/forms/champ-date";
 import { AucunEmplacement } from "@/components/empty-states/aucun-emplacement";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
@@ -39,20 +39,15 @@ export default function PageRapports() {
 
   if (aucunEmplacement) {
     return (
-      <>
-        <Topbar titre="Rapports" />
-        <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto">
-          <AucunEmplacement onCreer={() => setModalEmpOuvert(true)} contexte="rapports" />
-        </div>
+      <PageContainer taille="etroit">
+        <AucunEmplacement onCreer={() => setModalEmpOuvert(true)} contexte="rapports" />
         <ModalEmplacement ouvert={modalEmpOuvert} onFermer={() => setModalEmpOuvert(false)} />
-      </>
+      </PageContainer>
     );
   }
 
   return (
-    <>
-      <Topbar titre="Rapports" />
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+    <PageContainer>
         <div className="flex flex-wrap items-end gap-3 mb-6">
           <Select
             selectedKey={empParDefaut}
@@ -97,7 +92,6 @@ export default function PageRapports() {
           </h2>
           <HistoriqueTickets tickets={ticketsData?.data ?? []} />
         </section>
-      </div>
-    </>
+    </PageContainer>
   );
 }
