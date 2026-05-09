@@ -66,6 +66,7 @@ export class TicketRepository {
 
   async mettreAJourTotaux(ticketId: string, totaux: {
     subtotal: string; taxAmount: string; total: string;
+    discountAmount?: string; note?: string;
   }) {
     const [updated] = await this.db
       .update(tickets)

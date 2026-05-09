@@ -5,11 +5,12 @@ import { toast } from "@heroui/react";
 import { venteAPI } from "../apis/vente.api";
 import { creerTicketSchema } from "../schemas/vente.schema";
 import { useInvalidateVenteQuery } from "../queries/index.query";
-import type { ArticlePanier } from "./usePanier";
+import type { ArticlePanier, Remise } from "./usePanier";
 import type { ITicket } from "../types/vente.type";
 
 interface PanierActions {
   articles: ArticlePanier[];
+  remiseGlobale: Remise | null;
   vider: () => void;
 }
 
@@ -39,9 +40,13 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
 
     const payload = creerTicketSchema.safeParse({
       emplacementId: empId,
+      remiseGlobale: panier.remiseGlobale?.montant ?? 0,
+      raisonRemise: panier.remiseGlobale?.raison,
       lignes: panier.articles.map((a) => ({
         varianteId: a.varianteId,
         quantite: a.quantite,
+        // remise par ligne : montant calcule cote front, plafonne au sous-total ligne
+        remise: a.remise?.montant ?? 0,
         supplements: a.supplements.map((s) => ({
           supplementId: s.supplementId,
           quantite: s.quantite,
@@ -84,9 +89,12 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
     try {
       const ticket = await venteAPI.creerTicket(token, {
         emplacementId: empId,
+        remiseGlobale: panier.remiseGlobale?.montant ?? 0,
+        raisonRemise: panier.remiseGlobale?.raison,
         lignes: panier.articles.map((a) => ({
           varianteId: a.varianteId,
           quantite: a.quantite,
+          remise: a.remise?.montant ?? 0,
           supplements: a.supplements.map((s) => ({
             supplementId: s.supplementId,
             quantite: s.quantite,

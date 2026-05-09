@@ -84,6 +84,23 @@ export class CreerTicketDto {
   @IsNotEmpty()
   emplacementId!: string;
 
+  @ApiPropertyOptional({
+    example: 1500,
+    description: "Remise globale appliquée au ticket (montant en F CFA, calculé côté front)",
+  })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  remiseGlobale?: number;
+
+  @ApiPropertyOptional({
+    example: "Geste commercial",
+    description: "Raison de la remise globale (présélectionnée ou libre)",
+  })
+  @IsString()
+  @IsOptional()
+  raisonRemise?: string;
+
   @ApiPropertyOptional({ example: "Amadou Diallo" })
   @IsString()
   @IsOptional()

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@heroui/react";
-import { Minus, Plus, Trash2, Package, Pencil, Sparkles } from "lucide-react";
+import { Minus, Plus, Trash2, Package, Pencil, Sparkles, Tag } from "lucide-react";
 import type { ArticlePanier } from "../hooks/usePanier";
 import { formatMontant } from "../utils/format";
 import { formaterQuantite, UNITE_LABELS, uniteAccepteDecimal } from "@/features/unite/types/unite.type";
@@ -16,6 +16,8 @@ interface Props {
   onSaisirQuantite?: (varianteId: string) => void;
   /** Optionnel : ouvre la modale supplements pour cette ligne. */
   onPersonnaliser?: () => void;
+  /** Optionnel : ouvre la modale de remise pour cette ligne. */
+  onAppliquerRemise?: () => void;
 }
 
 export function LignePanier({
@@ -25,6 +27,7 @@ export function LignePanier({
   onRetirer,
   onSaisirQuantite,
   onPersonnaliser,
+  onAppliquerRemise,
 }: Props) {
   const decimal = uniteAccepteDecimal(article.uniteVente);
   const [valeurInput, setValeurInput] = useState(String(article.quantite));
@@ -145,31 +148,55 @@ export function LignePanier({
               {formatMontant(article.totalLigne)}
               <span className="text-[10px] font-normal text-muted ml-0.5">F</span>
             </p>
-            <p className="text-[10px] text-muted/70 tabular-nums mt-0.5">
-              {formatMontant(article.prixUnitaire)} F
-              {article.prixParUnite && <> / {UNITE_LABELS[article.uniteVente]}</>}
-              {!article.prixParUnite && article.quantite > 1 && <> × {article.quantite}</>}
-            </p>
+            {article.remise ? (
+              <p className="text-[10px] text-warning tabular-nums mt-0.5">
+                -{formatMontant(article.remise.montant)} F
+                {article.remise.type === "POURCENTAGE" && ` (${article.remise.valeurOriginale}%)`}
+              </p>
+            ) : (
+              <p className="text-[10px] text-muted/70 tabular-nums mt-0.5">
+                {formatMontant(article.prixUnitaire)} F
+                {article.prixParUnite && <> / {UNITE_LABELS[article.uniteVente]}</>}
+                {!article.prixParUnite && article.quantite > 1 && <> × {article.quantite}</>}
+              </p>
+            )}
           </div>
         </div>
 
-        {onPersonnaliser && (
-          <Button
-            variant="ghost"
-            className={`mt-2 gap-1.5 text-xs font-medium px-2.5 py-1.5 h-auto min-w-0 rounded-md border transition-colors ${
-              article.supplements.length > 0
-                ? "border-accent/40 bg-accent/10 text-accent hover:bg-accent/15"
-                : "border-dashed border-accent/50 text-accent hover:bg-accent/10"
-            }`}
-            onPress={onPersonnaliser}
-            aria-label="Ajouter des suppléments"
-          >
-            <Sparkles size={13} strokeWidth={2.2} />
-            {article.supplements.length > 0
-              ? `Suppléments (${article.supplements.length})`
-              : "+ Ajouter un supplément"}
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {onPersonnaliser && (
+            <Button
+              variant="ghost"
+              className={`gap-1.5 text-xs font-medium px-2.5 py-1.5 h-auto min-w-0 rounded-md border transition-colors ${
+                article.supplements.length > 0
+                  ? "border-accent/40 bg-accent/10 text-accent hover:bg-accent/15"
+                  : "border-dashed border-accent/50 text-accent hover:bg-accent/10"
+              }`}
+              onPress={onPersonnaliser}
+              aria-label="Ajouter des suppléments"
+            >
+              <Sparkles size={13} strokeWidth={2.2} />
+              {article.supplements.length > 0
+                ? `Suppléments (${article.supplements.length})`
+                : "+ Supplément"}
+            </Button>
+          )}
+          {onAppliquerRemise && (
+            <Button
+              variant="ghost"
+              className={`gap-1.5 text-xs font-medium px-2.5 py-1.5 h-auto min-w-0 rounded-md border transition-colors ${
+                article.remise
+                  ? "border-warning/40 bg-warning/10 text-warning hover:bg-warning/15"
+                  : "border-dashed border-warning/50 text-warning hover:bg-warning/10"
+              }`}
+              onPress={onAppliquerRemise}
+              aria-label="Appliquer une remise"
+            >
+              <Tag size={13} strokeWidth={2.2} />
+              {article.remise ? "Remise" : "+ Remise"}
+            </Button>
+          )}
+        </div>
       </div>
     </li>
   );

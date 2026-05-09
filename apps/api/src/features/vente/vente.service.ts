@@ -108,15 +108,35 @@ export class VenteService {
       lignesCrees.push(ligneCree);
     }
 
-    const total = sousTotal + totalTva;
+    // Remise globale : montant calcule cote front, plafonne au sous-total
+    // pour eviter un total negatif. La raison (libre ou pre-selectionnee) est
+    // tracee dans le champ note du ticket prefixee par "Remise:".
+    const remiseGlobale = Math.min(
+      Math.max(0, dto.remiseGlobale ?? 0),
+      sousTotal + totalTva,
+    );
+    const total = Math.max(0, sousTotal + totalTva - remiseGlobale);
+
+    const noteFinale = dto.raisonRemise && remiseGlobale > 0
+      ? [dto.note, `Remise: ${dto.raisonRemise} (-${remiseGlobale.toFixed(0)} F)`]
+        .filter(Boolean).join(" · ")
+      : dto.note;
+
     const ticketMaj = await this.ticketRepo.mettreAJourTotaux(ticket.id, {
-      subtotal: sousTotal.toFixed(2), taxAmount: totalTva.toFixed(2), total: total.toFixed(2),
+      subtotal: sousTotal.toFixed(2),
+      taxAmount: totalTva.toFixed(2),
+      discountAmount: remiseGlobale.toFixed(2),
+      total: total.toFixed(2),
+      ...(noteFinale !== dto.note ? { note: noteFinale } : {}),
     });
 
     await this.audit.log({
       tenantId, userId, action: AUDIT_ACTIONS.TICKET_CREATED,
       entityType: "TICKET", entityId: ticket.id,
-      after: { numeroTicket: ticket.ticketNumber, total: total.toFixed(2), nbLignes: lignesCrees.length },
+      after: {
+        numeroTicket: ticket.ticketNumber, total: total.toFixed(2), nbLignes: lignesCrees.length,
+        ...(remiseGlobale > 0 ? { remiseGlobale, raisonRemise: dto.raisonRemise } : {}),
+      },
     });
 
     return this.mapTicket(ticketMaj, lignesCrees.map(this.mapLigne), []);
