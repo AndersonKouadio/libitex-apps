@@ -34,8 +34,12 @@ export class CatalogueController {
     @CurrentUser() user: CurrentUserData,
     @Query() query: ListerProduitsQueryDto,
   ) {
+    const isSupp =
+      query.isSupplement === "true" ? true :
+      query.isSupplement === "false" ? false :
+      undefined;
     return this.catalogueService.listerProduits(
-      user.tenantId, query.page, query.limit, query.recherche, query.isSupplement,
+      user.tenantId, query.page, query.limit, query.recherche, isSupp,
     );
   }
 

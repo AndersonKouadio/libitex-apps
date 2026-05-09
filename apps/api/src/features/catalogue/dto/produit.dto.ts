@@ -13,11 +13,14 @@ export class ListerProduitsQueryDto extends PaginationDto {
   @IsString()
   recherche?: string;
 
-  @ApiPropertyOptional({ description: "Filtrer sur le drapeau supplément (true / false)" })
+  // String volontaire : la conversion en boolean est faite dans le controller.
+  // class-transformer + class-validator strippent silencieusement la valeur
+  // "false" quand on utilise @Transform + @IsBoolean, ce qui rendait le
+  // filtre ignore.
+  @ApiPropertyOptional({ description: "Filtrer sur le drapeau supplément ('true' ou 'false')" })
   @IsOptional()
-  @IsBoolean()
-  @Transform(({ value }) => value === "true" ? true : value === "false" ? false : value)
-  isSupplement?: boolean;
+  @IsString()
+  isSupplement?: string;
 }
 
 export enum TypeProduit {
