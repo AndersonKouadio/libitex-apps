@@ -1,16 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Card } from "@heroui/react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { Store, Users, ChevronRight, ShieldCheck, Building2, User, MapPin } from "lucide-react";
-import { ModalChangerMotDePasse } from "@/features/auth/components/modal-changer-mot-de-passe";
+import { Store, Users, ChevronRight, Building2, User, MapPin } from "lucide-react";
 
 interface SectionConfig {
-  href?: string;
-  action?: "changer-mot-de-passe";
+  href: string;
   icone: typeof Store;
   titre: string;
   description: string;
@@ -50,31 +47,23 @@ const SECTIONS: SectionConfig[] = [
     href: "/parametres/mon-compte",
     icone: User,
     titre: "Mon compte",
-    description: "Vos informations personnelles et la suppression définitive du compte.",
+    description: "Vos informations personnelles, mot de passe et suppression définitive du compte.",
     classes: "bg-secondary/10 text-secondary",
-  },
-  {
-    action: "changer-mot-de-passe",
-    icone: ShieldCheck,
-    titre: "Sécurité",
-    description: "Changer votre mot de passe et protéger votre compte.",
-    classes: "bg-primary-500/10 text-primary-500",
   },
 ];
 
 export default function PageParametres() {
-  const [modalMotDePasse, setModalMotDePasse] = useState(false);
-
   return (
     <PageContainer>
       <PageHeader
         titre="Configuration"
-        description="Gérez vos boutiques, votre équipe, votre profil et la sécurité de votre compte."
+        description="Gérez vos boutiques, vos emplacements, votre équipe et votre compte."
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {SECTIONS.map((s) => {
-            const Icone = s.icone;
-            const contenu = (
+        {SECTIONS.map((s) => {
+          const Icone = s.icone;
+          return (
+            <Link key={s.titre} href={s.href} className="block">
               <Card className="hover:border-accent/40 transition-colors h-full cursor-pointer">
                 <Card.Content className="p-5">
                   <div className="flex items-start gap-3">
@@ -89,32 +78,10 @@ export default function PageParametres() {
                   </div>
                 </Card.Content>
               </Card>
-            );
-
-            if (s.action === "changer-mot-de-passe") {
-              return (
-                <button
-                  key={s.titre}
-                  type="button"
-                  onClick={() => setModalMotDePasse(true)}
-                  className="block text-left w-full"
-                >
-                  {contenu}
-                </button>
-              );
-            }
-            return (
-              <Link key={s.titre} href={s.href!} className="block">
-                {contenu}
-              </Link>
-            );
-          })}
-        </div>
-
-      <ModalChangerMotDePasse
-        ouvert={modalMotDePasse}
-        onFermer={() => setModalMotDePasse(false)}
-      />
+            </Link>
+          );
+        })}
+      </div>
     </PageContainer>
   );
 }

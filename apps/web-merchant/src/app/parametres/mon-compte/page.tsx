@@ -6,11 +6,12 @@ import {
   Button, Card, TextField, Label, Input, Skeleton, toast,
   AlertDialog,
 } from "@heroui/react";
-import { Save, Trash2 } from "lucide-react";
+import { Save, Trash2, KeyRound } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { authAPI } from "@/features/auth/apis/auth.api";
+import { ModalChangerMotDePasse } from "@/features/auth/components/modal-changer-mot-de-passe";
 
 export default function PageMonCompte() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function PageMonCompte() {
   const [telephone, setTelephone] = useState("");
   const [email, setEmail] = useState("");
 
+  const [modalMotDePasse, setModalMotDePasse] = useState(false);
   const [dialogueSupprOuvert, setDialogueSupprOuvert] = useState(false);
   const [motDePasseSuppr, setMotDePasseSuppr] = useState("");
   const [erreurSuppr, setErreurSuppr] = useState("");
@@ -147,6 +149,32 @@ export default function PageMonCompte() {
         </Card.Content>
       </Card>
 
+      <Card className="mt-6">
+        <Card.Content className="p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex items-start gap-3">
+              <span className="w-10 h-10 rounded-lg bg-primary-500/10 text-primary-500 flex items-center justify-center shrink-0">
+                <KeyRound size={18} />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Mot de passe</p>
+                <p className="text-xs text-muted mt-1">
+                  Changez votre mot de passe régulièrement pour protéger votre compte.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="secondary"
+              className="gap-1.5 shrink-0"
+              onPress={() => setModalMotDePasse(true)}
+            >
+              <KeyRound size={14} />
+              Changer le mot de passe
+            </Button>
+          </div>
+        </Card.Content>
+      </Card>
+
       {utilisateur && (
         <Card className="mt-6 border-danger/30">
           <Card.Content className="p-5 flex items-start justify-between gap-4">
@@ -211,6 +239,11 @@ export default function PageMonCompte() {
           </AlertDialog.Dialog>
         </AlertDialog.Container>
       </AlertDialog.Backdrop>
+
+      <ModalChangerMotDePasse
+        ouvert={modalMotDePasse}
+        onFermer={() => setModalMotDePasse(false)}
+      />
     </PageContainer>
   );
 }
