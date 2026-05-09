@@ -363,6 +363,7 @@ export default function PagePOS() {
           total={encaissement.derniereVente.total}
           monnaie={encaissement.derniereVente.monnaie}
           ticket={encaissement.derniereVente.ticket}
+          numeroSession={sessionActive?.numeroSession}
           onNouvelle={encaissement.fermerDerniereVente}
         />
       )}

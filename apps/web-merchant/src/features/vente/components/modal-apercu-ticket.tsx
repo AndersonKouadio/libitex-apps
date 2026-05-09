@@ -1,9 +1,12 @@
 "use client";
 
 import { Modal, Button } from "@heroui/react";
-import { Eye } from "lucide-react";
+import { Eye, Printer } from "lucide-react";
 import type { ArticlePanier, Remise, ClientPanier } from "../hooks/usePanier";
 import { formatMontant, formatHeure, formatDateRelative } from "../utils/format";
+import { imprimerTicket } from "../utils/imprimer-ticket";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import type { ITicket } from "../types/vente.type";
 
 interface Props {
   ouvert: boolean;
@@ -29,8 +32,52 @@ export function ModalApercuTicket({
   ouvert, onFermer, articles, sousTotal, total, remiseGlobale, note, client,
   emplacementNom, caissierNom, numeroSession,
 }: Props) {
+  const { boutiqueActive } = useAuth();
   const aRemise = !!remiseGlobale && remiseGlobale.montant > 0;
   const maintenant = new Date().toISOString();
+
+  function imprimerApercu() {
+    if (!boutiqueActive) return;
+    // Construit un "ticket fictif" depuis l'etat du panier pour reutiliser
+    // imprimerTicket(). Pas de paiements car la vente n'est pas encore validee.
+    const ticketFictif: ITicket = {
+      id: "preview",
+      numeroTicket: "(à venir)",
+      statut: "OPEN",
+      sousTotal,
+      montantTva: 0,
+      montantRemise: aRemise ? remiseGlobale!.montant : 0,
+      total,
+      nomClient: client?.nom,
+      telephoneClient: client?.telephone,
+      note: note || undefined,
+      lignes: articles.map((a, i) => ({
+        id: `tmp-${i}`,
+        varianteId: a.varianteId,
+        nomProduit: a.nomProduit,
+        nomVariante: a.nomVariante || null,
+        sku: a.sku,
+        quantite: a.quantite,
+        prixUnitaire: a.prixUnitaire,
+        remise: a.remise?.montant ?? 0,
+        tauxTva: 0,
+        montantTva: 0,
+        totalLigne: a.totalLigne,
+        uniteVente: a.uniteVente,
+        pasMin: a.pasMin,
+        prixParUnite: a.prixParUnite,
+        supplements: a.supplements,
+      })),
+      paiements: [],
+      creeLe: maintenant,
+    };
+    imprimerTicket(
+      ticketFictif,
+      { nom: emplacementNom || boutiqueActive.nom, devise: boutiqueActive.devise },
+      0,
+      { caissier: caissierNom, numeroSession },
+    );
+  }
 
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(o) => { if (!o) onFermer(); }}>
@@ -148,7 +195,15 @@ export function ModalApercuTicket({
           </Modal.Body>
 
           <Modal.Footer>
-            <Button variant="primary" slot="close">Fermer</Button>
+            <Button variant="secondary" className="mr-auto" slot="close">Fermer</Button>
+            <Button
+              variant="primary"
+              className="gap-2"
+              onPress={imprimerApercu}
+              isDisabled={articles.length === 0}
+            >
+              <Printer size={14} /> Imprimer
+            </Button>
           </Modal.Footer>
         </Modal.Dialog>
       </Modal.Container>

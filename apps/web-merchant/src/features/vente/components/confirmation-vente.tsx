@@ -13,15 +13,25 @@ interface Props {
   total: number;
   monnaie: number;
   ticket?: ITicket;
+  /** Numero de session caisse pour l'impression (tracabilite). */
+  numeroSession?: string;
   onNouvelle: () => void;
 }
 
-export function ConfirmationVente({ numeroTicket, total, monnaie, ticket, onNouvelle }: Props) {
-  const { boutiqueActive } = useAuth();
+export function ConfirmationVente({
+  numeroTicket, total, monnaie, ticket, numeroSession, onNouvelle,
+}: Props) {
+  const { boutiqueActive, utilisateur } = useAuth();
 
   function handleImprimer() {
     if (!ticket || !boutiqueActive) return;
-    imprimerTicket(ticket, { nom: boutiqueActive.nom, devise: boutiqueActive.devise }, monnaie);
+    const caissier = `${utilisateur?.prenom ?? ""} ${utilisateur?.nomFamille ?? ""}`.trim();
+    imprimerTicket(
+      ticket,
+      { nom: boutiqueActive.nom, devise: boutiqueActive.devise },
+      monnaie,
+      { caissier: caissier || undefined, numeroSession },
+    );
   }
 
   return (
