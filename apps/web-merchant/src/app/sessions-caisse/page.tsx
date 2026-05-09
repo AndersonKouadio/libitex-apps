@@ -132,8 +132,9 @@ export default function PageHistoriqueSessions() {
       />
 
       {!isLoading && sessions.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-5">
           <CarteKpi
+            taille="compact"
             libelle="Recettes"
             valeur={formatMontant(kpis.recettes)}
             unite="F CFA"
@@ -141,12 +142,14 @@ export default function PageHistoriqueSessions() {
             classesIcone="bg-accent/10 text-accent"
           />
           <CarteKpi
+            taille="compact"
             libelle="Tickets"
             valeur={String(kpis.tickets)}
             icone={Receipt}
             classesIcone="bg-warning/10 text-warning"
           />
           <CarteKpi
+            taille="compact"
             libelle="Ticket moyen"
             valeur={formatMontant(kpis.moyen)}
             unite="F CFA"
@@ -154,6 +157,7 @@ export default function PageHistoriqueSessions() {
             classesIcone="bg-success/10 text-success"
           />
           <CarteKpi
+            taille="compact"
             libelle="Écart espèces"
             valeur={`${kpis.ecartEspeces > 0 ? "+" : ""}${formatMontant(kpis.ecartEspeces)}`}
             unite="F CFA"
