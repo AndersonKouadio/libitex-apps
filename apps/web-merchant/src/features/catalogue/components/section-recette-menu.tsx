@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Select, ListBox, Label, Input } from "@heroui/react";
+import { Button, ComboBox, ListBox, Label, Input } from "@heroui/react";
 import { Plus, X, Wheat } from "lucide-react";
 import Link from "next/link";
 import { useIngredientListQuery } from "@/features/ingredient/queries/ingredient-list.query";
-import { UniteMesure, UNITE_LABELS } from "@/features/unite/types/unite.type";
+import { UniteMesure, UNITE_LABELS, UNITE_CATEGORIE } from "@/features/unite/types/unite.type";
 import { SelectUnite } from "@/features/unite/components/select-unite";
 import type { LigneRecetteDTO } from "@/features/ingredient/schemas/ingredient.schema";
 
@@ -37,6 +37,14 @@ export function SectionRecetteMenu({ lignes, onChange }: Props) {
   const ingredientsDisponibles = (ingredients ?? []).filter(
     (i) => !lignes.some((l) => l.ingredientId === i.id),
   );
+
+  // Categorie d'unite de l'ingredient choisi : on ne propose que les unites
+  // compatibles (huile en L → [L, mL] ; farine en kg → [kg, g]). Cela
+  // empeche la saisie d'incoherences (huile en kg).
+  const ingredientChoisi = ingredients?.find((i) => i.id === ingredientId);
+  const categorieUnite = ingredientChoisi
+    ? UNITE_CATEGORIE[ingredientChoisi.unite]
+    : undefined;
 
   return (
     <div>
@@ -86,28 +94,34 @@ export function SectionRecetteMenu({ lignes, onChange }: Props) {
 
           {ingredientsDisponibles.length > 0 && (
             <div className="rounded-xl border border-dashed border-border bg-surface-secondary/40 p-3 space-y-2">
-              <Select
-                selectedKey={ingredientId}
+              <ComboBox
+                selectedKey={ingredientId || null}
                 onSelectionChange={(k) => {
-                  const id = String(k);
+                  const id = k ? String(k) : "";
                   setIngredientId(id);
                   const ing = ingredients?.find((x) => x.id === id);
                   if (ing) setUnite(ing.unite);
                 }}
-                placeholder="Choisir un ingrédient..."
+                allowsEmptyCollection
               >
                 <Label className="sr-only">Ingrédient</Label>
-                <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
-                <Select.Popover>
+                <ComboBox.InputGroup>
+                  <Input placeholder="Rechercher un ingrédient..." />
+                  <ComboBox.Trigger />
+                </ComboBox.InputGroup>
+                <ComboBox.Popover>
                   <ListBox>
                     {ingredientsDisponibles.map((i) => (
                       <ListBox.Item key={i.id} id={i.id} textValue={i.nom}>
-                        {i.nom}
+                        <span className="font-medium">{i.nom}</span>
+                        <span className="ml-2 text-xs text-muted">
+                          en {UNITE_LABELS[i.unite]}
+                        </span>
                       </ListBox.Item>
                     ))}
                   </ListBox>
-                </Select.Popover>
-              </Select>
+                </ComboBox.Popover>
+              </ComboBox>
 
               <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-end">
                 <Input
@@ -119,7 +133,13 @@ export function SectionRecetteMenu({ lignes, onChange }: Props) {
                   step="0.001"
                 />
                 <div className="min-w-[120px]">
-                  <SelectUnite label="Unité" valeur={unite} onChange={setUnite} />
+                  <SelectUnite
+                    label="Unité"
+                    valeur={unite}
+                    onChange={setUnite}
+                    categorie={categorieUnite}
+                    isDisabled={!ingredientId}
+                  />
                 </div>
                 <Button
                   variant="secondary"
@@ -131,6 +151,11 @@ export function SectionRecetteMenu({ lignes, onChange }: Props) {
                   Ajouter
                 </Button>
               </div>
+              {categorieUnite && (
+                <p className="text-[10px] text-muted">
+                  Unités compatibles avec {ingredientChoisi?.nom} ({UNITE_LABELS[ingredientChoisi!.unite]} de base).
+                </p>
+              )}
             </div>
           )}
 
