@@ -31,7 +31,6 @@ export const creerProduitSchema = z.object({
   typeProduit: z.enum(["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE", "MENU"]),
   categorieId: z.string().optional(),
   marque: z.string().optional(),
-  codeBarresEan13: z.string().optional(),
   tauxTva: z.number().min(0).optional(),
   images: z.array(z.string().url("URL d'image invalide")).max(6, "6 images maximum").optional(),
   metadataSecteur: z.record(z.string(), z.unknown()).optional(),

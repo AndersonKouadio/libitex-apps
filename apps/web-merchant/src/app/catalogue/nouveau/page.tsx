@@ -115,7 +115,6 @@ export default function PageNouveauProduit() {
             typeProduit={typeProduit}
             marque={form.valeurs.marque}
             categorieId={form.valeurs.categorieId}
-            codeBarresEan13={form.valeurs.codeBarresEan13}
             tauxTva={form.valeurs.tauxTva}
             categories={categories ?? []}
             typesAutorises={typesAutorises}
@@ -124,7 +123,6 @@ export default function PageNouveauProduit() {
             onTypeProduit={form.setTypeProduit}
             onMarque={form.setMarque}
             onCategorieId={form.setCategorieId}
-            onCodeBarresEan13={form.setCodeBarresEan13}
             onTauxTva={form.setTauxTva}
           />
         </CarteSection>

@@ -139,11 +139,6 @@ export class CreerProduitDto {
   @IsOptional()
   marque?: string;
 
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  codeBarresEan13?: string;
-
   @ApiPropertyOptional({ example: 18 })
   @IsNumber()
   @IsOptional()

@@ -16,7 +16,6 @@ export class ProduitRepository {
     productType: "SIMPLE" | "VARIANT" | "SERIALIZED" | "PERISHABLE" | "MENU";
     categoryId?: string;
     brand?: string;
-    barcodeEan13?: string;
     taxRate?: string;
     images?: string[];
     sectorMetadata?: Record<string, unknown>;
