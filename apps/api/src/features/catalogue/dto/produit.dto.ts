@@ -371,6 +371,52 @@ export class VarianteResponseDto {
   prixParUnite!: boolean;
 }
 
+export class ModifierVarianteDto {
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  sku?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  nom?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  codeBarres?: string;
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  prixAchat?: number;
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  prixDetail?: number;
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  prixGros?: number;
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  prixVip?: number;
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  actif?: boolean;
+}
+
 export class ProduitResponseDto {
   id!: string;
   nom!: string;

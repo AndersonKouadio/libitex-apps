@@ -6,9 +6,10 @@ import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags, ApiOperation } from "@nestjs/swagger";
 import { CatalogueService } from "./catalogue.service";
 import {
-  CreerProduitDto, ModifierProduitDto, CreerCategorieDto, ModifierCategorieDto,
+  CreerProduitDto, ModifierProduitDto, ModifierVarianteDto,
+  CreerCategorieDto, ModifierCategorieDto,
+  ListerProduitsQueryDto,
 } from "./dto/produit.dto";
-import { ListerProduitsQueryDto } from "./dto/produit.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
 
@@ -66,6 +67,20 @@ export class CatalogueController {
   @Roles("ADMIN", "MANAGER")
   supprimerProduit(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
     return this.catalogueService.supprimerProduit(user.tenantId, user.userId, id);
+  }
+
+  @Patch("produits/:produitId/variantes/:varianteId")
+  @ApiOperation({ summary: "Modifier une variante (sku, prix, code-barres, actif)" })
+  @Roles("ADMIN", "MANAGER")
+  modifierVariante(
+    @CurrentUser() user: CurrentUserData,
+    @Param("produitId") produitId: string,
+    @Param("varianteId") varianteId: string,
+    @Body() dto: ModifierVarianteDto,
+  ) {
+    return this.catalogueService.modifierVariante(
+      user.tenantId, user.userId, produitId, varianteId, dto,
+    );
   }
 
   // --- Categories ---

@@ -5,11 +5,21 @@ import type { IProduit, ICategorie } from "../types/produit.type";
 const BASE = "/catalogue";
 
 export const catalogueAPI = {
-  listerProduits: (token: string, params?: { page?: number; recherche?: string }) =>
-    httpClient.get<PaginatedResponse<IProduit>>(
-      `${BASE}/produits?page=${params?.page || 1}${params?.recherche ? `&recherche=${params.recherche}` : ""}`,
+  listerProduits: (
+    token: string,
+    params?: { page?: number; recherche?: string; isSupplement?: boolean },
+  ) => {
+    const qs = new URLSearchParams();
+    qs.set("page", String(params?.page ?? 1));
+    if (params?.recherche) qs.set("recherche", params.recherche);
+    if (params?.isSupplement !== undefined) {
+      qs.set("isSupplement", String(params.isSupplement));
+    }
+    return httpClient.get<PaginatedResponse<IProduit>>(
+      `${BASE}/produits?${qs.toString()}`,
       { token },
-    ),
+    );
+  },
 
   obtenirProduit: (token: string, id: string) =>
     httpClient.get<IProduit>(`${BASE}/produits/${id}`, { token }),

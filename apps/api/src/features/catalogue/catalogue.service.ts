@@ -160,6 +160,34 @@ export class CatalogueService {
     });
   }
 
+  async modifierVariante(
+    tenantId: string, userId: string, produitId: string, varianteId: string, dto: any,
+  ): Promise<VarianteResponseDto> {
+    // Verifier que le produit appartient au tenant.
+    const produit = await this.produitRepo.obtenirParId(tenantId, produitId);
+    if (!produit) throw new RessourceIntrouvableException("Produit", produitId);
+
+    const updated = await this.produitRepo.modifierVariante(produitId, varianteId, {
+      sku: dto.sku,
+      name: dto.nom,
+      barcode: dto.codeBarres,
+      pricePurchase: dto.prixAchat?.toString(),
+      priceRetail: dto.prixDetail?.toString(),
+      priceWholesale: dto.prixGros?.toString(),
+      priceVip: dto.prixVip?.toString(),
+      isActive: dto.actif,
+    });
+    if (!updated) throw new RessourceIntrouvableException("Variante", varianteId);
+
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.PRODUIT_UPDATED,
+      entityType: "VARIANTE", entityId: varianteId,
+      after: { sku: updated.sku, prixDetail: updated.priceRetail },
+    });
+
+    return this.mapVariante(updated);
+  }
+
   async creerCategorie(tenantId: string, dto: CreerCategorieDto): Promise<CategorieResponseDto> {
     if (dto.parentId) {
       const parent = await this.produitRepo.trouverCategorieParId(tenantId, dto.parentId);

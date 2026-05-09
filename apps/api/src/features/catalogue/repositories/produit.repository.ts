@@ -90,6 +90,30 @@ export class ProduitRepository {
     });
   }
 
+  async modifierVariante(productId: string, varianteId: string, data: Partial<{
+    sku: string;
+    name: string;
+    barcode: string;
+    pricePurchase: string;
+    priceRetail: string;
+    priceWholesale: string;
+    priceVip: string;
+    saleUnit: UniteMesure;
+    saleStep: string;
+    pricePerUnit: boolean;
+    isActive: boolean;
+  }>) {
+    const cleaned = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined),
+    );
+    const [updated] = await this.db
+      .update(variants)
+      .set({ ...cleaned, updatedAt: new Date() })
+      .where(and(eq(variants.id, varianteId), eq(variants.productId, productId)))
+      .returning();
+    return updated;
+  }
+
   async obtenirVariantes(productId: string) {
     return this.db.query.variants.findMany({
       where: and(eq(variants.productId, productId), isNull(variants.deletedAt)),
