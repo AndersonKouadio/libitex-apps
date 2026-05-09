@@ -20,5 +20,15 @@ export const transfertStockSchema = z.object({
   { message: "Les emplacements de depart et destination doivent differer", path: ["versEmplacementId"] },
 );
 
+export const ajustementStockSchema = z.object({
+  varianteId: z.string().min(1, "Sélectionnez un produit"),
+  emplacementId: z.string().min(1, "Sélectionnez un emplacement"),
+  // Delta : positif (ajout) ou negatif (retrait). Le frontend calcule
+  // ce delta a partir de la quantite reelle saisie - le stock actuel.
+  quantite: z.number().refine((n) => n !== 0, "Aucun écart à ajuster"),
+  note: z.string().min(1, "La justification est obligatoire"),
+});
+
 export type EntreeStockDTO = z.infer<typeof entreeStockSchema>;
 export type TransfertStockDTO = z.infer<typeof transfertStockSchema>;
+export type AjustementStockDTO = z.infer<typeof ajustementStockSchema>;

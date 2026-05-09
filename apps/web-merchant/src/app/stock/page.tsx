@@ -7,6 +7,7 @@ import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-li
 import { useStockEmplacementQuery } from "@/features/stock/queries/stock-emplacement.query";
 import { ModalEntreeStock } from "@/features/stock/components/modal-entree-stock";
 import { ModalTransfertStock } from "@/features/stock/components/modal-transfert-stock";
+import { ModalAjustementStock } from "@/features/stock/components/modal-ajustement-stock";
 import { ModalReceptionIngredient } from "@/features/ingredient/components/modal-reception-ingredient";
 import {
   useIngredientListQuery, useStockIngredientsQuery,
@@ -16,7 +17,7 @@ import { UNITE_LABELS } from "@/features/unite/types/unite.type";
 import { Table, Chip, Card, Button, Skeleton, Tabs } from "@heroui/react";
 import {
   MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus,
-  Settings, Wheat, AlertTriangle,
+  Settings, Wheat, AlertTriangle, Scale,
 } from "lucide-react";
 
 const LABELS_TYPE: Record<string, string> = {
@@ -32,6 +33,7 @@ export default function PageStock() {
   const [onglet, setOnglet] = useState<Onglet>("variantes");
   const [modalOuvert, setModalOuvert] = useState(false);
   const [modalTransfertOuvert, setModalTransfertOuvert] = useState(false);
+  const [modalAjustementOuvert, setModalAjustementOuvert] = useState(false);
   const [modalReceptionOuvert, setModalReceptionOuvert] = useState(false);
 
   const { data: stockDetail, isLoading: chargementStock } =
@@ -76,6 +78,15 @@ export default function PageStock() {
             </Link>
             {onglet === "variantes" && (
               <>
+                <Button
+                  variant="secondary"
+                  className="gap-1.5"
+                  onPress={() => setModalAjustementOuvert(true)}
+                  aria-label="Ajuster un inventaire"
+                >
+                  <Scale size={16} />
+                  Ajuster
+                </Button>
                 <Button
                   variant="secondary"
                   className="gap-1.5"
@@ -295,6 +306,11 @@ export default function PageStock() {
         ouvert={modalTransfertOuvert}
         onFermer={() => setModalTransfertOuvert(false)}
         emplacementSourceParDefaut={empSelectionne}
+      />
+      <ModalAjustementStock
+        ouvert={modalAjustementOuvert}
+        onFermer={() => setModalAjustementOuvert(false)}
+        emplacementParDefautId={empSelectionne}
       />
       <ModalReceptionIngredient
         ouvert={modalReceptionOuvert}
