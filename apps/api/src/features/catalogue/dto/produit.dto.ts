@@ -21,6 +21,21 @@ export class ListerProduitsQueryDto extends PaginationDto {
   @IsOptional()
   @IsString()
   isSupplement?: string;
+
+  @ApiPropertyOptional({ description: "Filtrer par type produit (SIMPLE, VARIANT, MENU, ...)" })
+  @IsOptional()
+  @IsString()
+  typeProduit?: string;
+
+  @ApiPropertyOptional({ description: "Filtrer par catégorie (UUID)" })
+  @IsOptional()
+  @IsString()
+  categorieId?: string;
+
+  @ApiPropertyOptional({ description: "Filtrer sur le statut actif ('true' ou 'false')" })
+  @IsOptional()
+  @IsString()
+  actif?: string;
 }
 
 export enum TypeProduit {

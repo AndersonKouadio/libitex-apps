@@ -84,12 +84,27 @@ export class CatalogueService {
   }
 
   async listerProduits(
-    tenantId: string, page: number, limit: number, recherche?: string, isSupplement?: boolean,
+    tenantId: string,
+    opts: {
+      page: number;
+      limit: number;
+      recherche?: string;
+      isSupplement?: boolean;
+      typeProduit?: string;
+      categorieId?: string;
+      actif?: boolean;
+    },
   ): Promise<PaginatedResponseDto<ProduitResponseDto>> {
-    const offset = (page - 1) * limit;
-    const { data, total } = await this.produitRepo.listerProduits(
-      tenantId, offset, limit, recherche, isSupplement,
-    );
+    const offset = (opts.page - 1) * opts.limit;
+    const { data, total } = await this.produitRepo.listerProduits(tenantId, {
+      offset,
+      limit: opts.limit,
+      recherche: opts.recherche,
+      isSupplement: opts.isSupplement,
+      typeProduit: opts.typeProduit,
+      categorieId: opts.categorieId,
+      actif: opts.actif,
+    });
 
     const produits = await Promise.all(
       data.map(async (p) => {
@@ -105,7 +120,7 @@ export class CatalogueService {
       }),
     );
 
-    return PaginatedResponseDto.create(produits, total, page, limit);
+    return PaginatedResponseDto.create(produits, total, opts.page, opts.limit);
   }
 
   async modifierProduit(tenantId: string, userId: string, id: string, dto: ModifierProduitDto): Promise<ProduitResponseDto> {

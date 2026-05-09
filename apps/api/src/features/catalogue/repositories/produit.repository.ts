@@ -149,30 +149,47 @@ export class ProduitRepository {
 
   async listerProduits(
     tenantId: string,
-    offset: number,
-    limit: number,
-    recherche?: string,
-    isSupplement?: boolean,
+    opts: {
+      offset: number;
+      limit: number;
+      recherche?: string;
+      isSupplement?: boolean;
+      typeProduit?: string;
+      categorieId?: string;
+      actif?: boolean;
+    },
   ) {
     const conditions = [eq(products.tenantId, tenantId), isNull(products.deletedAt)];
 
-    if (recherche) {
+    if (opts.recherche) {
       conditions.push(
         or(
-          ilike(products.name, `%${recherche}%`),
-          ilike(products.brand, `%${recherche}%`),
+          ilike(products.name, `%${opts.recherche}%`),
+          ilike(products.brand, `%${opts.recherche}%`),
         )!,
       );
     }
 
-    if (isSupplement !== undefined) {
-      conditions.push(eq(products.isSupplement, isSupplement));
+    if (opts.isSupplement !== undefined) {
+      conditions.push(eq(products.isSupplement, opts.isSupplement));
+    }
+
+    if (opts.typeProduit) {
+      conditions.push(eq(products.productType, opts.typeProduit as any));
+    }
+
+    if (opts.categorieId) {
+      conditions.push(eq(products.categoryId, opts.categorieId));
+    }
+
+    if (opts.actif !== undefined) {
+      conditions.push(eq(products.isActive, opts.actif));
     }
 
     const data = await this.db.query.products.findMany({
       where: and(...conditions),
-      limit,
-      offset,
+      limit: opts.limit,
+      offset: opts.offset,
       orderBy: products.createdAt,
     });
 

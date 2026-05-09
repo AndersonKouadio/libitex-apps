@@ -7,14 +7,22 @@ const BASE = "/catalogue";
 export const catalogueAPI = {
   listerProduits: (
     token: string,
-    params?: { page?: number; recherche?: string; isSupplement?: boolean },
+    params?: {
+      page?: number;
+      recherche?: string;
+      isSupplement?: boolean;
+      typeProduit?: string;
+      categorieId?: string;
+      actif?: boolean;
+    },
   ) => {
     const qs = new URLSearchParams();
     qs.set("page", String(params?.page ?? 1));
     if (params?.recherche) qs.set("recherche", params.recherche);
-    if (params?.isSupplement !== undefined) {
-      qs.set("isSupplement", String(params.isSupplement));
-    }
+    if (params?.isSupplement !== undefined) qs.set("isSupplement", String(params.isSupplement));
+    if (params?.typeProduit) qs.set("typeProduit", params.typeProduit);
+    if (params?.categorieId) qs.set("categorieId", params.categorieId);
+    if (params?.actif !== undefined) qs.set("actif", String(params.actif));
     return httpClient.get<PaginatedResponse<IProduit>>(
       `${BASE}/produits?${qs.toString()}`,
       { token },

@@ -8,7 +8,12 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 export function useProduitListQuery(
   page = 1,
   recherche?: string,
-  options?: { isSupplement?: boolean | null },
+  options?: {
+    isSupplement?: boolean | null;
+    typeProduit?: string;
+    categorieId?: string;
+    actif?: boolean;
+  },
 ) {
   const { token } = useAuth();
   // Par defaut isSupplement=false : la page Catalogue Produits ne montre QUE
@@ -16,8 +21,17 @@ export function useProduitListQuery(
   const filtreSupp = options?.isSupplement === null ? undefined : (options?.isSupplement ?? false);
 
   return useQuery({
-    queryKey: catalogueKeyQuery("produits", page, recherche, filtreSupp),
-    queryFn: () => catalogueAPI.listerProduits(token!, { page, recherche, isSupplement: filtreSupp }),
+    queryKey: catalogueKeyQuery(
+      "produits", page, recherche, filtreSupp,
+      options?.typeProduit, options?.categorieId, options?.actif,
+    ),
+    queryFn: () => catalogueAPI.listerProduits(token!, {
+      page, recherche,
+      isSupplement: filtreSupp,
+      typeProduit: options?.typeProduit,
+      categorieId: options?.categorieId,
+      actif: options?.actif,
+    }),
     enabled: !!token,
   });
 }
