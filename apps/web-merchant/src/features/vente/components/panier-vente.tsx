@@ -1,8 +1,10 @@
 "use client";
 
 import { Button } from "@heroui/react";
-import { ShoppingCart, PauseCircle, Receipt, Tag, X } from "lucide-react";
-import type { ArticlePanier, Remise } from "../hooks/usePanier";
+import {
+  ShoppingCart, PauseCircle, Receipt, Tag, X, User, StickyNote, Eye, Trash2,
+} from "lucide-react";
+import type { ArticlePanier, Remise, ClientPanier } from "../hooks/usePanier";
 import { formatMontant } from "../utils/format";
 import { LignePanier } from "./ligne-panier";
 import { BoutonPOS } from "./bouton-pos";
@@ -16,6 +18,10 @@ interface Props {
   nombreArticles: number;
   /** Remise globale appliquee au ticket (ou null si aucune). */
   remiseGlobale: Remise | null;
+  /** Note libre du ticket (Table 3, A emporter, Sans piment, etc.). */
+  note: string;
+  /** Client associe (existant ou saisie libre). */
+  client: ClientPanier | null;
   onModifierQuantite: (varianteId: string, delta: number) => void;
   onDefinirQuantite: (varianteId: string, quantite: number) => void;
   onRetirer: (varianteId: string) => void;
@@ -34,15 +40,23 @@ interface Props {
   onAppliquerRemiseGlobale?: () => void;
   /** Optionnel : retire la remise globale sans ouvrir la modale. */
   onRetirerRemiseGlobale?: () => void;
+  /** Optionnel : edit/effacer la note. */
+  onModifierNote?: (note: string) => void;
+  /** Optionnel : ouvre la modale de selection client. */
+  onChoisirClient?: () => void;
+  /** Optionnel : ouvre l'apercu du ticket. */
+  onApercu?: () => void;
 }
 
 export function PanierVente({
-  articles, sousTotal, total, nombreArticles, remiseGlobale,
+  articles, sousTotal, total, nombreArticles, remiseGlobale, note, client,
   onModifierQuantite, onDefinirQuantite, onRetirer, onVider, onEncaisser, onAttente,
   onSaisirQuantite, onPersonnaliser, onAppliquerRemiseLigne,
-  onAppliquerRemiseGlobale, onRetirerRemiseGlobale, mode = "lateral",
+  onAppliquerRemiseGlobale, onRetirerRemiseGlobale,
+  onModifierNote, onChoisirClient, onApercu, mode = "lateral",
 }: Props) {
   const vide = articles.length === 0;
+  const aRemise = !!remiseGlobale && remiseGlobale.montant > 0;
 
   const wrapperCls = mode === "lateral"
     ? "w-[380px] flex flex-col bg-surface border-l border-border shrink-0"
@@ -50,12 +64,13 @@ export function PanierVente({
 
   return (
     <div className={wrapperCls}>
-      <header className="px-4 py-3.5 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="w-7 h-7 rounded-lg bg-accent/10 text-accent flex items-center justify-center">
+      {/* Header compact : icone + titre + compteur + actions tete */}
+      <header className="px-3 py-2.5 border-b border-border flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-7 h-7 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0">
             <Receipt size={14} strokeWidth={2} />
           </span>
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground leading-none">Panier</p>
             {!vide && (
               <p className="text-[10px] text-muted leading-none mt-0.5">
@@ -65,12 +80,57 @@ export function PanierVente({
           </div>
         </div>
         {!vide && (
-          <Button variant="ghost" className="text-xs text-danger px-2 h-7" onPress={onVider}>
-            Vider
+          <Button
+            variant="ghost"
+            className="text-xs text-muted hover:text-danger px-2 h-7 gap-1"
+            onPress={onVider}
+            aria-label="Vider le panier"
+          >
+            <Trash2 size={12} />
+            <span className="hidden sm:inline">Vider</span>
           </Button>
         )}
       </header>
 
+      {/* Barre meta : Client + Note (compacte, juste sous le header) */}
+      {!vide && (onChoisirClient || onModifierNote) && (
+        <div className="px-3 py-2 border-b border-border bg-muted/5 space-y-1.5">
+          {onChoisirClient && (
+            <button
+              type="button"
+              onClick={onChoisirClient}
+              className="w-full flex items-center gap-2 text-xs text-muted hover:text-foreground transition-colors"
+            >
+              <User size={12} />
+              {client ? (
+                <span className="truncate text-foreground font-medium">
+                  {client.nom ?? client.telephone ?? "Client"}
+                  {client.telephone && client.nom && (
+                    <span className="text-muted ml-1.5 font-normal">· {client.telephone}</span>
+                  )}
+                </span>
+              ) : (
+                <span>Associer un client</span>
+              )}
+            </button>
+          )}
+          {onModifierNote && (
+            <div className="flex items-center gap-2">
+              <StickyNote size={12} className="text-muted shrink-0" />
+              <input
+                type="text"
+                value={note}
+                onChange={(e) => onModifierNote(e.target.value)}
+                placeholder="Note (Table 3, A emporter...)"
+                className="flex-1 text-xs bg-transparent outline-none text-foreground placeholder:text-muted/60"
+                maxLength={120}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Liste des lignes */}
       <div className="flex-1 overflow-y-auto">
         {vide ? (
           <div className="flex flex-col items-center justify-center h-full px-6 text-center min-h-[240px]">
@@ -100,70 +160,82 @@ export function PanierVente({
         )}
       </div>
 
-      <footer className="border-t border-border p-4 space-y-3 bg-surface safe-bottom">
-        {/* Bouton remise globale + ligne remise dans le recap */}
-        {!vide && onAppliquerRemiseGlobale && (
-          <Button
-            variant="ghost"
-            className={`w-full gap-1.5 text-xs font-medium px-2.5 py-1.5 h-auto min-w-0 rounded-md border transition-colors ${
-              remiseGlobale
-                ? "border-warning/40 bg-warning/10 text-warning hover:bg-warning/15"
-                : "border-dashed border-warning/50 text-warning hover:bg-warning/10"
-            }`}
-            onPress={onAppliquerRemiseGlobale}
-          >
-            <Tag size={13} strokeWidth={2.2} />
-            {remiseGlobale
-              ? `Remise ticket : -${formatMontant(remiseGlobale.montant)} F${
-                  remiseGlobale.type === "POURCENTAGE" ? ` (${remiseGlobale.valeurOriginale}%)` : ""
-                }`
-              : "+ Remise sur le ticket"}
-          </Button>
+      {/* Footer : actions + total compact */}
+      <footer className="border-t border-border p-3 space-y-2.5 bg-surface safe-bottom">
+        {/* Actions secondaires regroupees : Remise ticket + Apercu */}
+        {!vide && (onAppliquerRemiseGlobale || onApercu) && (
+          <div className="flex gap-1.5">
+            {onAppliquerRemiseGlobale && (
+              <Button
+                variant="ghost"
+                className={`flex-1 gap-1.5 text-xs font-medium px-2 py-1.5 h-auto min-w-0 rounded-md border transition-colors ${
+                  aRemise
+                    ? "border-warning/40 bg-warning/10 text-warning hover:bg-warning/15"
+                    : "border-dashed border-warning/40 text-warning hover:bg-warning/10"
+                }`}
+                onPress={onAppliquerRemiseGlobale}
+              >
+                <Tag size={12} strokeWidth={2.2} />
+                {aRemise
+                  ? `-${formatMontant(remiseGlobale!.montant)} F${
+                      remiseGlobale!.type === "POURCENTAGE" ? ` (${remiseGlobale!.valeurOriginale}%)` : ""
+                    }`
+                  : "+ Remise"}
+              </Button>
+            )}
+            {onApercu && (
+              <Button
+                variant="ghost"
+                className="gap-1.5 text-xs font-medium px-2.5 py-1.5 h-auto min-w-0 rounded-md border border-border text-muted hover:text-foreground hover:bg-foreground/5"
+                onPress={onApercu}
+                aria-label="Aperçu du ticket"
+              >
+                <Eye size={12} strokeWidth={2.2} />
+                Aperçu
+              </Button>
+            )}
+          </div>
         )}
 
-        <div className="px-4 py-3.5 rounded-xl bg-navy space-y-1">
-          {!vide && remiseGlobale && (
-            <>
-              <div className="flex justify-between text-xs text-navy-foreground/55">
-                <span>Sous-total</span>
-                <span className="tabular-nums">{formatMontant(sousTotal)} F</span>
-              </div>
-              <div className="flex justify-between text-xs text-warning">
-                <span className="flex items-center gap-1">
-                  Remise
-                  {remiseGlobale.raison && (
-                    <span className="text-navy-foreground/40 truncate max-w-[120px]">
-                      · {remiseGlobale.raison}
-                    </span>
-                  )}
-                  {onRetirerRemiseGlobale && (
-                    <button
-                      type="button"
-                      onClick={onRetirerRemiseGlobale}
-                      className="ml-1 p-0.5 hover:bg-warning/20 rounded"
-                      aria-label="Retirer la remise"
-                    >
-                      <X size={10} />
-                    </button>
-                  )}
-                </span>
-                <span className="tabular-nums">- {formatMontant(remiseGlobale.montant)} F</span>
-              </div>
-            </>
+        {/* Bandeau total compact : sous-total toujours, remise si applicable, total */}
+        <div className="px-3 py-2.5 rounded-xl bg-navy space-y-1">
+          <div className="flex justify-between text-[11px] text-navy-foreground/55">
+            <span>Sous-total {nombreArticles > 0 && `· ${nombreArticles} art.`}</span>
+            <span className="tabular-nums">{formatMontant(sousTotal)} F</span>
+          </div>
+          {aRemise && (
+            <div className="flex justify-between text-[11px] text-warning">
+              <span className="flex items-center gap-1 min-w-0">
+                <span>Remise</span>
+                {remiseGlobale!.raison && (
+                  <span className="text-navy-foreground/40 truncate max-w-[110px]">
+                    · {remiseGlobale!.raison}
+                  </span>
+                )}
+                {onRetirerRemiseGlobale && (
+                  <button
+                    type="button"
+                    onClick={onRetirerRemiseGlobale}
+                    className="ml-0.5 p-0.5 hover:bg-warning/20 rounded"
+                    aria-label="Retirer la remise"
+                  >
+                    <X size={10} />
+                  </button>
+                )}
+              </span>
+              <span className="tabular-nums">- {formatMontant(remiseGlobale!.montant)} F</span>
+            </div>
           )}
-          <div className="flex items-end justify-between gap-2">
-            <span className="text-xs text-navy-foreground/60 uppercase tracking-wider">Total</span>
-            <span className="text-5xl font-bold text-navy-foreground tabular-nums tracking-tight leading-none">
+          <div className="flex items-end justify-between gap-2 pt-0.5">
+            <span className="text-[10px] text-navy-foreground/60 uppercase tracking-wider">Total</span>
+            <span className="text-3xl font-bold text-navy-foreground tabular-nums tracking-tight leading-none">
               {formatMontant(total)}
-              <span className="text-base font-normal text-navy-foreground/50 ml-1.5">F</span>
+              <span className="text-sm font-normal text-navy-foreground/50 ml-1">F</span>
             </span>
           </div>
-          {!vide && (
-            <p className="text-[10px] text-navy-foreground/55 mt-1">
-              {nombreArticles} article{nombreArticles > 1 ? "s" : ""}
-            </p>
-          )}
         </div>
+
+        {/* Boutons primaires */}
         <div className="flex gap-2">
           <BoutonPOS
             variant="primary"
@@ -175,7 +247,7 @@ export function PanierVente({
           </BoutonPOS>
           <BoutonPOS
             variant="outline"
-            className="px-5 border-warning/40 text-warning hover:bg-warning/5"
+            className="px-4 border-warning/40 text-warning hover:bg-warning/5"
             onPress={onAttente}
             isDisabled={vide}
             aria-label="Mettre en attente"

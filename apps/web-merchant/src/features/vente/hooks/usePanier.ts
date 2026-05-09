@@ -78,9 +78,18 @@ export function calculerMontantRemise(
   return Math.min(sousTotal, Number(valeur.toFixed(2)));
 }
 
+export interface ClientPanier {
+  /** Optionnel : id si client existant en base, absent si saisie libre. */
+  id?: string;
+  nom?: string;
+  telephone?: string;
+}
+
 export function usePanier() {
   const [articles, setArticles] = useState<ArticlePanier[]>([]);
   const [remiseGlobale, setRemiseGlobale] = useState<Remise | null>(null);
+  const [note, setNote] = useState<string>("");
+  const [client, setClient] = useState<ClientPanier | null>(null);
 
   const ajouter = useCallback(
     (
@@ -232,6 +241,8 @@ export function usePanier() {
   const vider = useCallback(() => {
     setArticles([]);
     setRemiseGlobale(null);
+    setNote("");
+    setClient(null);
   }, []);
 
   const chargerDepuisTicket = useCallback((
@@ -279,10 +290,11 @@ export function usePanier() {
   const nombreArticles = articles.reduce((s, a) => s + a.quantite, 0);
 
   return {
-    articles, sousTotal, total, nombreArticles,
+    articles, sousTotal, total, nombreArticles, note, client,
     remiseGlobale: remiseGlobale ? { ...remiseGlobale, montant: montantRemiseGlobale } : null,
     ajouter, modifierQuantite, definirQuantite, definirSupplementsLigne,
     definirRemiseLigne, definirRemiseGlobale,
+    definirNote: setNote, definirClient: setClient,
     retirer, vider, chargerDepuisTicket,
   };
 }

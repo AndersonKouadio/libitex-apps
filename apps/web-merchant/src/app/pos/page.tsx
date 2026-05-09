@@ -23,6 +23,8 @@ import { ModalTicketsAttente } from "@/features/vente/components/modal-tickets-a
 import { ModalSaisirQuantite } from "@/features/vente/components/modal-saisir-quantite";
 import { ModalSupplements } from "@/features/vente/components/modal-supplements";
 import { ModalRemise } from "@/features/vente/components/modal-remise";
+import { ModalClientPanier } from "@/features/vente/components/modal-client-panier";
+import { ModalApercuTicket } from "@/features/vente/components/modal-apercu-ticket";
 import { useSaisieQuantite } from "@/features/vente/hooks/useSaisieQuantite";
 import { useEncaissement } from "@/features/vente/hooks/useEncaissement";
 import { formatMontant } from "@/features/vente/utils/format";
@@ -31,7 +33,7 @@ import { FormulaireOuvertureCaisse } from "@/features/session-caisse/components/
 import { ModalFermetureCaisse } from "@/features/session-caisse/components/modal-fermeture-caisse";
 
 export default function PagePOS() {
-  const { token } = useAuth();
+  const { token, utilisateur } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   // POS : charger TOUS les produits (vrais + supplements) pour pouvoir vendre
@@ -97,6 +99,8 @@ export default function PagePOS() {
   // Cible de la modale remise : "ticket" pour la remise globale, ou un index de ligne.
   const [cibleRemise, setCibleRemise] = useState<number | "ticket" | null>(null);
   const articleRemise = typeof cibleRemise === "number" ? panier.articles[cibleRemise] : null;
+  const [modalClientOuvert, setModalClientOuvert] = useState(false);
+  const [apercuOuvert, setApercuOuvert] = useState(false);
 
   function ouvrirSupplements(indexLigne: number) {
     setLigneSupplements(indexLigne);
@@ -244,6 +248,8 @@ export default function PagePOS() {
           total={panier.total}
           nombreArticles={panier.nombreArticles}
           remiseGlobale={panier.remiseGlobale}
+          note={panier.note}
+          client={panier.client}
           onModifierQuantite={panier.modifierQuantite}
           onDefinirQuantite={panier.definirQuantite}
           onRetirer={panier.retirer}
@@ -255,6 +261,9 @@ export default function PagePOS() {
           onAppliquerRemiseLigne={(i) => setCibleRemise(i)}
           onAppliquerRemiseGlobale={() => setCibleRemise("ticket")}
           onRetirerRemiseGlobale={() => panier.definirRemiseGlobale(null)}
+          onModifierNote={panier.definirNote}
+          onChoisirClient={() => setModalClientOuvert(true)}
+          onApercu={() => setApercuOuvert(true)}
         />
       </div>
 
@@ -307,6 +316,8 @@ export default function PagePOS() {
               total={panier.total}
               nombreArticles={panier.nombreArticles}
               remiseGlobale={panier.remiseGlobale}
+              note={panier.note}
+              client={panier.client}
               onModifierQuantite={panier.modifierQuantite}
               onDefinirQuantite={panier.definirQuantite}
               onRetirer={panier.retirer}
@@ -318,6 +329,9 @@ export default function PagePOS() {
               onAppliquerRemiseLigne={(i) => setCibleRemise(i)}
               onAppliquerRemiseGlobale={() => setCibleRemise("ticket")}
               onRetirerRemiseGlobale={() => panier.definirRemiseGlobale(null)}
+              onModifierNote={panier.definirNote}
+              onChoisirClient={() => setModalClientOuvert(true)}
+              onApercu={() => setApercuOuvert(true)}
             />
           </Drawer.Dialog>
         </Drawer.Content>
@@ -391,6 +405,27 @@ export default function PagePOS() {
         ouvert={modalFermetureOuvert}
         sessionId={sessionActive?.id ?? null}
         onFermer={() => setModalFermetureOuvert(false)}
+      />
+
+      <ModalClientPanier
+        ouvert={modalClientOuvert}
+        clientCourant={panier.client}
+        onConfirmer={panier.definirClient}
+        onFermer={() => setModalClientOuvert(false)}
+      />
+
+      <ModalApercuTicket
+        ouvert={apercuOuvert}
+        onFermer={() => setApercuOuvert(false)}
+        articles={panier.articles}
+        sousTotal={panier.sousTotal}
+        total={panier.total}
+        remiseGlobale={panier.remiseGlobale}
+        note={panier.note}
+        client={panier.client}
+        emplacementNom={empCourant?.nom ?? "Emplacement"}
+        caissierNom={`${utilisateur?.prenom ?? ""} ${utilisateur?.nomFamille ?? ""}`.trim() || "—"}
+        numeroSession={sessionActive?.numeroSession}
       />
 
       <ModalRemise
