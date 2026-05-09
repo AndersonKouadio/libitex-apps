@@ -2,9 +2,23 @@ import {
   IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsArray,
   ValidateNested, IsBoolean, Min, IsUrl, ArrayMaxSize, IsInt,
 } from "class-validator";
-import { Type } from "class-transformer";
+import { Type, Transform } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { UniteMesure } from "@libitex/shared";
+import { PaginationDto } from "../../../common/dto/pagination.dto";
+
+export class ListerProduitsQueryDto extends PaginationDto {
+  @ApiPropertyOptional({ description: "Recherche dans nom et marque" })
+  @IsOptional()
+  @IsString()
+  recherche?: string;
+
+  @ApiPropertyOptional({ description: "Filtrer sur le drapeau supplément (true / false)" })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === "true" ? true : value === "false" ? false : value)
+  isSupplement?: boolean;
+}
 
 export enum TypeProduit {
   SIMPLE = "SIMPLE",

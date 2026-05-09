@@ -8,7 +8,7 @@ import { CatalogueService } from "./catalogue.service";
 import {
   CreerProduitDto, ModifierProduitDto, CreerCategorieDto, ModifierCategorieDto,
 } from "./dto/produit.dto";
-import { PaginationDto } from "../../common/dto/pagination.dto";
+import { ListerProduitsQueryDto } from "./dto/produit.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
 
@@ -32,16 +32,10 @@ export class CatalogueController {
   @ApiOperation({ summary: "Lister les produits (pagine, recherche, filtre supplément)" })
   listerProduits(
     @CurrentUser() user: CurrentUserData,
-    @Query() pagination: PaginationDto,
-    @Query("recherche") recherche?: string,
-    @Query("isSupplement") isSupplement?: string,
+    @Query() query: ListerProduitsQueryDto,
   ) {
-    const filtreSupplement =
-      isSupplement === "true" ? true :
-      isSupplement === "false" ? false :
-      undefined;
     return this.catalogueService.listerProduits(
-      user.tenantId, pagination.page, pagination.limit, recherche, filtreSupplement,
+      user.tenantId, query.page, query.limit, query.recherche, query.isSupplement,
     );
   }
 
