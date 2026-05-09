@@ -2,7 +2,7 @@
 set -e
 
 # ── LIBITEX Deploy Script ──
-# Usage: ./deploy.sh [api|web|all|nginx|down|logs|status]
+# Usage: ./deploy.sh [api|web|all|nginx|db|down|logs|status]
 
 COMPONENT=${1:-all}
 
@@ -21,8 +21,32 @@ if [ ! -f .env ] && [[ "$COMPONENT" != "nginx" && "$COMPONENT" != "status" && "$
   exit 1
 fi
 
+# Pousse le schema Drizzle vers la base (Neon). A appeler apres chaque deploy
+# api/all ou en standalone via './deploy.sh db'. Idempotent : ne fait rien si
+# le schema est deja a jour.
+push_schema() {
+  echo ">> Push du schema Drizzle vers la base..."
+  # drizzle-kit est en devDep, donc absent en prod sauf si pnpm install a deja
+  # ete fait sur le host. On installe a la demande si node_modules manquant.
+  if [ ! -f packages/db/node_modules/.bin/drizzle-kit ] && [ ! -f node_modules/.bin/drizzle-kit ]; then
+    echo ">> Installation des dependances pnpm (incluant drizzle-kit)..."
+    pnpm install --silent
+  fi
+  # Charge DATABASE_URL depuis .env (sourcing securise par set -a).
+  set -a
+  . ./.env
+  set +a
+  if [ -z "${DATABASE_URL:-}" ]; then
+    echo "ERREUR: DATABASE_URL absent du .env"
+    exit 1
+  fi
+  (cd packages/db && pnpm exec drizzle-kit push --force)
+  echo ">> Schema OK"
+}
+
 case $COMPONENT in
   api)
+    push_schema
     echo ">> Build API..."
     docker compose -f docker-compose.prod.yml build api
     echo ">> Restart API..."
@@ -35,10 +59,14 @@ case $COMPONENT in
     docker compose -f docker-compose.prod.yml up -d --force-recreate web
     ;;
   all)
+    push_schema
     echo ">> Build all..."
     docker compose -f docker-compose.prod.yml build
     echo ">> Start all..."
     docker compose -f docker-compose.prod.yml up -d
+    ;;
+  db)
+    push_schema
     ;;
   nginx)
     echo ">> Installation des configs Nginx..."
@@ -73,7 +101,7 @@ case $COMPONENT in
     docker compose -f docker-compose.prod.yml ps
     ;;
   *)
-    echo "Usage: ./deploy.sh [api|web|all|nginx|down|logs|status]"
+    echo "Usage: ./deploy.sh [api|web|all|nginx|db|down|logs|status]"
     exit 1
     ;;
 esac
