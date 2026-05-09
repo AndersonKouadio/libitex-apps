@@ -4,7 +4,7 @@ import { useState } from "react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { NavCatalogue } from "@/components/layout/nav-catalogue";
-import { Button, Skeleton, Chip } from "@heroui/react";
+import { Button, Skeleton, Chip, Table } from "@heroui/react";
 import { Plus, Pencil, Trash2, UtensilsCrossed, Package } from "lucide-react";
 import {
   useSupplementListQuery, useSupprimerSupplementMutation,
@@ -65,8 +65,18 @@ export default function PageSupplements() {
       />
 
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-[110px] rounded-xl" />)}
+          <div className="bg-surface rounded-xl border border-border p-4 space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-4 py-2">
+                <Skeleton className="w-12 h-12 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-48 rounded" />
+                  <Skeleton className="h-3 w-64 rounded" />
+                </div>
+                <Skeleton className="h-5 w-16 rounded-full" />
+                <Skeleton className="h-4 w-16 rounded" />
+              </div>
+            ))}
           </div>
         ) : supplements.length === 0 ? (
           <div className="bg-surface rounded-xl border border-border py-16 text-center">
@@ -84,61 +94,72 @@ export default function PageSupplements() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {supplements.map((s) => (
-              <div
-                key={s.id}
-                className={`rounded-xl border overflow-hidden transition-colors ${
-                  s.actif
-                    ? "border-border bg-surface hover:border-accent/40"
-                    : "border-border bg-surface-secondary opacity-70"
-                }`}
-              >
-                <div className="aspect-[3/2] bg-surface-secondary overflow-hidden flex items-center justify-center">
-                  {s.image ? (
-                    <img src={s.image} alt={s.nom} className="w-full h-full object-cover" loading="lazy" />
-                  ) : (
-                    <Package size={28} className="text-muted/30" />
-                  )}
-                </div>
-                <div className="p-3">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-sm font-semibold text-foreground line-clamp-1">{s.nom}</p>
-                    <Chip className={`text-[10px] shrink-0 ${COULEURS_CATEGORIE[s.categorie] ?? ""}`}>
-                      {LABELS_CATEGORIE_SUPPLEMENT[s.categorie]}
-                    </Chip>
-                  </div>
-                  {s.description && (
-                    <p className="text-xs text-muted line-clamp-2 mb-2">{s.description}</p>
-                  )}
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-base font-bold text-foreground tabular-nums">
-                      {formatMontant(s.prix)}
-                      <span className="text-xs font-normal text-muted ml-0.5">F</span>
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
-                        onPress={() => ouvrirEdition(s)}
-                        aria-label="Modifier"
-                      >
-                        <Pencil size={14} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="text-muted hover:text-danger p-1.5 h-auto min-w-0"
-                        onPress={() => handleSupprimer(s)}
-                        aria-label="Supprimer"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <Table>
+            <Table.ScrollContainer>
+              <Table.Content aria-label="Suppléments">
+                <Table.Header className="table-header-libitex">
+                  <Table.Column isRowHeader>Supplément</Table.Column>
+                  <Table.Column>Catégorie</Table.Column>
+                  <Table.Column>Prix</Table.Column>
+                  <Table.Column className="w-20"> </Table.Column>
+                </Table.Header>
+                <Table.Body>
+                  {supplements.map((s) => (
+                    <Table.Row key={s.id} className={s.actif ? "" : "opacity-60"}>
+                      <Table.Cell>
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-lg bg-surface-secondary overflow-hidden flex items-center justify-center shrink-0">
+                            {s.image ? (
+                              <img src={s.image} alt={s.nom} className="w-full h-full object-cover" loading="lazy" />
+                            ) : (
+                              <Package size={18} className="text-muted/50" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">{s.nom}</p>
+                            {s.description && (
+                              <p className="text-xs text-muted truncate max-w-md">{s.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Chip className={`text-xs ${COULEURS_CATEGORIE[s.categorie] ?? ""}`}>
+                          {LABELS_CATEGORIE_SUPPLEMENT[s.categorie]}
+                        </Chip>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <span className="text-sm font-semibold tabular-nums">
+                          {formatMontant(s.prix)}
+                          <span className="text-xs font-normal text-muted ml-0.5">F</span>
+                        </span>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <div className="flex items-center gap-0.5 justify-end">
+                          <Button
+                            variant="ghost"
+                            className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
+                            onPress={() => ouvrirEdition(s)}
+                            aria-label={`Modifier ${s.nom}`}
+                          >
+                            <Pencil size={14} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="text-muted hover:text-danger p-1.5 h-auto min-w-0"
+                            onPress={() => handleSupprimer(s)}
+                            aria-label={`Supprimer ${s.nom}`}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        </div>
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table.Content>
+            </Table.ScrollContainer>
+          </Table>
         )}
 
       <ModalSupplement
