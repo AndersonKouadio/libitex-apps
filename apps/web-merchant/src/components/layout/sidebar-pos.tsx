@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Avatar } from "@heroui/react";
-import { PauseCircle, Receipt, BarChart3, Lock, History } from "lucide-react";
+import { PauseCircle, Receipt, BarChart3, Lock, History, Calculator } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useKpisQuery } from "@/features/tableau-de-bord/queries/kpis.query";
@@ -9,6 +10,7 @@ import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import { useSessionActiveQuery } from "@/features/session-caisse/queries/session-active.query";
 import { formatMontant, formatHeure, formatDateRelative } from "@/features/vente/utils/format";
+import { ModalCalculatrice } from "@/features/vente/components/modal-calculatrice";
 
 interface Props {
   /** Si true, sidebar repliee : on cache les libelles. */
@@ -42,6 +44,7 @@ export function SidebarPOS({ replie }: Props) {
   const { data: emplacements } = useEmplacementListQuery();
   const empParDefaut = (emplacements ?? []).find((e) => e.type === "STORE");
   const { data: sessionActive } = useSessionActiveQuery(empParDefaut?.id ?? null);
+  const [calculatriceOuverte, setCalculatriceOuverte] = useState(false);
 
   if (replie) {
     return (
@@ -58,6 +61,14 @@ export function SidebarPOS({ replie }: Props) {
             </span>
           )}
         </Link>
+        <button
+          type="button"
+          onClick={() => setCalculatriceOuverte(true)}
+          className="w-full h-10 rounded-lg flex items-center justify-center text-white/65 hover:text-white hover:bg-white/5 transition-colors"
+          aria-label="Calculatrice"
+        >
+          <Calculator size={18} strokeWidth={1.5} />
+        </button>
         <Link
           href="/rapports"
           className="w-full h-10 rounded-lg flex items-center justify-center text-white/65 hover:text-white hover:bg-white/5 transition-colors"
@@ -65,6 +76,7 @@ export function SidebarPOS({ replie }: Props) {
         >
           <BarChart3 size={18} strokeWidth={1.5} />
         </Link>
+        <ModalCalculatrice ouvert={calculatriceOuverte} onFermer={() => setCalculatriceOuverte(false)} />
       </nav>
     );
   }
@@ -160,8 +172,18 @@ export function SidebarPOS({ replie }: Props) {
             <History size={16} strokeWidth={1.5} />
             Historique sessions
           </Link>
+          <button
+            type="button"
+            onClick={() => setCalculatriceOuverte(true)}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-white/65 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <Calculator size={16} strokeWidth={1.5} />
+            Calculatrice
+          </button>
         </div>
       </div>
+
+      <ModalCalculatrice ouvert={calculatriceOuverte} onFermer={() => setCalculatriceOuverte(false)} />
     </nav>
   );
 }
