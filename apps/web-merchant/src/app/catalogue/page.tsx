@@ -90,6 +90,23 @@ export default function PageCatalogue() {
     ? categories?.find((c) => c.id === filtreCategorie)
     : undefined;
 
+  // Categories aplaties en arborescence pour l'affichage du Select :
+  // chaque parent est suivi immediatement de ses enfants (indentes via niveau).
+  // On garde une seule ListBox plate pour rester selectionnable a tous les niveaux.
+  const categoriesArborees = useMemo(() => {
+    type Item = { id: string; nom: string; niveau: number };
+    const result: Item[] = [];
+    const cats = categories ?? [];
+    const racines = cats.filter((c) => !c.parentId);
+    function ajouter(c: typeof cats[number], niveau: number) {
+      result.push({ id: c.id, nom: c.nom, niveau });
+      const enfants = cats.filter((x) => x.parentId === c.id);
+      for (const e of enfants) ajouter(e, niveau + 1);
+    }
+    for (const r of racines) ajouter(r, 0);
+    return result;
+  }, [categories]);
+
   function changerFiltre(setter: (v: string) => void) {
     return (v: string) => { setter(v); setPage(1); };
   }
@@ -152,14 +169,19 @@ export default function PageCatalogue() {
           selectedKey={filtreCategorie}
           onSelectionChange={(k) => changerFiltre(setFiltreCategorie)(String(k))}
           aria-label="Catégorie"
-          className="min-w-[180px]"
+          className="min-w-[200px]"
         >
           <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
           <Select.Popover>
             <ListBox>
               <ListBox.Item id="all" textValue="Toutes catégories">Toutes catégories</ListBox.Item>
-              {(categories ?? []).map((c) => (
-                <ListBox.Item key={c.id} id={c.id} textValue={c.nom}>{c.nom}</ListBox.Item>
+              {categoriesArborees.map((c) => (
+                <ListBox.Item key={c.id} id={c.id} textValue={c.nom}>
+                  <span style={{ paddingLeft: `${c.niveau * 14}px` }}>
+                    {c.niveau > 0 && <span className="text-muted/50 mr-1">↳</span>}
+                    {c.nom}
+                  </span>
+                </ListBox.Item>
               ))}
             </ListBox>
           </Select.Popover>
