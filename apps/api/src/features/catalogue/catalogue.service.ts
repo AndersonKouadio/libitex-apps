@@ -22,7 +22,6 @@ export class CatalogueService {
       productType: dto.typeProduit,
       categoryId: dto.categorieId,
       brand: dto.marque,
-      barcodeEan13: dto.codeBarresEan13,
       taxRate: dto.tauxTva?.toString(),
       images: dto.images ?? [],
       sectorMetadata: dto.metadataSecteur ?? {},

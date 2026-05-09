@@ -49,8 +49,9 @@ export const products = pgTable("products", {
   productType: productTypeEnum("product_type").notNull(),
   categoryId: uuid("category_id").references(() => categories.id),
   brand: varchar("brand", { length: 255 }),
-  barcodeEan13: varchar("barcode_ean13", { length: 13 }),
-  barcodeInternal: varchar("barcode_internal", { length: 50 }),
+  // Code-barres : porte au niveau variante uniquement (variants.barcode).
+  // Une variante = 1 SKU = 1 code-barres scannable. Le produit parent n'a
+  // pas besoin de code propre car le scan vise toujours une variante.
   taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).default("0"),
   weight: numeric("weight", { precision: 10, scale: 3 }),
   images: jsonb("images").$type<string[]>().default([]),
@@ -89,8 +90,6 @@ export const products = pgTable("products", {
 }, (table) => [
   index("idx_products_tenant").on(table.tenantId),
   index("idx_products_type").on(table.tenantId, table.productType),
-  index("idx_products_barcode").on(table.barcodeEan13),
-  index("idx_products_barcode_internal").on(table.barcodeInternal),
   index("idx_products_supplement").on(table.tenantId, table.isSupplement),
 ]);
 

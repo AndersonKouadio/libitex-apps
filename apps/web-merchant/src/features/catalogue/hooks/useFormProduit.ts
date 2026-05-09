@@ -20,7 +20,6 @@ export interface EtatFormProduit {
   typeProduit: TypeProduit;
   marque: string;
   categorieId: string;
-  codeBarresEan13: string;
   tauxTva: string;
   prefixeSku: string;
   axes: AxeAttribut[];
@@ -43,7 +42,6 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
   }, [typesAutorises, typeProduit]);
   const [marque, setMarque] = useState("");
   const [categorieId, setCategorieId] = useState("");
-  const [codeBarresEan13, setCodeBarresEan13] = useState("");
   const [tauxTva, setTauxTva] = useState("0");
   const [prefixeSku, setPrefixeSku] = useState("");
   const [axes, setAxes] = useState<AxeAttribut[]>(AXES_VIDES);
@@ -110,7 +108,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
 
   const reinitialiser = useCallback(() => {
     setNom(""); setDescription(""); setTypeProduit(typeParDefaut); setMarque("");
-    setCategorieId(""); setCodeBarresEan13(""); setTauxTva("0"); setPrefixeSku("");
+    setCategorieId(""); setTauxTva("0"); setPrefixeSku("");
     setAxes(AXES_VIDES); setVarianteUnique({ ...VARIANTE_VIDE }); setImages([]);
     setMetadataSecteur({}); setLignesRecette([]); setErreur("");
     setCookingTimeMinutes(null); setPrixPromotion(null); setEnPromotion(false);
@@ -164,7 +162,6 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
       typeProduit,
       marque: marque || undefined,
       categorieId: categorieId || undefined,
-      codeBarresEan13: codeBarresEan13 || undefined,
       tauxTva: tauxTva ? Number(tauxTva) : undefined,
       images: images.length > 0 ? images : undefined,
       metadataSecteur: Object.keys(metadataSecteur).length > 0 ? metadataSecteur : undefined,
@@ -188,7 +185,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
     setErreur("");
     return validation.data;
   }, [
-    nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva,
+    nom, description, typeProduit, marque, categorieId, tauxTva,
     images, metadataSecteur, lignesRecette, variantesGenerees,
     cookingTimeMinutes, prixPromotion, enPromotion, niveauEpice, tagsCuisine,
     enRupture,
@@ -197,15 +194,14 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
 
   return {
     valeurs: {
-      nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva,
+      nom, description, typeProduit, marque, categorieId, tauxTva,
       prefixeSku, axes, varianteUnique, variantesGenerees, images, metadataSecteur,
       lignesRecette, erreur,
       cookingTimeMinutes, prixPromotion, enPromotion, niveauEpice, tagsCuisine,
       enRupture,
       modeDisponibilite, planningDisponibilite, emplacementsDisponibles,
     },
-    setNom, setDescription, setTypeProduit, setMarque, setCategorieId,
-    setCodeBarresEan13, setTauxTva,
+    setNom, setDescription, setTypeProduit, setMarque, setCategorieId, setTauxTva,
     setPrefixeSku: setPrefixeSkuAvecTracking,
     setVarianteUnique: setVarianteUniqueAvecSkuTracking,
     setImages, setMetadataSecteur, setLignesRecette,

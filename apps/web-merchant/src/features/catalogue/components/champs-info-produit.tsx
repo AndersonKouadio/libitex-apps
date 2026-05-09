@@ -19,7 +19,6 @@ interface Props {
   typeProduit: TypeProduit;
   marque: string;
   categorieId: string;
-  codeBarresEan13: string;
   tauxTva: string;
   categories: ICategorie[];
   typesAutorises: TypeProduit[];
@@ -28,14 +27,13 @@ interface Props {
   onTypeProduit: (v: TypeProduit) => void;
   onMarque: (v: string) => void;
   onCategorieId: (v: string) => void;
-  onCodeBarresEan13: (v: string) => void;
   onTauxTva: (v: string) => void;
 }
 
 export function ChampsInfoProduit({
-  nom, description, typeProduit, marque, categorieId, codeBarresEan13, tauxTva,
+  nom, description, typeProduit, marque, categorieId, tauxTva,
   categories, typesAutorises,
-  onNom, onDescription, onTypeProduit, onMarque, onCategorieId, onCodeBarresEan13, onTauxTva,
+  onNom, onDescription, onTypeProduit, onMarque, onCategorieId, onTauxTva,
 }: Props) {
   const typesDisponibles = TYPES_PRODUIT.filter((t) => typesAutorises.includes(t.id));
   const typeSelectionne = TYPES_PRODUIT.find((t) => t.id === typeProduit);
@@ -119,16 +117,13 @@ export function ChampsInfoProduit({
                 </Select.Popover>
               </Select>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <TextField name="codeBarresEan13" value={codeBarresEan13} onChange={onCodeBarresEan13}>
-                <Label>Code-barres EAN-13 (optionnel)</Label>
-                <Input placeholder="3017620422003" />
-              </TextField>
-              <TextField name="tauxTva" type="number" value={tauxTva} onChange={onTauxTva}>
-                <Label>Taux TVA (%)</Label>
-                <Input placeholder="18" min="0" max="100" />
-              </TextField>
-            </div>
+            <TextField name="tauxTva" type="number" value={tauxTva} onChange={onTauxTva}>
+              <Label>Taux TVA (%)</Label>
+              <Input placeholder="18" min="0" max="100" />
+            </TextField>
+            <p className="text-[10px] text-muted">
+              Le code-barres se renseigne au niveau de chaque variante (un par SKU à scanner).
+            </p>
         </Disclosure.Content>
       </Disclosure>
     </div>
