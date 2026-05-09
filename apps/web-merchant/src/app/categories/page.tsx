@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { NavCatalogue } from "@/components/layout/nav-catalogue";
 import { Button, Skeleton } from "@heroui/react";
-import { Plus, Pencil, Trash2, FolderTree, Folder, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, FolderTree, Folder, ChevronRight, ArrowUpRight } from "lucide-react";
 import { useCategorieListQuery } from "@/features/catalogue/queries/categorie-list.query";
 import { useSupprimerCategorieMutation } from "@/features/catalogue/queries/categorie.mutations";
 import { ModalCategorie } from "@/features/catalogue/components/modal-categorie";
@@ -134,21 +135,32 @@ function NoeudCategorie({
   return (
     <>
       <li
-        className={`flex items-center gap-2 px-3 py-2.5 hover:bg-surface-secondary/50 transition-colors ${
+        className={`flex items-center gap-2 px-3 py-2.5 hover:bg-surface-secondary/50 transition-colors group ${
           niveau === 0 && !premierDeNiveau ? "border-t border-border" : ""
         } ${niveau > 0 ? "border-t border-border/50" : ""}`}
         style={{ paddingLeft: `${12 + niveau * 24}px` }}
       >
         {niveau > 0 && <ChevronRight size={12} className="text-muted/50 shrink-0" />}
         <Folder size={14} className={niveau === 0 ? "text-accent shrink-0" : "text-muted shrink-0"} />
-        <span className="flex-1 text-sm text-foreground truncate">
-          {noeud.categorie.nom}
-          {aDesEnfants && (
-            <span className="text-[10px] text-muted ml-2">
-              {noeud.enfants.length} sous-catégorie{noeud.enfants.length > 1 ? "s" : ""}
-            </span>
-          )}
-        </span>
+        {/* Toute la zone nom + compteur est cliquable et navigue vers la liste
+            produits filtree sur cette categorie. Drill-down classique dossier. */}
+        <Link
+          href={`/catalogue?categorie=${noeud.categorie.id}`}
+          className="flex-1 flex items-center gap-2 min-w-0 hover:text-accent transition-colors"
+        >
+          <span className="text-sm text-foreground hover:text-accent truncate">
+            {noeud.categorie.nom}
+            {aDesEnfants && (
+              <span className="text-[10px] text-muted ml-2">
+                {noeud.enfants.length} sous-catégorie{noeud.enfants.length > 1 ? "s" : ""}
+              </span>
+            )}
+          </span>
+          <ArrowUpRight
+            size={12}
+            className="text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+          />
+        </Link>
         <span
           className={`text-xs tabular-nums px-2 py-0.5 rounded-full mr-1 ${
             (noeud.categorie.nombreProduits ?? 0) > 0
