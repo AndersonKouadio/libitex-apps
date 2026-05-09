@@ -51,14 +51,18 @@ export default function PageStock() {
         <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
           <Tabs selectedKey={onglet} onSelectionChange={(k) => setOnglet(k as Onglet)} aria-label="Type de stock">
             <Tabs.List>
-              <Tabs.Tab id="variantes">
-                <Package size={14} className="mr-1.5" />
-                Produits & variantes
+              <Tabs.Tab id="variantes" className="px-4 whitespace-nowrap">
+                <span className="inline-flex items-center gap-1.5">
+                  <Package size={14} />
+                  Produits
+                </span>
               </Tabs.Tab>
               {ingredientsDisponible && (
-                <Tabs.Tab id="ingredients">
-                  <Wheat size={14} className="mr-1.5" />
-                  Ingrédients
+                <Tabs.Tab id="ingredients" className="px-4 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Wheat size={14} />
+                    Ingrédients
+                  </span>
                 </Tabs.Tab>
               )}
             </Tabs.List>
