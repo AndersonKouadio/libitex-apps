@@ -18,6 +18,7 @@ export const venteAPI = {
     }[];
     nomClient?: string;
     telephoneClient?: string;
+    note?: string;
   }) =>
     httpClient.post<ITicket>(`${BASE}/tickets`, data, { token }),
 

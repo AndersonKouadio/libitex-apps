@@ -5,12 +5,14 @@ import { toast } from "@heroui/react";
 import { venteAPI } from "../apis/vente.api";
 import { creerTicketSchema } from "../schemas/vente.schema";
 import { useInvalidateVenteQuery } from "../queries/index.query";
-import type { ArticlePanier, Remise } from "./usePanier";
+import type { ArticlePanier, Remise, ClientPanier } from "./usePanier";
 import type { ITicket } from "../types/vente.type";
 
 interface PanierActions {
   articles: ArticlePanier[];
   remiseGlobale: Remise | null;
+  note: string;
+  client: ClientPanier | null;
   vider: () => void;
 }
 
@@ -42,6 +44,9 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
       emplacementId: empId,
       remiseGlobale: panier.remiseGlobale?.montant ?? 0,
       raisonRemise: panier.remiseGlobale?.raison,
+      nomClient: panier.client?.nom,
+      telephoneClient: panier.client?.telephone,
+      note: panier.note || undefined,
       lignes: panier.articles.map((a) => ({
         varianteId: a.varianteId,
         quantite: a.quantite,
@@ -91,6 +96,9 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
         emplacementId: empId,
         remiseGlobale: panier.remiseGlobale?.montant ?? 0,
         raisonRemise: panier.remiseGlobale?.raison,
+        nomClient: panier.client?.nom,
+        telephoneClient: panier.client?.telephone,
+        note: panier.note || undefined,
         lignes: panier.articles.map((a) => ({
           varianteId: a.varianteId,
           quantite: a.quantite,

@@ -51,8 +51,8 @@ export function LignePanier({
   }
 
   return (
-    <li className="flex gap-3 p-3 group">
-      <div className="w-12 h-12 rounded-lg bg-surface-secondary overflow-hidden shrink-0">
+    <li className="flex gap-2.5 p-2.5 group">
+      <div className="w-10 h-10 rounded-md bg-surface-secondary overflow-hidden shrink-0">
         {article.image ? (
           <img
             src={article.image}
@@ -62,7 +62,7 @@ export function LignePanier({
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-muted/30">
-            <Package size={20} strokeWidth={2} />
+            <Package size={16} strokeWidth={2} />
           </div>
         )}
       </div>
@@ -73,18 +73,20 @@ export function LignePanier({
             <p className="text-sm font-medium text-foreground truncate leading-tight">
               {article.nomProduit}
             </p>
-            <p className="text-xs text-muted truncate mt-0.5">{article.nomVariante}</p>
-            {article.supplements.length > 0 ? (
-              <ul className="mt-1 space-y-0.5 pl-2 border-l-2 border-warning/30">
+            {article.nomVariante && article.nomVariante !== article.sku && (
+              <p className="text-[10px] text-muted truncate mt-0.5">{article.nomVariante}</p>
+            )}
+            {article.supplements.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
                 {article.supplements.map((s) => (
-                  <li key={s.supplementId} className="text-[10px] text-muted">
-                    + {s.nom}{s.quantite > 1 ? ` ×${s.quantite}` : ""}{" "}
-                    <span className="tabular-nums">({formatMontant(s.prixUnitaire * s.quantite)} F)</span>
-                  </li>
+                  <span
+                    key={s.supplementId}
+                    className="inline-flex items-center gap-0.5 text-[10px] text-warning bg-warning/10 px-1.5 py-0.5 rounded"
+                  >
+                    + {s.nom}{s.quantite > 1 && ` ×${s.quantite}`}
+                  </span>
                 ))}
-              </ul>
-            ) : (
-              <p className="text-[10px] text-muted/70 font-mono mt-0.5">{article.sku}</p>
+              </div>
             )}
           </div>
           <Button
@@ -93,7 +95,7 @@ export function LignePanier({
             onPress={() => onRetirer(article.varianteId)}
             aria-label={`Retirer ${article.nomProduit}`}
           >
-            <Trash2 size={16} strokeWidth={2} />
+            <Trash2 size={14} strokeWidth={2} />
           </Button>
         </div>
 
@@ -163,40 +165,40 @@ export function LignePanier({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {onPersonnaliser && (
-            <Button
-              variant="ghost"
-              className={`gap-1.5 text-xs font-medium px-2.5 py-1.5 h-auto min-w-0 rounded-md border transition-colors ${
-                article.supplements.length > 0
-                  ? "border-accent/40 bg-accent/10 text-accent hover:bg-accent/15"
-                  : "border-dashed border-accent/50 text-accent hover:bg-accent/10"
-              }`}
-              onPress={onPersonnaliser}
-              aria-label="Ajouter des suppléments"
-            >
-              <Sparkles size={13} strokeWidth={2.2} />
-              {article.supplements.length > 0
-                ? `Suppléments (${article.supplements.length})`
-                : "+ Supplément"}
-            </Button>
-          )}
-          {onAppliquerRemise && (
-            <Button
-              variant="ghost"
-              className={`gap-1.5 text-xs font-medium px-2.5 py-1.5 h-auto min-w-0 rounded-md border transition-colors ${
-                article.remise
-                  ? "border-warning/40 bg-warning/10 text-warning hover:bg-warning/15"
-                  : "border-dashed border-warning/50 text-warning hover:bg-warning/10"
-              }`}
-              onPress={onAppliquerRemise}
-              aria-label="Appliquer une remise"
-            >
-              <Tag size={13} strokeWidth={2.2} />
-              {article.remise ? "Remise" : "+ Remise"}
-            </Button>
-          )}
-        </div>
+        {(onPersonnaliser || onAppliquerRemise) && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {onPersonnaliser && (
+              <Button
+                variant="ghost"
+                className={`gap-1 text-[10px] font-medium px-1.5 py-0.5 h-auto min-w-0 rounded border transition-colors ${
+                  article.supplements.length > 0
+                    ? "border-accent/40 bg-accent/10 text-accent hover:bg-accent/15"
+                    : "border-dashed border-accent/40 text-accent hover:bg-accent/10"
+                }`}
+                onPress={onPersonnaliser}
+                aria-label="Ajouter des suppléments"
+              >
+                <Sparkles size={10} strokeWidth={2.2} />
+                {article.supplements.length > 0 ? `Suppléments (${article.supplements.length})` : "+ Supp."}
+              </Button>
+            )}
+            {onAppliquerRemise && (
+              <Button
+                variant="ghost"
+                className={`gap-1 text-[10px] font-medium px-1.5 py-0.5 h-auto min-w-0 rounded border transition-colors ${
+                  article.remise
+                    ? "border-warning/40 bg-warning/10 text-warning hover:bg-warning/15"
+                    : "border-dashed border-warning/40 text-warning hover:bg-warning/10"
+                }`}
+                onPress={onAppliquerRemise}
+                aria-label="Appliquer une remise"
+              >
+                <Tag size={10} strokeWidth={2.2} />
+                {article.remise ? "Remise" : "+ Remise"}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </li>
   );
