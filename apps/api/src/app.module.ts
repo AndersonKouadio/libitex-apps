@@ -13,7 +13,6 @@ import { UploadModule } from "./features/upload/upload.module";
 import { IngredientModule } from "./features/ingredient/ingredient.module";
 import { EquipeModule } from "./features/equipe/equipe.module";
 import { ClientModule } from "./features/client/client.module";
-import { SupplementModule } from "./features/supplement/supplement.module";
 
 @Module({
   imports: [
@@ -34,7 +33,6 @@ import { SupplementModule } from "./features/supplement/supplement.module";
     IngredientModule,
     EquipeModule,
     ClientModule,
-    SupplementModule,
   ],
 })
 export class AppModule {}

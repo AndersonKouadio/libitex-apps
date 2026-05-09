@@ -90,6 +90,34 @@ export class ProduitRepository {
     });
   }
 
+  /**
+   * Liste plusieurs produits par leurs ids (avec leur premiere variante chargee)
+   * dans le contexte du tenant. Utilise pour resoudre les supplements ajoutes
+   * a une commande au moment de la vente.
+   */
+  async listerParIdsAvecVariantes(tenantId: string, ids: string[]) {
+    if (ids.length === 0) return [];
+    const rows = await this.db.query.products.findMany({
+      where: and(
+        inArray(products.id, ids),
+        eq(products.tenantId, tenantId),
+        isNull(products.deletedAt),
+      ),
+    });
+    const allVariantes = await this.db.query.variants.findMany({
+      where: and(
+        inArray(variants.productId, rows.map((p) => p.id)),
+        isNull(variants.deletedAt),
+      ),
+    });
+    const parProduit = new Map<string, typeof allVariantes>();
+    for (const v of allVariantes) {
+      if (!parProduit.has(v.productId)) parProduit.set(v.productId, []);
+      parProduit.get(v.productId)!.push(v);
+    }
+    return rows.map((p) => ({ ...p, variantes: parProduit.get(p.id) ?? [] }));
+  }
+
   async modifierVariante(productId: string, varianteId: string, data: Partial<{
     sku: string;
     name: string;

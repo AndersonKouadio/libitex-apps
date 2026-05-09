@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { TicketRepository } from "./repositories/ticket.repository";
 import { StockService } from "../stock/stock.service";
 import { IngredientService } from "../ingredient/ingredient.service";
-import { SupplementService } from "../supplement/supplement.service";
+import { ProduitRepository } from "../catalogue/repositories/produit.repository";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import {
   RessourceIntrouvableException,
@@ -23,7 +23,7 @@ export class VenteService {
     private readonly ticketRepo: TicketRepository,
     private readonly stockService: StockService,
     private readonly ingredientService: IngredientService,
-    private readonly supplementService: SupplementService,
+    private readonly produitRepo: ProduitRepository,
     private readonly audit: AuditService,
   ) {}
 
@@ -326,6 +326,10 @@ export class VenteService {
   /**
    * Resout les supplements demandes (par id + quantite) en figeant leur nom et prix
    * au moment de la vente. Les changements de prix ulterieurs n'affectent pas le ticket.
+   *
+   * Depuis la refonte Option A, les supplements sont des produits avec
+   * isSupplement=true. L'id passe est l'id du produit ; le prix vient de sa
+   * premiere variante.
    */
   private async resoudreSupplements(
     tenantId: string,
@@ -333,16 +337,16 @@ export class VenteService {
   ): Promise<Array<{ supplementId: string; name: string; unitPrice: number; quantity: number }>> {
     if (demandes.length === 0) return [];
     const ids = demandes.map((d) => d.supplementId);
-    const supplements = await this.supplementService.listerParIds(tenantId, ids);
-    const parId = new Map(supplements.map((s) => [s.id, s]));
+    const produits = await this.produitRepo.listerParIdsAvecVariantes(tenantId, ids);
+    const parId = new Map(produits.map((p) => [p.id, p]));
     return demandes
       .map((d) => {
-        const s = parId.get(d.supplementId);
-        if (!s) return null;
+        const p = parId.get(d.supplementId);
+        if (!p || !p.variantes[0]) return null;
         return {
-          supplementId: s.id,
-          name: s.nom,
-          unitPrice: s.prix,
+          supplementId: p.id,
+          name: p.name,
+          unitPrice: Number(p.variantes[0].priceRetail ?? 0),
           quantity: d.quantite,
         };
       })
