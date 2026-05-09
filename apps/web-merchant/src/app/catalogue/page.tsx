@@ -14,7 +14,7 @@ import type { IProduit } from "@/features/catalogue/types/produit.type";
 import {
   Table, Chip, Button, Skeleton, SearchField, Input, Select, ListBox,
 } from "@heroui/react";
-import { Package, Plus, Pencil, AlertTriangle, Copy, Trash2, Folder, Upload } from "lucide-react";
+import { Package, Plus, Pencil, AlertTriangle, Copy, Trash2, Folder, Upload, ChevronUp, ChevronDown } from "lucide-react";
 import { useSupprimerProduitMutation } from "@/features/catalogue/queries/produit-delete.mutation";
 import { useConfirmation } from "@/providers/confirmation-provider";
 import { ToggleActifProduit } from "@/features/catalogue/components/toggle-actif-produit";
@@ -22,6 +22,28 @@ import { BarreActionsLot } from "@/features/catalogue/components/barre-actions-l
 
 function formatPrix(n: number) {
   return new Intl.NumberFormat("fr-FR").format(n);
+}
+
+type ColTri = "nom" | "typeProduit" | "variantes" | "prixDetail" | "actif";
+
+interface EtatTri { col: ColTri | null; ordre: "asc" | "desc" }
+
+function BoutonTri({
+  col, label, tri, onTri,
+}: { col: ColTri; label: string; tri: EtatTri; onTri: (c: ColTri) => void }) {
+  const actif = tri.col === col;
+  return (
+    <button
+      type="button"
+      onClick={() => onTri(col)}
+      className="flex items-center gap-1 hover:text-accent transition-colors w-full text-left"
+    >
+      {label}
+      {actif && (tri.ordre === "asc"
+        ? <ChevronUp size={12} className="text-accent" />
+        : <ChevronDown size={12} className="text-accent" />)}
+    </button>
+  );
 }
 
 const LABELS_TYPE: Record<string, { label: string; color: string }> = {
@@ -84,6 +106,18 @@ export default function PageCatalogue() {
   // gestion manuelle de la selection.
   const [selection, setSelection] = useState<Set<string>>(new Set());
 
+  // Tri front-only de la page courante. 3 etats : asc -> desc -> aucun.
+  // Pas de persistance URL pour l'instant (suffit le temps d'une recherche).
+  const [tri, setTri] = useState<{ col: ColTri | null; ordre: "asc" | "desc" }>({ col: null, ordre: "asc" });
+
+  function basculerTri(col: ColTri) {
+    setTri((prev) => {
+      if (prev.col !== col) return { col, ordre: "asc" };
+      if (prev.ordre === "asc") return { col, ordre: "desc" };
+      return { col: null, ordre: "asc" };
+    });
+  }
+
   function toggleLigne(id: string, selected: boolean) {
     setSelection((prev) => {
       const next = new Set(prev);
@@ -110,8 +144,31 @@ export default function PageCatalogue() {
     await supprimer.mutateAsync(p.id);
   }
 
-  const produits = data?.data ?? [];
+  const produitsBruts = data?.data ?? [];
   const meta = data?.meta;
+
+  const produits = useMemo(() => {
+    if (!tri.col) return produitsBruts;
+    const arr = [...produitsBruts];
+    const sens = tri.ordre === "asc" ? 1 : -1;
+    arr.sort((a, b) => {
+      const valeur = (p: IProduit) => {
+        switch (tri.col) {
+          case "nom": return p.nom.toLowerCase();
+          case "typeProduit": return p.typeProduit;
+          case "variantes": return p.variantes.length;
+          case "prixDetail": return p.variantes[0]?.prixDetail ?? 0;
+          case "actif": return p.actif ? 1 : 0;
+          default: return 0;
+        }
+      };
+      const va = valeur(a), vb = valeur(b);
+      if (va < vb) return -1 * sens;
+      if (va > vb) return 1 * sens;
+      return 0;
+    });
+    return arr;
+  }, [produitsBruts, tri]);
 
   // Filtre Type adapte au secteur d'activite : on ne montre que les types
   // que la boutique peut creer (RESTAURATION → SIMPLE+MENU, BIJOUTERIE →
@@ -288,11 +345,21 @@ export default function PageCatalogue() {
                     className="w-4 h-4 rounded border-border accent-accent cursor-pointer"
                   />
                 </Table.Column>
-                <Table.Column isRowHeader>Produit</Table.Column>
-                <Table.Column>Type</Table.Column>
-                <Table.Column>Variantes</Table.Column>
-                <Table.Column>Prix détail</Table.Column>
-                <Table.Column>Statut</Table.Column>
+                <Table.Column isRowHeader>
+                  <BoutonTri col="nom" label="Produit" tri={tri} onTri={basculerTri} />
+                </Table.Column>
+                <Table.Column>
+                  <BoutonTri col="typeProduit" label="Type" tri={tri} onTri={basculerTri} />
+                </Table.Column>
+                <Table.Column>
+                  <BoutonTri col="variantes" label="Variantes" tri={tri} onTri={basculerTri} />
+                </Table.Column>
+                <Table.Column>
+                  <BoutonTri col="prixDetail" label="Prix détail" tri={tri} onTri={basculerTri} />
+                </Table.Column>
+                <Table.Column>
+                  <BoutonTri col="actif" label="Statut" tri={tri} onTri={basculerTri} />
+                </Table.Column>
                 <Table.Column className="w-12"> </Table.Column>
               </Table.Header>
               <Table.Body>
