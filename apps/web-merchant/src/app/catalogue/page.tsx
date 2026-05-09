@@ -14,7 +14,9 @@ import type { IProduit } from "@/features/catalogue/types/produit.type";
 import {
   Table, Chip, Button, Skeleton, SearchField, Input, Select, ListBox,
 } from "@heroui/react";
-import { Package, Plus, Pencil, AlertTriangle, Copy } from "lucide-react";
+import { Package, Plus, Pencil, AlertTriangle, Copy, Trash2, Folder } from "lucide-react";
+import { useSupprimerProduitMutation } from "@/features/catalogue/queries/produit-delete.mutation";
+import { useConfirmation } from "@/providers/confirmation-provider";
 
 function formatPrix(n: number) {
   return new Intl.NumberFormat("fr-FR").format(n);
@@ -70,6 +72,18 @@ export default function PageCatalogue() {
     categorieId: filtreCategorie !== "all" ? filtreCategorie : undefined,
     actif: filtreStatut === "actif" ? true : filtreStatut === "inactif" ? false : undefined,
   });
+  const supprimer = useSupprimerProduitMutation();
+  const confirmer = useConfirmation();
+
+  async function handleSupprimer(p: IProduit) {
+    const ok = await confirmer({
+      titre: "Supprimer ce produit ?",
+      description: `« ${p.nom} » et ses ${p.variantes.length} variante${p.variantes.length > 1 ? "s" : ""} seront supprimés. L'historique de stock reste consultable mais le produit n'apparaît plus au POS.`,
+      actionLibelle: "Supprimer définitivement",
+    });
+    if (!ok) return;
+    await supprimer.mutateAsync(p.id);
+  }
 
   const produits = data?.data ?? [];
   const meta = data?.meta;
@@ -118,7 +132,8 @@ export default function PageCatalogue() {
 
       {categorieActive && (
         <div className="mb-3 flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-sm">
-          <span className="text-accent font-medium">📂 {categorieActive.nom}</span>
+          <Folder size={14} className="text-accent shrink-0" />
+          <span className="text-accent font-medium">{categorieActive.nom}</span>
           <span className="text-muted text-xs">
             {meta?.total ?? 0} produit{(meta?.total ?? 0) > 1 ? "s" : ""}
           </span>
@@ -311,6 +326,15 @@ export default function PageCatalogue() {
                               <Pencil size={14} />
                             </Button>
                           </Link>
+                          <Button
+                            variant="ghost"
+                            className="text-muted hover:text-danger p-1.5 h-auto min-w-0"
+                            onPress={() => handleSupprimer(p)}
+                            isDisabled={supprimer.isPending}
+                            aria-label={`Supprimer ${p.nom}`}
+                          >
+                            <Trash2 size={14} />
+                          </Button>
                         </div>
                       </Table.Cell>
                     </Table.Row>
