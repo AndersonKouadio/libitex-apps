@@ -10,8 +10,17 @@ echo "=== LIBITEX Deploy ==="
 echo "Composant: $COMPONENT"
 echo ""
 
-# Pull latest code
+# Pull latest code, et redemarre le script si lui-meme a change. Sans ce
+# re-exec, bash continue avec la version en memoire (ancien code) bien que
+# le fichier sur disque soit a jour.
+PRE_HASH=$(sha256sum "$0" | awk '{print $1}')
 git pull origin main
+POST_HASH=$(sha256sum "$0" | awk '{print $1}')
+if [ "$PRE_HASH" != "$POST_HASH" ] && [ -z "${LIBITEX_DEPLOY_REEXEC:-}" ]; then
+  echo ">> deploy.sh a change, redemarrage avec la version a jour..."
+  export LIBITEX_DEPLOY_REEXEC=1
+  exec "$0" "$@"
+fi
 
 # Check .env
 if [ ! -f .env ] && [[ "$COMPONENT" != "nginx" && "$COMPONENT" != "status" && "$COMPONENT" != "logs" ]]; then
