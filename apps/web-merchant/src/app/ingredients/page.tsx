@@ -2,34 +2,33 @@
 
 import { useState } from "react";
 import { Button, Table, Chip, Card, Skeleton } from "@heroui/react";
-import { Plus, PackagePlus, Wheat, AlertTriangle, MapPin, Pencil, Trash2 } from "lucide-react";
+import { Plus, Wheat, Pencil, Trash2, ArrowUpRight } from "lucide-react";
+import Link from "next/link";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { NavCatalogue } from "@/components/layout/nav-catalogue";
 import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
-import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
-import {
-  useIngredientListQuery,
-  useStockIngredientsQuery,
-} from "@/features/ingredient/queries/ingredient-list.query";
+import { useIngredientListQuery } from "@/features/ingredient/queries/ingredient-list.query";
 import { useSupprimerIngredientMutation } from "@/features/ingredient/queries/ingredient-mutations";
 import { ModalIngredient } from "@/features/ingredient/components/modal-ingredient";
-import { ModalReceptionIngredient } from "@/features/ingredient/components/modal-reception-ingredient";
 import type { IIngredient } from "@/features/ingredient/types/ingredient.type";
 import { UNITE_LABELS } from "@/features/unite/types/unite.type";
 import { useConfirmation } from "@/providers/confirmation-provider";
 
+/**
+ * Page Catalogue / Ingredients : fiche pure (nom, unite de base, cout, seuil
+ * d'alerte). La gestion du stock (reception, ajustement, vue par emplacement)
+ * a deplace dans /stock onglet "Ingredients" pour separer clairement le
+ * "quoi" (catalogue) du "combien" (stock).
+ */
 export default function PageIngredients() {
   const { data: boutique } = useBoutiqueActiveQuery();
-  const { data: emplacements } = useEmplacementListQuery();
   const { data: ingredients, isLoading } = useIngredientListQuery();
   const supprimer = useSupprimerIngredientMutation();
   const confirmer = useConfirmation();
 
-  const [empSelectionne, setEmpSelectionne] = useState("");
   const [modalIngredientOuvert, setModalIngredientOuvert] = useState(false);
   const [enEdition, setEnEdition] = useState<IIngredient | null>(null);
-  const [modalReceptionOuvert, setModalReceptionOuvert] = useState(false);
 
   function ouvrirCreation() {
     setEnEdition(null);
@@ -50,11 +49,6 @@ export default function PageIngredients() {
     if (!ok) return;
     await supprimer.mutateAsync(i.id);
   }
-
-  const empActif = empSelectionne || emplacements?.[0]?.id || "";
-  const { data: stocks } = useStockIngredientsQuery(empActif || undefined);
-
-  const stockMap = new Map((stocks ?? []).map((s) => [s.ingredientId, s]));
 
   // Garde-fou : module ingrédients réservé aux secteurs concernés (restauration, etc.)
   const secteur = boutique?.secteurActivite;
@@ -84,151 +78,116 @@ export default function PageIngredients() {
       <NavCatalogue />
       <PageHeader
         titre={`${(ingredients ?? []).length} ingrédient${(ingredients ?? []).length > 1 ? "s" : ""}`}
-        description="Matières premières en grammes ou litres. Les menus consomment leurs ingrédients à chaque vente selon la recette définie."
+        description="Définissez vos matières premières (nom, unité, coût, seuil). Le stock par emplacement se gère dans Stock."
         actions={
           <>
-            <Button variant="ghost" className="gap-1.5" onPress={() => ouvrirCreation()}>
+            <Link href="/stock">
+              <Button variant="ghost" className="gap-1.5 text-xs">
+                <ArrowUpRight size={14} />
+                Voir le stock
+              </Button>
+            </Link>
+            <Button variant="primary" className="gap-1.5" onPress={() => ouvrirCreation()}>
               <Plus size={16} />
               Ingrédient
-            </Button>
-            <Button variant="primary" className="gap-1.5" onPress={() => setModalReceptionOuvert(true)}>
-              <PackagePlus size={16} />
-              Réceptionner
             </Button>
           </>
         }
       />
 
-        {(emplacements?.length ?? 0) > 1 && (
-          <div className="flex items-center gap-2 mb-4 flex-wrap">
-            <span className="text-xs font-medium text-muted">Stock à :</span>
-            {(emplacements ?? []).map((e) => {
-              const actif = empActif === e.id;
-              return (
-                <Button
-                  key={e.id}
-                  variant={actif ? "primary" : "ghost"}
-                  className="gap-1.5 text-xs"
-                  onPress={() => setEmpSelectionne(e.id)}
-                >
-                  <MapPin size={12} />
-                  {e.nom}
-                </Button>
-              );
-            })}
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
-          </div>
-        ) : (ingredients ?? []).length === 0 ? (
-          <Card>
-            <Card.Content className="py-16 text-center">
-              <Wheat size={32} className="text-muted/30 mx-auto mb-3" />
-              <p className="text-sm font-medium text-foreground">Aucun ingrédient</p>
-              <p className="text-sm text-muted mt-1 mb-4">
-                Commencez par déclarer vos matières premières (farine, huile, viandes, légumes...)
-              </p>
-              <Button variant="primary" className="gap-1.5" onPress={() => ouvrirCreation()}>
-                <Plus size={16} />
-                Créer un ingrédient
-              </Button>
-            </Card.Content>
-          </Card>
-        ) : (
-          <Table>
-            <Table.ScrollContainer>
-              <Table.Content aria-label="Ingrédients">
-                <Table.Header className="table-header-libitex">
-                  <Table.Column isRowHeader>Ingrédient</Table.Column>
-                  <Table.Column>Unité</Table.Column>
-                  <Table.Column>Stock actuel</Table.Column>
-                  <Table.Column>Seuil alerte</Table.Column>
-                  <Table.Column>Coût unitaire</Table.Column>
-                  <Table.Column className="w-20"> </Table.Column>
-                </Table.Header>
-                <Table.Body>
-                  {(ingredients ?? []).map((i) => {
-                    const stock = stockMap.get(i.id);
-                    const enAlerte = stock?.enAlerte ?? false;
-                    return (
-                      <Table.Row key={i.id}>
-                        <Table.Cell>
-                          <div className="flex items-center gap-2">
-                            <span className="w-8 h-8 rounded-lg bg-warning/10 text-warning flex items-center justify-center shrink-0">
-                              <Wheat size={14} />
-                            </span>
-                            <div>
-                              <p className="text-sm font-medium text-foreground">{i.nom}</p>
-                              {i.description && (
-                                <p className="text-xs text-muted truncate max-w-xs">{i.description}</p>
-                              )}
-                            </div>
-                          </div>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <Chip className="text-xs">{UNITE_LABELS[i.unite]}</Chip>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <span className={`text-sm font-semibold tabular-nums flex items-center gap-1 ${
-                            enAlerte ? "text-warning" : "text-foreground"
-                          }`}>
-                            {enAlerte && <AlertTriangle size={12} />}
-                            {stock?.quantite.toLocaleString("fr-FR", { maximumFractionDigits: 3 }) ?? "0"}
-                            <span className="text-[10px] font-normal text-muted ml-0.5">
-                              {UNITE_LABELS[i.unite]}
-                            </span>
-                          </span>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <span className="text-xs text-muted tabular-nums">
-                            {i.seuilAlerte > 0 ? `${i.seuilAlerte} ${UNITE_LABELS[i.unite]}` : "—"}
-                          </span>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <span className="text-sm font-medium tabular-nums">
-                            {i.prixUnitaire > 0
-                              ? `${i.prixUnitaire.toLocaleString("fr-FR")} F / ${UNITE_LABELS[i.unite]}`
-                              : "—"}
-                          </span>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <div className="flex items-center gap-0.5 justify-end">
-                            <Button
-                              variant="ghost"
-                              className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
-                              aria-label={`Modifier ${i.nom}`}
-                              onPress={() => ouvrirEdition(i)}
-                            >
-                              <Pencil size={14} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              className="text-muted hover:text-danger p-1.5 h-auto min-w-0"
-                              aria-label={`Supprimer ${i.nom}`}
-                              onPress={() => handleSupprimer(i)}
-                            >
-                              <Trash2 size={14} />
-                            </Button>
-                          </div>
-                        </Table.Cell>
-                      </Table.Row>
-                    );
-                  })}
-                </Table.Body>
-              </Table.Content>
-            </Table.ScrollContainer>
-          </Table>
-        )}
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
+        </div>
+      ) : (ingredients ?? []).length === 0 ? (
+        <Card>
+          <Card.Content className="py-16 text-center">
+            <Wheat size={32} className="text-muted/30 mx-auto mb-3" />
+            <p className="text-sm font-medium text-foreground">Aucun ingrédient</p>
+            <p className="text-sm text-muted mt-1 mb-4">
+              Commencez par déclarer vos matières premières (farine, huile, viandes, légumes...)
+            </p>
+            <Button variant="primary" className="gap-1.5" onPress={() => ouvrirCreation()}>
+              <Plus size={16} />
+              Créer un ingrédient
+            </Button>
+          </Card.Content>
+        </Card>
+      ) : (
+        <Table>
+          <Table.ScrollContainer>
+            <Table.Content aria-label="Ingrédients">
+              <Table.Header className="table-header-libitex">
+                <Table.Column isRowHeader>Ingrédient</Table.Column>
+                <Table.Column>Unité de base</Table.Column>
+                <Table.Column>Seuil d'alerte</Table.Column>
+                <Table.Column>Coût unitaire</Table.Column>
+                <Table.Column className="w-20"> </Table.Column>
+              </Table.Header>
+              <Table.Body>
+                {(ingredients ?? []).map((i) => (
+                  <Table.Row key={i.id}>
+                    <Table.Cell>
+                      <div className="flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-lg bg-warning/10 text-warning flex items-center justify-center shrink-0">
+                          <Wheat size={14} />
+                        </span>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{i.nom}</p>
+                          {i.description && (
+                            <p className="text-xs text-muted truncate max-w-xs">{i.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Chip className="text-xs">{UNITE_LABELS[i.unite]}</Chip>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <span className="text-xs text-muted tabular-nums">
+                        {i.seuilAlerte > 0 ? `${i.seuilAlerte} ${UNITE_LABELS[i.unite]}` : "—"}
+                      </span>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <span className="text-sm font-medium tabular-nums">
+                        {i.prixUnitaire > 0
+                          ? `${i.prixUnitaire.toLocaleString("fr-FR")} F / ${UNITE_LABELS[i.unite]}`
+                          : "—"}
+                      </span>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <div className="flex items-center gap-0.5 justify-end">
+                        <Button
+                          variant="ghost"
+                          className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
+                          aria-label={`Modifier ${i.nom}`}
+                          onPress={() => ouvrirEdition(i)}
+                        >
+                          <Pencil size={14} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="text-muted hover:text-danger p-1.5 h-auto min-w-0"
+                          aria-label={`Supprimer ${i.nom}`}
+                          onPress={() => handleSupprimer(i)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Content>
+          </Table.ScrollContainer>
+        </Table>
+      )}
 
       <ModalIngredient
         ouvert={modalIngredientOuvert}
         ingredient={enEdition}
         onFermer={() => setModalIngredientOuvert(false)}
       />
-      <ModalReceptionIngredient ouvert={modalReceptionOuvert} onFermer={() => setModalReceptionOuvert(false)} />
     </PageContainer>
   );
 }
