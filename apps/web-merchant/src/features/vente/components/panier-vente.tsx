@@ -92,37 +92,53 @@ export function PanierVente({
         )}
       </header>
 
-      {/* Barre meta : Client + Note (compacte, juste sous le header) */}
+      {/* Barre meta : Client + Note (visible, juste sous le header) */}
       {!vide && (onChoisirClient || onModifierNote) && (
-        <div className="px-3 py-2 border-b border-border bg-muted/5 space-y-1.5">
+        <div className="px-3 py-2.5 border-b border-border bg-muted/10 space-y-2">
           {onChoisirClient && (
             <button
               type="button"
               onClick={onChoisirClient}
-              className="w-full flex items-center gap-2 text-xs text-muted hover:text-foreground transition-colors"
+              className={`w-full flex items-center gap-2.5 text-sm rounded-md px-2 py-1.5 transition-colors ${
+                client
+                  ? "bg-accent/10 text-accent hover:bg-accent/15"
+                  : "text-muted hover:text-foreground hover:bg-foreground/5 border border-dashed border-border"
+              }`}
             >
-              <User size={12} />
+              <User size={15} strokeWidth={2} className="shrink-0" />
               {client ? (
-                <span className="truncate text-foreground font-medium">
+                <span className="truncate font-medium flex-1 text-left">
                   {client.nom ?? client.telephone ?? "Client"}
                   {client.telephone && client.nom && (
-                    <span className="text-muted ml-1.5 font-normal">· {client.telephone}</span>
+                    <span className="text-accent/70 ml-1.5 font-normal text-xs">· {client.telephone}</span>
                   )}
                 </span>
               ) : (
-                <span>Associer un client</span>
+                <span className="font-medium">+ Associer un client</span>
               )}
             </button>
           )}
           {onModifierNote && (
-            <div className="flex items-center gap-2">
-              <StickyNote size={12} className="text-muted shrink-0" />
+            <div
+              className={`flex items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors ${
+                note
+                  ? "bg-warning/10 border border-warning/30"
+                  : "border border-dashed border-border focus-within:border-foreground/30"
+              }`}
+            >
+              <StickyNote
+                size={15}
+                strokeWidth={2}
+                className={`shrink-0 ${note ? "text-warning" : "text-muted"}`}
+              />
               <input
                 type="text"
                 value={note}
                 onChange={(e) => onModifierNote(e.target.value)}
-                placeholder="Note (Table 3, A emporter...)"
-                className="flex-1 text-xs bg-transparent outline-none text-foreground placeholder:text-muted/60"
+                placeholder="+ Ajouter une note (Table 3, A emporter...)"
+                className={`flex-1 text-sm bg-transparent outline-none placeholder:text-muted ${
+                  note ? "text-warning font-medium" : "text-foreground"
+                }`}
                 maxLength={120}
               />
             </div>
