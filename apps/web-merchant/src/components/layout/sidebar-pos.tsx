@@ -1,11 +1,13 @@
 "use client";
 
 import { Avatar } from "@heroui/react";
-import { PauseCircle, Receipt, BarChart3 } from "lucide-react";
+import { PauseCircle, Receipt, BarChart3, Lock, History } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useKpisQuery } from "@/features/tableau-de-bord/queries/kpis.query";
 import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
+import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
+import { useSessionActiveQuery } from "@/features/session-caisse/queries/session-active.query";
 import { formatMontant } from "@/features/vente/utils/format";
 
 interface Props {
@@ -34,6 +36,13 @@ export function SidebarPOS({ replie }: Props) {
     (parkedData?.data ?? []).filter((t) => t.statut === "PARKED").length +
     (openData?.data ?? []).filter((t) => t.statut === "OPEN").length;
 
+  // Session active sur l'emplacement par defaut (premier STORE). Si le caissier
+  // change d'emplacement dans le POS, ce bloc reflete la session du store
+  // primaire — limitation acceptee pour V1, evite un store global d'emplacement.
+  const { data: emplacements } = useEmplacementListQuery();
+  const empParDefaut = (emplacements ?? []).find((e) => e.type === "STORE");
+  const { data: sessionActive } = useSessionActiveQuery(empParDefaut?.id ?? null);
+
   if (replie) {
     return (
       <nav className="flex-1 px-2.5 py-3 space-y-1.5">
@@ -61,18 +70,29 @@ export function SidebarPOS({ replie }: Props) {
   }
 
   const initiales = `${utilisateur?.prenom?.[0] ?? ""}${utilisateur?.nomFamille?.[0] ?? ""}`;
-  const heureSession = nouvelleHeure();
+  const heureOuverture = sessionActive
+    ? formatHeure(sessionActive.ouvertA)
+    : null;
 
   return (
     <nav className="flex-1 px-3 py-3 space-y-4 overflow-y-auto">
-      {/* Caissier connecte */}
+      {/* Caissier connecte + session */}
       <div className="flex items-center gap-2.5 px-1">
         <Avatar className="bg-accent text-accent-foreground text-xs font-semibold w-9 h-9">
           {initiales || "•"}
         </Avatar>
         <div className="min-w-0 flex-1">
           <p className="text-sm text-white truncate">{utilisateur?.prenom} {utilisateur?.nomFamille}</p>
-          <p className="text-[10px] text-white/55">Session ouverte · {heureSession}</p>
+          {sessionActive ? (
+            <p className="text-[10px] text-white/55 truncate">
+              <span className="font-mono">{sessionActive.numeroSession}</span>
+              {heureOuverture && <> · ouv. {heureOuverture}</>}
+            </p>
+          ) : (
+            <p className="text-[10px] text-warning/80 flex items-center gap-1">
+              <Lock size={9} /> Caisse fermee
+            </p>
+          )}
         </div>
       </div>
 
@@ -114,12 +134,21 @@ export function SidebarPOS({ replie }: Props) {
             Historique des ventes
           </Link>
           <Link
-            href="/rapports"
+            href="/sessions-caisse"
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-white/65 hover:text-white hover:bg-white/5 transition-colors"
           >
-            <BarChart3 size={16} strokeWidth={1.5} />
-            Rapport Z
+            <History size={16} strokeWidth={1.5} />
+            Historique sessions
           </Link>
+          {sessionActive && (
+            <Link
+              href={`/pos?fermer=${Date.now()}`}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-warning/80 hover:text-warning hover:bg-warning/5 transition-colors"
+            >
+              <Lock size={16} strokeWidth={1.5} />
+              Fermer la caisse
+            </Link>
+          )}
         </div>
       </div>
     </nav>
@@ -135,10 +164,7 @@ function KpiLigne({ libelle, valeur }: { libelle: string; valeur: string }) {
   );
 }
 
-function nouvelleHeure(): string {
-  // Approximation : on n'a pas encore de session de caisse formelle, donc on
-  // affiche juste l'heure courante (rafraichie a chaque render). Sera remplace
-  // quand la session formelle sera implementee (Phase 1.5).
-  const d = new Date();
+function formatHeure(iso: string): string {
+  const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }

@@ -1,15 +1,17 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Inject, forwardRef } from "@nestjs/common";
 import { TicketRepository } from "./repositories/ticket.repository";
 import { StockService } from "../stock/stock.service";
 import { IngredientService } from "../ingredient/ingredient.service";
 import { ProduitRepository } from "../catalogue/repositories/produit.repository";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
+import { CashSessionRepository } from "../session-caisse/repositories/cash-session.repository";
 import {
   RessourceIntrouvableException,
   PaiementInsuffisantException,
   TicketNonModifiableException,
   NumeroSerieObligatoireException,
   LotIndisponibleException,
+  SessionCaisseRequiseException,
 } from "../../common/exceptions/metier.exception";
 import {
   CreerTicketDto, CompleterTicketDto,
@@ -25,15 +27,24 @@ export class VenteService {
     private readonly ingredientService: IngredientService,
     private readonly produitRepo: ProduitRepository,
     private readonly audit: AuditService,
+    @Inject(forwardRef(() => CashSessionRepository))
+    private readonly sessionRepo: CashSessionRepository,
   ) {}
 
   // --- Creer un ticket (ouvert) ---
 
   async creerTicket(tenantId: string, userId: string, dto: CreerTicketDto): Promise<TicketResponseDto> {
+    // Garde session : refuser si pas de session ouverte du caissier
+    // sur l'emplacement concerne. Toute vente est rattachee.
+    const session = await this.sessionRepo.trouverActive(tenantId, userId, dto.emplacementId);
+    if (!session) throw new SessionCaisseRequiseException();
+
     const numeroTicket = await this.genererNumeroTicket(tenantId);
 
     const ticket = await this.ticketRepo.creerTicket({
-      tenantId, locationId: dto.emplacementId, userId, ticketNumber: numeroTicket,
+      tenantId, locationId: dto.emplacementId, userId,
+      sessionId: session.id,
+      ticketNumber: numeroTicket,
       customerName: dto.nomClient, customerPhone: dto.telephoneClient, note: dto.note,
     });
 
@@ -120,6 +131,15 @@ export class VenteService {
     if (!ticket) throw new RessourceIntrouvableException("Ticket", ticketId);
     if (ticket.status !== "OPEN" && ticket.status !== "PARKED") {
       throw new TicketNonModifiableException(ticket.status);
+    }
+
+    // Auto-rattach : si le ticket flotte (sessionId null parce que reporte
+    // d'une ancienne session), on le rattache a la session active du
+    // caissier qui l'encaisse maintenant.
+    if (!ticket.sessionId) {
+      const session = await this.sessionRepo.trouverActive(tenantId, userId, ticket.locationId);
+      if (!session) throw new SessionCaisseRequiseException();
+      await this.ticketRepo.rattacherSession(ticket.id, session.id);
     }
 
     const totalPaye = dto.paiements.reduce((sum, p) => sum + p.montant, 0);
@@ -221,6 +241,22 @@ export class VenteService {
     return this.mapTicket(voided, lignes.map(this.mapLigne), []);
   }
 
+  // --- Reporter a la prochaine session (uniquement PARKED) ---
+  // Detache le ticket de sa session actuelle. Au prochain Reprendre par un
+  // caissier dont la session est ouverte sur le meme emplacement, il sera
+  // rattache automatiquement (cf. completerTicket).
+
+  async reporter(tenantId: string, ticketId: string): Promise<TicketResponseDto> {
+    const ticket = await this.ticketRepo.obtenirParId(tenantId, ticketId);
+    if (!ticket) throw new RessourceIntrouvableException("Ticket", ticketId);
+    if (ticket.status !== "PARKED") throw new TicketNonModifiableException(ticket.status);
+
+    await this.ticketRepo.detacherSession(ticketId);
+    const ticketMaj = await this.ticketRepo.obtenirParId(tenantId, ticketId);
+    const lignes = await this.ticketRepo.obtenirLignes(ticketId);
+    return this.mapTicket(ticketMaj, lignes.map(this.mapLigne), []);
+  }
+
   // --- Obtenir un ticket ---
 
   async obtenirTicket(tenantId: string, ticketId: string): Promise<TicketResponseDto> {
@@ -248,15 +284,20 @@ export class VenteService {
     return PaginatedResponseDto.create(items, total, page, limit);
   }
 
-  // --- Rapport Z ---
+  // --- Rapport Z d'une session ---
 
-  async rapportZ(tenantId: string, emplacementId: string, date?: string): Promise<RapportZResponseDto> {
-    const targetDate = date || new Date().toISOString().split("T")[0];
-    const { summary, paymentBreakdown } = await this.ticketRepo.rapportZ(tenantId, emplacementId, targetDate);
+  async rapportZ(tenantId: string, sessionId: string): Promise<RapportZResponseDto> {
+    const session = await this.sessionRepo.obtenirParId(tenantId, sessionId);
+    if (!session) throw new RessourceIntrouvableException("Session caisse", sessionId);
+
+    const { summary, paymentBreakdown } = await this.ticketRepo.rapportZParSession(tenantId, sessionId);
 
     return {
-      date: targetDate,
-      emplacementId,
+      sessionId,
+      numeroSession: session.sessionNumber,
+      emplacementId: session.locationId,
+      ouvertA: session.openedAt.toISOString(),
+      fermeA: session.closedAt?.toISOString() ?? null,
       resume: {
         totalTickets: Number(summary.totalTickets ?? 0),
         chiffreAffaires: Number(summary.totalRevenue ?? 0),

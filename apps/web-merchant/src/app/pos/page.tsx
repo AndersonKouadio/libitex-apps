@@ -3,9 +3,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  Select, ListBox, Label, Button, Chip, Drawer, Modal,
+  Select, ListBox, Label, Button, Chip, Drawer, Modal, Spinner,
 } from "@heroui/react";
-import { ShoppingCart, PauseCircle, X } from "lucide-react";
+import { ShoppingCart, PauseCircle, X, Lock } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
 import { estDisponibleMaintenant } from "@/features/catalogue/utils/disponibilite";
@@ -25,6 +25,9 @@ import { ModalSupplements } from "@/features/vente/components/modal-supplements"
 import { useSaisieQuantite } from "@/features/vente/hooks/useSaisieQuantite";
 import { useEncaissement } from "@/features/vente/hooks/useEncaissement";
 import { formatMontant } from "@/features/vente/utils/format";
+import { useSessionActiveQuery } from "@/features/session-caisse/queries/session-active.query";
+import { FormulaireOuvertureCaisse } from "@/features/session-caisse/components/formulaire-ouverture-caisse";
+import { ModalFermetureCaisse } from "@/features/session-caisse/components/modal-fermeture-caisse";
 
 export default function PagePOS() {
   const { token } = useAuth();
@@ -41,17 +44,25 @@ export default function PagePOS() {
   const [panierMobileOuvert, setPanierMobileOuvert] = useState(false);
   const [modalEmpOuvert, setModalEmpOuvert] = useState(false);
   const [modalAttenteOuvert, setModalAttenteOuvert] = useState(false);
+  const [modalFermetureOuvert, setModalFermetureOuvert] = useState(false);
 
-  // La sidebar POS pousse ?attente=<timestamp> dans l'URL pour ouvrir la
-  // modale tickets en attente. Le timestamp force le re-fire du useEffect a
-  // chaque clic meme si on est deja sur /pos.
+  // La sidebar POS pousse ?attente=<timestamp> ou ?fermer=<timestamp> dans
+  // l'URL pour ouvrir la modale correspondante. Le timestamp force le re-fire
+  // du useEffect a chaque clic meme si on est deja sur /pos.
   const attenteParam = searchParams.get("attente");
+  const fermerParam = searchParams.get("fermer");
   useEffect(() => {
     if (attenteParam) {
       setModalAttenteOuvert(true);
       router.replace("/pos");
     }
   }, [attenteParam, router]);
+  useEffect(() => {
+    if (fermerParam) {
+      setModalFermetureOuvert(true);
+      router.replace("/pos");
+    }
+  }, [fermerParam, router]);
 
   // Le POS ne propose que les emplacements de type STORE (boutique). Les
   // entrepots, stands, camions etc. peuvent contenir du stock mais ne servent
@@ -62,7 +73,9 @@ export default function PagePOS() {
   );
   const aucunEmplacement = emplacements !== undefined && emplacementsCaisse.length === 0;
   const empId = emplacementId || emplacementsCaisse[0]?.id || "";
+  const empCourant = emplacementsCaisse.find((e) => e.id === empId);
   const { data: stocks } = useStockEmplacementQuery(empId || undefined);
+  const { data: sessionActive, isLoading: chargementSession } = useSessionActiveQuery(empId || null);
   const tousLesProduits = produitsData?.data ?? [];
   // Filtre actif : produit actif + en stock + plage horaire valide + emplacement autorise.
   // Le filtrage est fait cote front pour eviter un round-trip a chaque tap, et reactif
@@ -115,6 +128,54 @@ export default function PagePOS() {
     );
   }
 
+  // Garde session caisse : tant que rien n'est ouvert sur l'emplacement
+  // courant, on bloque la vente et on demande au caissier d'ouvrir la caisse
+  // (declarer le fond initial).
+  if (empId && !chargementSession && !sessionActive) {
+    return (
+      <div className="flex h-screen overflow-hidden">
+        <div className="flex-1 flex flex-col bg-surface-secondary overflow-y-auto">
+          <header className="flex items-center justify-between gap-2 px-3 sm:px-4 border-b border-border bg-surface shrink-0 safe-top">
+            <div className="h-14 flex items-center gap-2 min-w-0">
+              <ShoppingCart size={18} className="text-accent shrink-0" />
+              <span className="font-semibold text-foreground text-sm sm:text-base">Caisse</span>
+              <Chip className="bg-warning/10 text-warning text-[10px] gap-1 ml-1">
+                <Lock size={10} /> Fermee
+              </Chip>
+            </div>
+            {(emplacementsCaisse ?? []).length > 1 && (
+              <Select
+                selectedKey={empId}
+                onSelectionChange={(key) => setEmplacementId(String(key))}
+                aria-label="Emplacement de caisse"
+                className="min-w-[140px] sm:min-w-[180px]"
+              >
+                <Label className="sr-only">Emplacement</Label>
+                <Select.Trigger>
+                  <Select.Value />
+                  <Select.Indicator />
+                </Select.Trigger>
+                <Select.Popover>
+                  <ListBox>
+                    {emplacementsCaisse.map((e) => (
+                      <ListBox.Item key={e.id} id={e.id} textValue={e.nom}>
+                        {e.nom}
+                      </ListBox.Item>
+                    ))}
+                  </ListBox>
+                </Select.Popover>
+              </Select>
+            )}
+          </header>
+          <FormulaireOuvertureCaisse
+            emplacementId={empId}
+            emplacementNom={empCourant?.nom ?? "Emplacement"}
+          />
+        </div>
+      </div>
+    );
+  }
+
   const ouvrirEncaissement = () => {
     setPanierMobileOuvert(false);
     setPaiementOuvert(true);
@@ -127,6 +188,11 @@ export default function PagePOS() {
           <div className="h-14 flex items-center gap-2 min-w-0">
             <ShoppingCart size={18} className="text-accent shrink-0" />
             <span className="font-semibold text-foreground text-sm sm:text-base">Caisse</span>
+            {sessionActive && (
+              <Chip className="bg-success/10 text-success text-[10px] font-mono ml-1 hidden sm:inline-flex">
+                {sessionActive.numeroSession}
+              </Chip>
+            )}
           </div>
           <div className="h-14 flex items-center gap-1 sm:gap-2 shrink-0">
             {(emplacementsCaisse ?? []).length > 0 && (
@@ -151,6 +217,16 @@ export default function PagePOS() {
                   </ListBox>
                 </Select.Popover>
               </Select>
+            )}
+            {sessionActive && (
+              <Button
+                variant="outline"
+                className="h-9 px-3 gap-1.5 text-xs text-danger border-danger/30 hover:bg-danger/5"
+                onPress={() => setModalFermetureOuvert(true)}
+              >
+                <Lock size={14} strokeWidth={2} />
+                <span className="hidden sm:inline">Fermer la caisse</span>
+              </Button>
             )}
           </div>
         </header>
@@ -301,6 +377,12 @@ export default function PagePOS() {
           onFermer={() => setLigneSupplements(null)}
         />
       )}
+
+      <ModalFermetureCaisse
+        ouvert={modalFermetureOuvert}
+        sessionId={sessionActive?.id ?? null}
+        onFermer={() => setModalFermetureOuvert(false)}
+      />
     </div>
   );
 }
