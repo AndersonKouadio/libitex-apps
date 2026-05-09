@@ -2,14 +2,14 @@ import { z } from "zod";
 import { UniteMesure } from "@/features/unite/types/unite.type";
 
 export const creerVarianteSchema = z.object({
-  sku: z.string().min(1, "SKU requis"),
+  sku: z.string({ message: "SKU requis" }).min(1, "SKU requis"),
   nom: z.string().optional(),
   attributs: z.record(z.string(), z.string()).optional(),
   codeBarres: z.string().optional(),
-  prixAchat: z.number().min(0).optional(),
-  prixDetail: z.number().min(0, "Prix de détail requis"),
-  prixGros: z.number().min(0).optional(),
-  prixVip: z.number().min(0).optional(),
+  prixAchat: z.number({ message: "Prix d'achat invalide" }).min(0).optional(),
+  prixDetail: z.number({ message: "Prix de détail requis" }).min(0, "Prix de détail requis"),
+  prixGros: z.number({ message: "Prix de gros invalide" }).min(0).optional(),
+  prixVip: z.number({ message: "Prix VIP invalide" }).min(0).optional(),
   uniteVente: z.nativeEnum(UniteMesure).optional(),
   pasMin: z.number().min(0, "Pas minimum invalide").optional(),
   prixParUnite: z.boolean().optional(),
@@ -26,7 +26,8 @@ export const planningDisponibiliteSchema = z.record(z.string(), z.array(plageHor
 export const modeDisponibiliteSchema = z.enum(["TOUJOURS", "PROGRAMME"]);
 
 export const creerProduitSchema = z.object({
-  nom: z.string().min(2, "Nom du produit requis (2 caractères min.)"),
+  nom: z.string({ message: "Nom du produit requis (2 caractères min.)" })
+    .min(2, "Nom du produit requis (2 caractères min.)"),
   description: z.string().optional(),
   typeProduit: z.enum(["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE", "MENU"]),
   categorieId: z.string().optional(),
