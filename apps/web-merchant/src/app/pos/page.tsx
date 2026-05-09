@@ -30,7 +30,9 @@ export default function PagePOS() {
   const { token } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: produitsData } = useProduitListQuery(1);
+  // POS : charger TOUS les produits (vrais + supplements) pour pouvoir vendre
+  // n'importe quel article a la commande. Filtrage par categorie cote front.
+  const { data: produitsData } = useProduitListQuery(1, undefined, { isSupplement: null });
   const { data: emplacements } = useEmplacementListQuery();
   const panier = usePanier();
 
@@ -49,8 +51,15 @@ export default function PagePOS() {
     }
   }, [searchParams, router]);
 
-  const aucunEmplacement = emplacements !== undefined && emplacements.length === 0;
-  const empId = emplacementId || emplacements?.[0]?.id || "";
+  // Le POS ne propose que les emplacements de type STORE (boutique). Les
+  // entrepots, stands, camions etc. peuvent contenir du stock mais ne servent
+  // pas a vendre directement.
+  const emplacementsCaisse = useMemo(
+    () => (emplacements ?? []).filter((e) => e.type === "STORE"),
+    [emplacements],
+  );
+  const aucunEmplacement = emplacements !== undefined && emplacementsCaisse.length === 0;
+  const empId = emplacementId || emplacementsCaisse[0]?.id || "";
   const { data: stocks } = useStockEmplacementQuery(empId || undefined);
   const tousLesProduits = produitsData?.data ?? [];
   // Filtre actif : produit actif + en stock + plage horaire valide + emplacement autorise.
@@ -118,21 +127,7 @@ export default function PagePOS() {
             <span className="font-semibold text-foreground text-sm sm:text-base">Caisse</span>
           </div>
           <div className="h-14 flex items-center gap-1 sm:gap-2 shrink-0">
-            <Button
-              variant="ghost"
-              className="gap-1.5 text-muted hover:text-warning relative px-2 sm:px-3"
-              onPress={() => setModalAttenteOuvert(true)}
-              aria-label="Tickets en attente"
-            >
-              <PauseCircle size={18} strokeWidth={2} />
-              <span className="hidden sm:inline">Attente</span>
-              {nombreEnAttente > 0 && (
-                <Chip className="bg-warning text-warning-foreground text-[10px] h-4 min-w-4 px-1">
-                  {nombreEnAttente}
-                </Chip>
-              )}
-            </Button>
-            {(emplacements ?? []).length > 0 && (
+            {(emplacementsCaisse ?? []).length > 0 && (
               <Select
                 selectedKey={empId}
                 onSelectionChange={(key) => setEmplacementId(String(key))}
@@ -146,7 +141,7 @@ export default function PagePOS() {
                 </Select.Trigger>
                 <Select.Popover>
                   <ListBox>
-                    {(emplacements ?? []).map((e) => (
+                    {emplacementsCaisse.map((e) => (
                       <ListBox.Item key={e.id} id={e.id} textValue={e.nom}>
                         {e.nom}
                       </ListBox.Item>

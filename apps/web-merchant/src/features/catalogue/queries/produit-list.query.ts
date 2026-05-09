@@ -5,14 +5,19 @@ import { catalogueAPI } from "../apis/catalogue.api";
 import { catalogueKeyQuery } from "./index.query";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
-export function useProduitListQuery(page = 1, recherche?: string) {
+export function useProduitListQuery(
+  page = 1,
+  recherche?: string,
+  options?: { isSupplement?: boolean | null },
+) {
   const { token } = useAuth();
+  // Par defaut isSupplement=false : la page Catalogue Produits ne montre QUE
+  // les vrais produits. Le POS passe `null` pour tout charger (incl. supplements).
+  const filtreSupp = options?.isSupplement === null ? undefined : (options?.isSupplement ?? false);
 
-  // Filtre isSupplement=false : la page Catalogue Produits ne montre QUE les
-  // vrais produits, pas les supplements (qui ont leur propre onglet).
   return useQuery({
-    queryKey: catalogueKeyQuery("produits", page, recherche),
-    queryFn: () => catalogueAPI.listerProduits(token!, { page, recherche, isSupplement: false }),
+    queryKey: catalogueKeyQuery("produits", page, recherche, filtreSupp),
+    queryFn: () => catalogueAPI.listerProduits(token!, { page, recherche, isSupplement: filtreSupp }),
     enabled: !!token,
   });
 }

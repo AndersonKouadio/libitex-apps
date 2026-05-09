@@ -59,6 +59,7 @@ export interface IProduit {
   emplacementsDisponibles: string[];
   // Communs
   actif: boolean;
+  isSupplement: boolean;
   variantes: IVariante[];
   creeLe: string;
 }

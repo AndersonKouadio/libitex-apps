@@ -156,14 +156,18 @@ export function LignePanier({
         {onPersonnaliser && (
           <Button
             variant="ghost"
-            className="mt-1.5 gap-1 text-[11px] text-accent hover:underline px-1.5 py-0.5 h-auto min-w-0"
+            className={`mt-2 gap-1.5 text-xs font-medium px-2.5 py-1.5 h-auto min-w-0 rounded-md border transition-colors ${
+              article.supplements.length > 0
+                ? "border-accent/40 bg-accent/10 text-accent hover:bg-accent/15"
+                : "border-dashed border-accent/50 text-accent hover:bg-accent/10"
+            }`}
             onPress={onPersonnaliser}
             aria-label="Ajouter des suppléments"
           >
-            <Sparkles size={11} />
+            <Sparkles size={13} strokeWidth={2.2} />
             {article.supplements.length > 0
-              ? `Modifier les suppléments (${article.supplements.length})`
-              : "Ajouter un supplément"}
+              ? `Suppléments (${article.supplements.length})`
+              : "+ Ajouter un supplément"}
           </Button>
         )}
       </div>

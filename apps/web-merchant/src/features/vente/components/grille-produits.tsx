@@ -16,6 +16,8 @@ interface Props {
 }
 
 const TOUTES = "__TOUTES__";
+const SUPPLEMENTS = "__SUPPLEMENTS__";
+const AUTRES = "__AUTRES__";
 
 export function GrilleProduits({ produits, stocks, onAjouter }: Props) {
   const [recherche, setRecherche] = useState("");
@@ -30,14 +32,29 @@ export function GrilleProduits({ produits, stocks, onAjouter }: Props) {
   // On ne montre que les categories qui contiennent au moins un produit dans le
   // catalogue actif : evite d'avoir des onglets vides sur les petites boutiques.
   const categoriesPresentes = useMemo(() => {
-    const ids = new Set(produits.map((p) => p.categorieId).filter((id): id is string => Boolean(id)));
+    const ids = new Set(
+      produits
+        .filter((p) => !p.isSupplement)
+        .map((p) => p.categorieId)
+        .filter((id): id is string => Boolean(id)),
+    );
     return (categories ?? []).filter((c) => ids.has(c.id));
   }, [categories, produits]);
+
+  const aDesSupplements = useMemo(() => produits.some((p) => p.isSupplement), [produits]);
+  const aDesAutres = useMemo(
+    () => produits.some((p) => !p.isSupplement && !p.categorieId),
+    [produits],
+  );
 
   const terme = recherche.toLowerCase().trim();
   const filtres = useMemo(() => {
     let liste = produits;
-    if (categorieActive !== TOUTES) {
+    if (categorieActive === SUPPLEMENTS) {
+      liste = liste.filter((p) => p.isSupplement);
+    } else if (categorieActive === AUTRES) {
+      liste = liste.filter((p) => !p.isSupplement && !p.categorieId);
+    } else if (categorieActive !== TOUTES) {
       liste = liste.filter((p) => p.categorieId === categorieActive);
     }
     if (terme) {
@@ -57,7 +74,7 @@ export function GrilleProduits({ produits, stocks, onAjouter }: Props) {
           <Input placeholder="Rechercher un article ou scanner un code-barres..." autoFocus />
         </SearchField>
 
-        {categoriesPresentes.length > 0 && (
+        {(categoriesPresentes.length > 0 || aDesSupplements || aDesAutres) && (
           <div
             className="flex items-center gap-1.5 overflow-x-auto -mx-1 px-1 pb-1"
             role="tablist"
@@ -70,7 +87,7 @@ export function GrilleProduits({ produits, stocks, onAjouter }: Props) {
               total={produits.length}
             />
             {categoriesPresentes.map((c) => {
-              const total = produits.filter((p) => p.categorieId === c.id).length;
+              const total = produits.filter((p) => !p.isSupplement && p.categorieId === c.id).length;
               return (
                 <OngletCategorie
                   key={c.id}
@@ -81,6 +98,22 @@ export function GrilleProduits({ produits, stocks, onAjouter }: Props) {
                 />
               );
             })}
+            {aDesSupplements && (
+              <OngletCategorie
+                actif={categorieActive === SUPPLEMENTS}
+                onPress={() => setCategorieActive(SUPPLEMENTS)}
+                libelle="Suppléments"
+                total={produits.filter((p) => p.isSupplement).length}
+              />
+            )}
+            {aDesAutres && (
+              <OngletCategorie
+                actif={categorieActive === AUTRES}
+                onPress={() => setCategorieActive(AUTRES)}
+                libelle="Autres"
+                total={produits.filter((p) => !p.isSupplement && !p.categorieId).length}
+              />
+            )}
           </div>
         )}
       </div>
@@ -103,7 +136,7 @@ export function GrilleProduits({ produits, stocks, onAjouter }: Props) {
             <p className="text-sm text-muted">Aucun article ne correspond a la recherche</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2.5">
             {filtres.flatMap((produit) =>
               produit.variantes.map((variante) => (
                 <CarteArticle
