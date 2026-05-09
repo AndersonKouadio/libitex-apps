@@ -95,15 +95,36 @@ export function SidebarPOS({ replie }: Props) {
         </div>
       </div>
 
-      {/* KPIs jour */}
+      {/* KPIs : session active sur jour */}
+      {/*
+        Format active/total : si une session est ouverte, on montre la valeur
+        de la session en gros et le total du jour en petit en dessous.
+        Sinon (caisse fermee), on n'affiche que le jour.
+      */}
       <div>
         <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider px-1 mb-1.5">
-          Aujourd'hui
+          {sessionActive ? "Session" : "Aujourd'hui"}
         </p>
         <div className="space-y-1">
-          <KpiLigne libelle="Recettes" valeur={`${formatMontant(kpis?.recettesJour ?? 0)} F`} />
-          <KpiLigne libelle="Tickets" valeur={String(kpis?.ticketsJour ?? 0)} />
-          <KpiLigne libelle="Ticket moyen" valeur={`${formatMontant(kpis?.ticketMoyen ?? 0)} F`} />
+          <KpiLigne
+            libelle="Recettes"
+            valeur={`${formatMontant(sessionActive?.totalEncaisse ?? kpis?.recettesJour ?? 0)} F`}
+            comparaison={sessionActive ? `${formatMontant(kpis?.recettesJour ?? 0)} F sur le jour` : undefined}
+          />
+          <KpiLigne
+            libelle="Tickets"
+            valeur={String(sessionActive?.nombreTickets ?? kpis?.ticketsJour ?? 0)}
+            comparaison={sessionActive ? `${kpis?.ticketsJour ?? 0} sur le jour` : undefined}
+          />
+          <KpiLigne
+            libelle="Ticket moyen"
+            valeur={`${formatMontant(
+              sessionActive && sessionActive.nombreTickets && sessionActive.nombreTickets > 0
+                ? (sessionActive.totalEncaisse ?? 0) / sessionActive.nombreTickets
+                : kpis?.ticketMoyen ?? 0,
+            )} F`}
+            comparaison={sessionActive ? `${formatMontant(kpis?.ticketMoyen ?? 0)} F sur le jour` : undefined}
+          />
         </div>
       </div>
 
@@ -145,11 +166,26 @@ export function SidebarPOS({ replie }: Props) {
   );
 }
 
-function KpiLigne({ libelle, valeur }: { libelle: string; valeur: string }) {
+function KpiLigne({
+  libelle, valeur, comparaison,
+}: {
+  libelle: string;
+  valeur: string;
+  /**
+   * Valeur de reference affichee sous la valeur principale, en gris.
+   * Pour montrer la session active vs le jour, le mois, etc.
+   */
+  comparaison?: string;
+}) {
   return (
-    <div className="flex items-baseline justify-between gap-2 px-3 py-1 rounded-md hover:bg-white/5">
-      <span className="text-[11px] text-white/55">{libelle}</span>
-      <span className="text-sm font-semibold text-white tabular-nums">{valeur}</span>
+    <div className="px-3 py-1 rounded-md hover:bg-white/5">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[11px] text-white/55">{libelle}</span>
+        <span className="text-sm font-semibold text-white tabular-nums">{valeur}</span>
+      </div>
+      {comparaison && (
+        <p className="text-[10px] text-white/35 tabular-nums text-right -mt-0.5">{comparaison}</p>
+      )}
     </div>
   );
 }
