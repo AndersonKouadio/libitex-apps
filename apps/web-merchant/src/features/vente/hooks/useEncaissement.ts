@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { toast } from "@heroui/react";
 import { venteAPI } from "../apis/vente.api";
 import { creerTicketSchema } from "../schemas/vente.schema";
@@ -29,9 +29,13 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
   const [enCours, setEnCours] = useState(false);
   const [derniereVente, setDerniereVente] = useState<DerniereVente | null>(null);
   const invalidateVente = useInvalidateVenteQuery();
+  // Garde anti-double-clic via ref : le state enCours n'est pas frais dans la
+  // closure si l'utilisateur tape deux fois avant le prochain re-render.
+  const verrou = useRef(false);
 
   const encaisser = useCallback(async (methode: string) => {
     if (!token || !empId || panier.articles.length === 0) return;
+    if (verrou.current) return;
 
     const payload = creerTicketSchema.safeParse({
       emplacementId: empId,
@@ -49,6 +53,7 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
       return;
     }
 
+    verrou.current = true;
     setEnCours(true);
     try {
       const ticket = await venteAPI.creerTicket(token, payload.data);
@@ -62,15 +67,19 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
         ticket: resultat,
       });
       panier.vider();
+      invalidateVente();
     } catch (err: unknown) {
       toast.danger(err instanceof Error ? err.message : "Erreur lors de la vente");
     } finally {
       setEnCours(false);
+      verrou.current = false;
     }
-  }, [token, empId, panier]);
+  }, [token, empId, panier, invalidateVente]);
 
   const mettreEnAttente = useCallback(async () => {
     if (!token || !empId || panier.articles.length === 0) return;
+    if (verrou.current) return;
+    verrou.current = true;
     setEnCours(true);
     try {
       const ticket = await venteAPI.creerTicket(token, {
@@ -92,6 +101,7 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
       toast.danger(err instanceof Error ? err.message : "Erreur lors de la mise en attente");
     } finally {
       setEnCours(false);
+      verrou.current = false;
     }
   }, [token, empId, panier, invalidateVente]);
 
