@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Select, ListBox, Label, Button, Chip, Drawer, Modal,
 } from "@heroui/react";
@@ -27,6 +28,8 @@ import { formatMontant } from "@/features/vente/utils/format";
 
 export default function PagePOS() {
   const { token } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: produitsData } = useProduitListQuery(1);
   const { data: emplacements } = useEmplacementListQuery();
   const panier = usePanier();
@@ -36,6 +39,15 @@ export default function PagePOS() {
   const [panierMobileOuvert, setPanierMobileOuvert] = useState(false);
   const [modalEmpOuvert, setModalEmpOuvert] = useState(false);
   const [modalAttenteOuvert, setModalAttenteOuvert] = useState(false);
+
+  // La sidebar POS pousse ?attente=1 dans l'URL pour ouvrir la modale tickets
+  // en attente. On la reprend ici puis on nettoie l'URL.
+  useEffect(() => {
+    if (searchParams.get("attente") === "1") {
+      setModalAttenteOuvert(true);
+      router.replace("/pos");
+    }
+  }, [searchParams, router]);
 
   const aucunEmplacement = emplacements !== undefined && emplacements.length === 0;
   const empId = emplacementId || emplacements?.[0]?.id || "";

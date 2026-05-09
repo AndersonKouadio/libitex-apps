@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { SwitcherBoutique } from "@/features/boutique/components/switcher-boutique";
+import { SidebarPOS } from "./sidebar-pos";
 
 interface ItemNav {
   href: string;
@@ -134,7 +135,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
         </nav>
       )}
 
-      {modePOS && <div className="flex-1" />}
+      {modePOS && <SidebarPOS replie={replie} />}
 
       <div className="px-2.5 py-3 border-t border-white/10">
         {!replie && utilisateur && (
