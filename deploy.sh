@@ -55,6 +55,7 @@ push_schema() {
     -w /app/packages/db \
     -e DATABASE_URL="$db_url" \
     -e COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
+    -e CI=true \
     node:20-alpine \
     sh -c "corepack enable pnpm >/dev/null 2>&1 && pnpm install --silent && pnpm exec drizzle-kit push --force"
   echo ">> Schema OK"
