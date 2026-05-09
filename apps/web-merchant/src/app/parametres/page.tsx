@@ -59,7 +59,7 @@ export default function PageParametres() {
   const [modalMotDePasse, setModalMotDePasse] = useState(false);
 
   return (
-    <PageContainer taille="moyen">
+    <PageContainer>
       <PageHeader
         titre="Configuration"
         description="Gérez vos boutiques, votre équipe, votre profil et la sécurité de votre compte."

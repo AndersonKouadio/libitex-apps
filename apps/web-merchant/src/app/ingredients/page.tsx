@@ -61,7 +61,7 @@ export default function PageIngredients() {
 
   if (boutique && !moduleDisponible) {
     return (
-      <PageContainer taille="etroit">
+      <PageContainer>
         <Card>
           <Card.Content className="py-12 text-center">
             <Wheat size={32} className="text-muted/30 mx-auto mb-3" />

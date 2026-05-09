@@ -38,7 +38,7 @@ export default function PageEquipe() {
   }
 
   return (
-    <PageContainer taille="moyen">
+    <PageContainer>
       <PageHeader
         titre={`${(membres ?? []).length} membre${(membres ?? []).length > 1 ? "s" : ""}`}
         description="Invitez vos collaborateurs, attribuez-leur un rôle et limitez leur accès aux bons points de vente."

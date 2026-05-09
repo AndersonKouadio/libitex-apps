@@ -39,7 +39,7 @@ export default function PageRapports() {
 
   if (aucunEmplacement) {
     return (
-      <PageContainer taille="etroit">
+      <PageContainer>
         <AucunEmplacement onCreer={() => setModalEmpOuvert(true)} contexte="rapports" />
         <ModalEmplacement ouvert={modalEmpOuvert} onFermer={() => setModalEmpOuvert(false)} />
       </PageContainer>

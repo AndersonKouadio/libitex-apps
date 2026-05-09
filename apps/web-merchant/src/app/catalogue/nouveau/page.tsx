@@ -78,7 +78,7 @@ export default function PageNouveauProduit() {
   }
 
   return (
-    <PageContainer taille="moyen">
+    <PageContainer>
       <PageHeader
         titre="Nouveau produit"
         description="Renseignez chaque section : les blocs spécifiques (recette, restauration, secteur) apparaissent automatiquement selon votre choix."

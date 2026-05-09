@@ -126,7 +126,7 @@ export default function PageModifierProduit({ params }: { params: Promise<{ id: 
   }
 
   return (
-    <PageContainer taille="moyen">
+    <PageContainer>
       <PageHeader
         titre={produit ? produit.nom : "Modifier le produit"}
         description="Mettez à jour les informations, les options spécifiques au secteur et la disponibilité."

@@ -63,7 +63,7 @@ export default function PageCategories() {
   }
 
   return (
-    <PageContainer taille="moyen">
+    <PageContainer>
       <PageHeader
         titre={`${categories.length} catégorie${categories.length > 1 ? "s" : ""}`}
         description="Structurez votre catalogue en familles et sous-familles. Une catégorie ne peut être supprimée que si aucun produit n'y est rattaché."

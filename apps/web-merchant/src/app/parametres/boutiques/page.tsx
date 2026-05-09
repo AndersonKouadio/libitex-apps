@@ -42,7 +42,7 @@ export default function PageBoutiques() {
   }
 
   return (
-    <PageContainer taille="moyen">
+    <PageContainer>
       <PageHeader
         titre={`${boutiques.length} boutique${boutiques.length > 1 ? "s" : ""}`}
         description={

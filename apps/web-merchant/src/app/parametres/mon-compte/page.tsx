@@ -87,7 +87,7 @@ export default function PageMonCompte() {
   }
 
   return (
-    <PageContainer taille="moyen">
+    <PageContainer>
       <PageHeader
         titre="Mon compte"
         description="Vos informations personnelles. L'email reste fixé à l'inscription pour préserver l'historique d'audit."

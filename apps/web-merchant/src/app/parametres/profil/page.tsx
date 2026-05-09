@@ -52,7 +52,7 @@ export default function PageProfilBoutique() {
   }
 
   return (
-    <PageContainer taille="moyen">
+    <PageContainer>
       <PageHeader
         titre="Profil de la boutique"
         description="Nom, secteur d'activité, devise, contact et adresse de la boutique active. Pour modifier une autre boutique, basculez dessus depuis « Mes boutiques »."
