@@ -12,6 +12,18 @@ export interface SupplementChoisi {
   quantite: number;
 }
 
+/**
+ * Remise appliquee a une ligne ou au ticket complet.
+ * Le montant est toujours stocke en F CFA. type/valeurOriginale sont
+ * conserves pour l'affichage (ex. "-10% (1 000 F)").
+ */
+export interface Remise {
+  type: "POURCENTAGE" | "MONTANT";
+  valeurOriginale: number;
+  montant: number;
+  raison?: string;
+}
+
 export interface ArticlePanier {
   varianteId: string;
   nomProduit: string;
@@ -25,6 +37,7 @@ export interface ArticlePanier {
   pasMin: number | null;
   prixParUnite: boolean;
   supplements: SupplementChoisi[];
+  remise: Remise | null;
 }
 
 /**
@@ -38,18 +51,36 @@ function pasEffectif(unite: UniteMesure, pasMin: number | null): number {
 }
 
 /** Recalcule le total ligne selon le mode tarifaire (forfait vs au kg/m).
- *  Inclut les supplements (prix * qte) qui s'appliquent une seule fois par ligne. */
+ *  Inclut les supplements (prix * qte) qui s'appliquent une seule fois par ligne.
+ *  La remise eventuelle est soustraite du sous-total ligne (sans descendre sous 0). */
 function recalculerTotalLigne(article: Omit<ArticlePanier, "totalLigne">): number {
   const baseLigne = article.prixUnitaire * article.quantite;
   const totalSupplements = (article.supplements ?? []).reduce(
     (s, sup) => s + sup.prixUnitaire * sup.quantite,
     0,
   );
-  return Number((baseLigne + totalSupplements).toFixed(2));
+  const sousTotal = baseLigne + totalSupplements;
+  const remise = article.remise?.montant ?? 0;
+  return Number(Math.max(0, sousTotal - remise).toFixed(2));
+}
+
+/** Calcule le montant d'une remise a partir du type+valeur, plafonne au sous-total. */
+export function calculerMontantRemise(
+  type: "POURCENTAGE" | "MONTANT",
+  valeur: number,
+  sousTotal: number,
+): number {
+  if (valeur <= 0 || sousTotal <= 0) return 0;
+  if (type === "POURCENTAGE") {
+    const pct = Math.min(100, valeur);
+    return Number(((sousTotal * pct) / 100).toFixed(2));
+  }
+  return Math.min(sousTotal, Number(valeur.toFixed(2)));
 }
 
 export function usePanier() {
   const [articles, setArticles] = useState<ArticlePanier[]>([]);
+  const [remiseGlobale, setRemiseGlobale] = useState<Remise | null>(null);
 
   const ajouter = useCallback(
     (
@@ -94,6 +125,7 @@ export function usePanier() {
           pasMin: variante.pasMin,
           prixParUnite: variante.prixParUnite,
           supplements: supplements ?? [],
+          remise: null,
         };
         return [...prev, { ...nouveau, totalLigne: recalculerTotalLigne(nouveau) }];
       });
@@ -146,7 +178,61 @@ export function usePanier() {
     setArticles((prev) => prev.filter((a) => a.varianteId !== varianteId));
   }, []);
 
-  const vider = useCallback(() => setArticles([]), []);
+  /**
+   * Applique ou remplace la remise sur une ligne. Le montant est recalcule
+   * a partir du sous-total ligne (prix*qte + supplements). Passer null retire
+   * la remise.
+   */
+  const definirRemiseLigne = useCallback(
+    (
+      indexLigne: number,
+      remise: { type: "POURCENTAGE" | "MONTANT"; valeur: number; raison?: string } | null,
+    ) => {
+      setArticles((prev) =>
+        prev.map((a, i) => {
+          if (i !== indexLigne) return a;
+          if (!remise) {
+            return { ...a, remise: null, totalLigne: recalculerTotalLigne({ ...a, remise: null }) };
+          }
+          const sousTotal = a.prixUnitaire * a.quantite
+            + (a.supplements ?? []).reduce((s, sup) => s + sup.prixUnitaire * sup.quantite, 0);
+          const montant = calculerMontantRemise(remise.type, remise.valeur, sousTotal);
+          const r: Remise = {
+            type: remise.type, valeurOriginale: remise.valeur, montant, raison: remise.raison,
+          };
+          return { ...a, remise: r, totalLigne: recalculerTotalLigne({ ...a, remise: r }) };
+        }),
+      );
+    },
+    [],
+  );
+
+  /**
+   * Applique ou remplace la remise globale sur le ticket. Le montant est
+   * calcule sur le sous-total apres remises lignes. Passer null retire.
+   */
+  const definirRemiseGlobale = useCallback(
+    (remise: { type: "POURCENTAGE" | "MONTANT"; valeur: number; raison?: string } | null) => {
+      if (!remise) { setRemiseGlobale(null); return; }
+      // setArticles n'est pas appele : on calcule a partir de l'etat courant
+      // via une lecture immediate. Comme remiseGlobale ne depend pas des autres
+      // setters et qu'on n'a pas besoin d'etre transactionnel, c'est OK.
+      setArticles((articlesCourants) => {
+        const sousTotal = articlesCourants.reduce((s, a) => s + a.totalLigne, 0);
+        const montant = calculerMontantRemise(remise.type, remise.valeur, sousTotal);
+        setRemiseGlobale({
+          type: remise.type, valeurOriginale: remise.valeur, montant, raison: remise.raison,
+        });
+        return articlesCourants;
+      });
+    },
+    [],
+  );
+
+  const vider = useCallback(() => {
+    setArticles([]);
+    setRemiseGlobale(null);
+  }, []);
 
   const chargerDepuisTicket = useCallback((
     lignes: Array<{
@@ -177,16 +263,26 @@ export function usePanier() {
         pasMin: l.pasMin ?? null,
         prixParUnite: l.prixParUnite ?? false,
         supplements: l.supplements ?? [],
+        remise: null,
       })),
     );
   }, []);
 
-  const total = articles.reduce((s, a) => s + a.totalLigne, 0);
+  const sousTotal = articles.reduce((s, a) => s + a.totalLigne, 0);
+  // Si la remise globale est en pourcentage, la valeur cachee est figee au moment
+  // de l'application. On la recalcule ici pour suivre les modifications du panier
+  // (ajout/retrait d'article, changement de quantite).
+  const montantRemiseGlobale = remiseGlobale
+    ? calculerMontantRemise(remiseGlobale.type, remiseGlobale.valeurOriginale, sousTotal)
+    : 0;
+  const total = Math.max(0, sousTotal - montantRemiseGlobale);
   const nombreArticles = articles.reduce((s, a) => s + a.quantite, 0);
 
   return {
-    articles, total, nombreArticles,
+    articles, sousTotal, total, nombreArticles,
+    remiseGlobale: remiseGlobale ? { ...remiseGlobale, montant: montantRemiseGlobale } : null,
     ajouter, modifierQuantite, definirQuantite, definirSupplementsLigne,
+    definirRemiseLigne, definirRemiseGlobale,
     retirer, vider, chargerDepuisTicket,
   };
 }

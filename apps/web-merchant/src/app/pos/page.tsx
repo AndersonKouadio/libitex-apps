@@ -22,6 +22,7 @@ import { ConfirmationVente } from "@/features/vente/components/confirmation-vent
 import { ModalTicketsAttente } from "@/features/vente/components/modal-tickets-attente";
 import { ModalSaisirQuantite } from "@/features/vente/components/modal-saisir-quantite";
 import { ModalSupplements } from "@/features/vente/components/modal-supplements";
+import { ModalRemise } from "@/features/vente/components/modal-remise";
 import { useSaisieQuantite } from "@/features/vente/hooks/useSaisieQuantite";
 import { useEncaissement } from "@/features/vente/hooks/useEncaissement";
 import { formatMontant } from "@/features/vente/utils/format";
@@ -93,6 +94,9 @@ export default function PagePOS() {
   // Index de la ligne en cours de personnalisation (suppléments). null = ferme.
   const [ligneSupplements, setLigneSupplements] = useState<number | null>(null);
   const articleEnCours = ligneSupplements !== null ? panier.articles[ligneSupplements] : undefined;
+  // Cible de la modale remise : "ticket" pour la remise globale, ou un index de ligne.
+  const [cibleRemise, setCibleRemise] = useState<number | "ticket" | null>(null);
+  const articleRemise = typeof cibleRemise === "number" ? panier.articles[cibleRemise] : null;
 
   function ouvrirSupplements(indexLigne: number) {
     setLigneSupplements(indexLigne);
@@ -236,8 +240,10 @@ export default function PagePOS() {
         <PanierVente
           mode="lateral"
           articles={panier.articles}
+          sousTotal={panier.sousTotal}
           total={panier.total}
           nombreArticles={panier.nombreArticles}
+          remiseGlobale={panier.remiseGlobale}
           onModifierQuantite={panier.modifierQuantite}
           onDefinirQuantite={panier.definirQuantite}
           onRetirer={panier.retirer}
@@ -246,6 +252,9 @@ export default function PagePOS() {
           onAttente={lancerMiseEnAttente}
           onSaisirQuantite={saisieQuantite.ouvrirPourLigne}
           onPersonnaliser={ouvrirSupplements}
+          onAppliquerRemiseLigne={(i) => setCibleRemise(i)}
+          onAppliquerRemiseGlobale={() => setCibleRemise("ticket")}
+          onRetirerRemiseGlobale={() => panier.definirRemiseGlobale(null)}
         />
       </div>
 
@@ -294,8 +303,10 @@ export default function PagePOS() {
             <PanierVente
               mode="plein"
               articles={panier.articles}
+              sousTotal={panier.sousTotal}
               total={panier.total}
               nombreArticles={panier.nombreArticles}
+              remiseGlobale={panier.remiseGlobale}
               onModifierQuantite={panier.modifierQuantite}
               onDefinirQuantite={panier.definirQuantite}
               onRetirer={panier.retirer}
@@ -304,6 +315,9 @@ export default function PagePOS() {
               onAttente={lancerMiseEnAttente}
               onSaisirQuantite={saisieQuantite.ouvrirPourLigne}
               onPersonnaliser={ouvrirSupplements}
+              onAppliquerRemiseLigne={(i) => setCibleRemise(i)}
+              onAppliquerRemiseGlobale={() => setCibleRemise("ticket")}
+              onRetirerRemiseGlobale={() => panier.definirRemiseGlobale(null)}
             />
           </Drawer.Dialog>
         </Drawer.Content>
@@ -377,6 +391,43 @@ export default function PagePOS() {
         ouvert={modalFermetureOuvert}
         sessionId={sessionActive?.id ?? null}
         onFermer={() => setModalFermetureOuvert(false)}
+      />
+
+      <ModalRemise
+        ouvert={cibleRemise !== null}
+        onFermer={() => setCibleRemise(null)}
+        cible={
+          cibleRemise === "ticket"
+            ? "le ticket entier"
+            : articleRemise?.nomProduit ?? ""
+        }
+        sousTotal={
+          cibleRemise === "ticket"
+            ? panier.sousTotal
+            : articleRemise
+              ? articleRemise.prixUnitaire * articleRemise.quantite
+                + (articleRemise.supplements ?? []).reduce((s, sup) => s + sup.prixUnitaire * sup.quantite, 0)
+              : 0
+        }
+        remiseCourante={
+          cibleRemise === "ticket"
+            ? panier.remiseGlobale
+            : articleRemise?.remise ?? null
+        }
+        onConfirmer={(r) => {
+          if (cibleRemise === "ticket") {
+            panier.definirRemiseGlobale(r);
+          } else if (typeof cibleRemise === "number") {
+            panier.definirRemiseLigne(cibleRemise, r);
+          }
+        }}
+        onRetirer={() => {
+          if (cibleRemise === "ticket") {
+            panier.definirRemiseGlobale(null);
+          } else if (typeof cibleRemise === "number") {
+            panier.definirRemiseLigne(cibleRemise, null);
+          }
+        }}
       />
     </div>
   );

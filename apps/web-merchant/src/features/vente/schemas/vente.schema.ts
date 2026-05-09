@@ -8,12 +8,15 @@ export const supplementChoisiSchema = z.object({
 export const ligneTicketSchema = z.object({
   varianteId: z.string().min(1, "Article requis"),
   quantite: z.number().positive("Quantité invalide"),
+  remise: z.number().min(0).optional(),
   numeroSerie: z.string().optional(),
   supplements: z.array(supplementChoisiSchema).optional(),
 });
 
 export const creerTicketSchema = z.object({
   emplacementId: z.string().min(1, "Emplacement requis"),
+  remiseGlobale: z.number().min(0).optional(),
+  raisonRemise: z.string().optional(),
   lignes: z.array(ligneTicketSchema).min(1, "Au moins un article est requis"),
   nomClient: z.string().optional(),
   telephoneClient: z.string().optional(),

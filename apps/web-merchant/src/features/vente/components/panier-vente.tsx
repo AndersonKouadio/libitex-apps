@@ -1,16 +1,21 @@
 "use client";
 
 import { Button } from "@heroui/react";
-import { ShoppingCart, PauseCircle, Receipt } from "lucide-react";
-import type { ArticlePanier } from "../hooks/usePanier";
+import { ShoppingCart, PauseCircle, Receipt, Tag, X } from "lucide-react";
+import type { ArticlePanier, Remise } from "../hooks/usePanier";
 import { formatMontant } from "../utils/format";
 import { LignePanier } from "./ligne-panier";
 import { BoutonPOS } from "./bouton-pos";
 
 interface Props {
   articles: ArticlePanier[];
+  /** Sous-total avant remise globale (somme des totaux ligne, qui incluent deja les remises lignes). */
+  sousTotal: number;
+  /** Total final apres remise globale. */
   total: number;
   nombreArticles: number;
+  /** Remise globale appliquee au ticket (ou null si aucune). */
+  remiseGlobale: Remise | null;
   onModifierQuantite: (varianteId: string, delta: number) => void;
   onDefinirQuantite: (varianteId: string, quantite: number) => void;
   onRetirer: (varianteId: string) => void;
@@ -23,12 +28,19 @@ interface Props {
   onSaisirQuantite?: (varianteId: string) => void;
   /** Optionnel : ouvre la modale supplements pour la ligne d'index donne. */
   onPersonnaliser?: (indexLigne: number) => void;
+  /** Optionnel : ouvre la modale de remise sur une ligne. */
+  onAppliquerRemiseLigne?: (indexLigne: number) => void;
+  /** Optionnel : ouvre la modale de remise globale (ticket). */
+  onAppliquerRemiseGlobale?: () => void;
+  /** Optionnel : retire la remise globale sans ouvrir la modale. */
+  onRetirerRemiseGlobale?: () => void;
 }
 
 export function PanierVente({
-  articles, total, nombreArticles,
+  articles, sousTotal, total, nombreArticles, remiseGlobale,
   onModifierQuantite, onDefinirQuantite, onRetirer, onVider, onEncaisser, onAttente,
-  onSaisirQuantite, onPersonnaliser, mode = "lateral",
+  onSaisirQuantite, onPersonnaliser, onAppliquerRemiseLigne,
+  onAppliquerRemiseGlobale, onRetirerRemiseGlobale, mode = "lateral",
 }: Props) {
   const vide = articles.length === 0;
 
@@ -81,6 +93,7 @@ export function PanierVente({
                 onRetirer={onRetirer}
                 onSaisirQuantite={onSaisirQuantite}
                 onPersonnaliser={onPersonnaliser ? () => onPersonnaliser(i) : undefined}
+                onAppliquerRemise={onAppliquerRemiseLigne ? () => onAppliquerRemiseLigne(i) : undefined}
               />
             ))}
           </ul>
@@ -88,7 +101,56 @@ export function PanierVente({
       </div>
 
       <footer className="border-t border-border p-4 space-y-3 bg-surface safe-bottom">
-        <div className="px-4 py-3.5 rounded-xl bg-navy">
+        {/* Bouton remise globale + ligne remise dans le recap */}
+        {!vide && onAppliquerRemiseGlobale && (
+          <Button
+            variant="ghost"
+            className={`w-full gap-1.5 text-xs font-medium px-2.5 py-1.5 h-auto min-w-0 rounded-md border transition-colors ${
+              remiseGlobale
+                ? "border-warning/40 bg-warning/10 text-warning hover:bg-warning/15"
+                : "border-dashed border-warning/50 text-warning hover:bg-warning/10"
+            }`}
+            onPress={onAppliquerRemiseGlobale}
+          >
+            <Tag size={13} strokeWidth={2.2} />
+            {remiseGlobale
+              ? `Remise ticket : -${formatMontant(remiseGlobale.montant)} F${
+                  remiseGlobale.type === "POURCENTAGE" ? ` (${remiseGlobale.valeurOriginale}%)` : ""
+                }`
+              : "+ Remise sur le ticket"}
+          </Button>
+        )}
+
+        <div className="px-4 py-3.5 rounded-xl bg-navy space-y-1">
+          {!vide && remiseGlobale && (
+            <>
+              <div className="flex justify-between text-xs text-navy-foreground/55">
+                <span>Sous-total</span>
+                <span className="tabular-nums">{formatMontant(sousTotal)} F</span>
+              </div>
+              <div className="flex justify-between text-xs text-warning">
+                <span className="flex items-center gap-1">
+                  Remise
+                  {remiseGlobale.raison && (
+                    <span className="text-navy-foreground/40 truncate max-w-[120px]">
+                      · {remiseGlobale.raison}
+                    </span>
+                  )}
+                  {onRetirerRemiseGlobale && (
+                    <button
+                      type="button"
+                      onClick={onRetirerRemiseGlobale}
+                      className="ml-1 p-0.5 hover:bg-warning/20 rounded"
+                      aria-label="Retirer la remise"
+                    >
+                      <X size={10} />
+                    </button>
+                  )}
+                </span>
+                <span className="tabular-nums">- {formatMontant(remiseGlobale.montant)} F</span>
+              </div>
+            </>
+          )}
           <div className="flex items-end justify-between gap-2">
             <span className="text-xs text-navy-foreground/60 uppercase tracking-wider">Total</span>
             <span className="text-5xl font-bold text-navy-foreground tabular-nums tracking-tight leading-none">
