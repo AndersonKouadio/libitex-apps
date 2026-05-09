@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-export const categorieSupplementSchema = z.enum(["NOURRITURE", "BOISSON", "ACCESSOIRE", "AUTRE"]);
+export const categorieSupplementSchema = z.enum([
+  "NOURRITURE", "BOISSON", "SAUCE", "ACCESSOIRE", "AUTRE",
+]);
 
 export const creerSupplementSchema = z.object({
   nom: z.string().min(1, "Nom requis"),

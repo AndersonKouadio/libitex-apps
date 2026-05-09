@@ -1,12 +1,14 @@
-export type CategorieSupplement = "NOURRITURE" | "BOISSON" | "ACCESSOIRE" | "AUTRE";
+export type CategorieSupplement =
+  | "NOURRITURE" | "BOISSON" | "SAUCE" | "ACCESSOIRE" | "AUTRE";
 
 export const CATEGORIES_SUPPLEMENT: CategorieSupplement[] = [
-  "NOURRITURE", "BOISSON", "ACCESSOIRE", "AUTRE",
+  "NOURRITURE", "BOISSON", "SAUCE", "ACCESSOIRE", "AUTRE",
 ];
 
 export const LABELS_CATEGORIE_SUPPLEMENT: Record<CategorieSupplement, string> = {
   NOURRITURE: "Nourriture",
   BOISSON: "Boisson",
+  SAUCE: "Sauce",
   ACCESSOIRE: "Accessoire",
   AUTRE: "Autre",
 };

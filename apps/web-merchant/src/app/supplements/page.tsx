@@ -17,6 +17,7 @@ import { useConfirmation } from "@/providers/confirmation-provider";
 const COULEURS_CATEGORIE: Record<string, string> = {
   NOURRITURE: "bg-success/10 text-success",
   BOISSON: "bg-accent/10 text-accent",
+  SAUCE: "bg-danger/10 text-danger",
   ACCESSOIRE: "bg-warning/10 text-warning",
   AUTRE: "bg-muted/10 text-muted",
 };
