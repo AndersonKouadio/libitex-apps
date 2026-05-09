@@ -69,15 +69,17 @@ export default function PageParametres() {
             const Icone = s.icone;
             const contenu = (
               <Card className="hover:border-accent/40 transition-colors h-full cursor-pointer">
-                <Card.Content className="p-5 flex items-start gap-3">
-                  <span className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${s.classes}`}>
-                    <Icone size={18} />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{s.titre}</p>
-                    <p className="text-xs text-muted mt-1">{s.description}</p>
+                <Card.Content className="p-5">
+                  <div className="flex items-start gap-3">
+                    <span className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${s.classes}`}>
+                      <Icone size={18} />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground">{s.titre}</p>
+                      <p className="text-xs text-muted mt-1">{s.description}</p>
+                    </div>
+                    <ChevronRight size={16} className="text-muted shrink-0 mt-2" />
                   </div>
-                  <ChevronRight size={16} className="text-muted shrink-0" />
                 </Card.Content>
               </Card>
             );

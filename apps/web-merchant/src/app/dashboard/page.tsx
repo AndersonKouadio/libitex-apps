@@ -91,10 +91,12 @@ export default function TableauDeBordPage() {
           <Card>
             <Card.Header>
               <Card.Title className="text-sm">Derniers tickets</Card.Title>
-              <span className="ml-auto text-xs text-muted flex items-center gap-1">
-                <MapPin size={12} />
-                {kpis?.nombreEmplacements ?? 0} emplacement{(kpis?.nombreEmplacements ?? 0) > 1 ? "s" : ""}
-              </span>
+              {!kpisChargement && (
+                <span className="ml-auto text-xs text-muted flex items-center gap-1">
+                  <MapPin size={12} />
+                  {kpis?.nombreEmplacements ?? 0} emplacement{(kpis?.nombreEmplacements ?? 0) > 1 ? "s" : ""}
+                </span>
+              )}
             </Card.Header>
             <Card.Content className="p-0">
               <HistoriqueTickets tickets={tickets} />

@@ -21,7 +21,7 @@ const LABELS_TYPE: Record<string, string> = {
 };
 
 export default function PageStock() {
-  const { data: emplacements } = useEmplacementListQuery();
+  const { data: emplacements, isLoading: chargementEmpList } = useEmplacementListQuery();
   const supprimer = useSupprimerEmplacementMutation();
   const confirmer = useConfirmation();
   const [empSelectionne, setEmpSelectionne] = useState("");
@@ -61,7 +61,7 @@ export default function PageStock() {
     <PageContainer>
         <div className="flex items-center justify-between mb-5">
           <p className="text-xs font-semibold text-muted uppercase tracking-wider">
-            Emplacements ({emplacements?.length ?? 0})
+            Emplacements {chargementEmpList ? "..." : `(${emplacements?.length ?? 0})`}
           </p>
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="ghost" className="gap-1.5" onPress={ouvrirCreation}>
