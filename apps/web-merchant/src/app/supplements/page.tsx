@@ -1,16 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { NavCatalogue } from "@/components/layout/nav-catalogue";
-import { Button, Skeleton, Chip, Table } from "@heroui/react";
+import {
+  Button, Skeleton, Chip, Table, Select, ListBox,
+} from "@heroui/react";
 import { Plus, Pencil, Trash2, UtensilsCrossed, Package } from "lucide-react";
 import {
   useSupplementListQuery, useSupprimerSupplementMutation,
 } from "@/features/supplement/queries/supplement.query";
 import { ModalSupplement } from "@/features/supplement/components/modal-supplement";
-import { LABELS_CATEGORIE_SUPPLEMENT, type ISupplement } from "@/features/supplement/types/supplement.type";
+import {
+  CATEGORIES_SUPPLEMENT, LABELS_CATEGORIE_SUPPLEMENT, type ISupplement,
+} from "@/features/supplement/types/supplement.type";
 import { formatMontant } from "@/features/vente/utils/format";
 import { useConfirmation } from "@/providers/confirmation-provider";
 
@@ -22,14 +26,30 @@ const COULEURS_CATEGORIE: Record<string, string> = {
   AUTRE: "bg-muted/10 text-muted",
 };
 
+const STATUTS_FILTRE = [
+  { id: "all", label: "Tous statuts" },
+  { id: "actif", label: "Actifs" },
+  { id: "inactif", label: "Inactifs" },
+];
+
 export default function PageSupplements() {
   const { data, isLoading } = useSupplementListQuery();
   const supprimer = useSupprimerSupplementMutation();
   const confirmer = useConfirmation();
   const [modalOuvert, setModalOuvert] = useState(false);
   const [enEdition, setEnEdition] = useState<ISupplement | null>(null);
+  const [filtreCategorie, setFiltreCategorie] = useState<string>("all");
+  const [filtreStatut, setFiltreStatut] = useState<string>("all");
 
-  const supplements = data ?? [];
+  const supplementsTout = data ?? [];
+  const supplements = useMemo(() => {
+    return supplementsTout.filter((s) => {
+      if (filtreCategorie !== "all" && s.categorie !== filtreCategorie) return false;
+      if (filtreStatut === "actif" && !s.actif) return false;
+      if (filtreStatut === "inactif" && s.actif) return false;
+      return true;
+    });
+  }, [supplementsTout, filtreCategorie, filtreStatut]);
 
   function ouvrirCreation() {
     setEnEdition(null);
@@ -64,6 +84,53 @@ export default function PageSupplements() {
           </Button>
         }
       />
+
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
+        <Select
+          selectedKey={filtreCategorie}
+          onSelectionChange={(k) => setFiltreCategorie(String(k))}
+          aria-label="Catégorie"
+          className="min-w-[180px]"
+        >
+          <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+          <Select.Popover>
+            <ListBox>
+              <ListBox.Item id="all" textValue="Toutes catégories">Toutes catégories</ListBox.Item>
+              {CATEGORIES_SUPPLEMENT.map((c) => (
+                <ListBox.Item key={c} id={c} textValue={LABELS_CATEGORIE_SUPPLEMENT[c]}>
+                  {LABELS_CATEGORIE_SUPPLEMENT[c]}
+                </ListBox.Item>
+              ))}
+            </ListBox>
+          </Select.Popover>
+        </Select>
+
+        <Select
+          selectedKey={filtreStatut}
+          onSelectionChange={(k) => setFiltreStatut(String(k))}
+          aria-label="Statut"
+          className="min-w-[140px]"
+        >
+          <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+          <Select.Popover>
+            <ListBox>
+              {STATUTS_FILTRE.map((s) => (
+                <ListBox.Item key={s.id} id={s.id} textValue={s.label}>{s.label}</ListBox.Item>
+              ))}
+            </ListBox>
+          </Select.Popover>
+        </Select>
+
+        {(filtreCategorie !== "all" || filtreStatut !== "all") && (
+          <Button
+            variant="ghost"
+            className="text-xs text-muted h-9 px-2"
+            onPress={() => { setFiltreCategorie("all"); setFiltreStatut("all"); }}
+          >
+            Effacer filtres
+          </Button>
+        )}
+      </div>
 
         {isLoading ? (
           <div className="bg-surface rounded-xl border border-border p-4 space-y-3">
@@ -102,11 +169,12 @@ export default function PageSupplements() {
                   <Table.Column isRowHeader>Supplément</Table.Column>
                   <Table.Column>Catégorie</Table.Column>
                   <Table.Column>Prix</Table.Column>
+                  <Table.Column>Statut</Table.Column>
                   <Table.Column className="w-20"> </Table.Column>
                 </Table.Header>
                 <Table.Body>
                   {supplements.map((s) => (
-                    <Table.Row key={s.id} className={s.actif ? "" : "opacity-60"}>
+                    <Table.Row key={s.id}>
                       <Table.Cell>
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-lg bg-surface-secondary overflow-hidden flex items-center justify-center shrink-0">
@@ -134,6 +202,13 @@ export default function PageSupplements() {
                           {formatMontant(s.prix)}
                           <span className="text-xs font-normal text-muted ml-0.5">F</span>
                         </span>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <Chip className={`text-xs ${
+                          s.actif ? "bg-success/10 text-success" : "bg-muted/10 text-muted"
+                        }`}>
+                          {s.actif ? "Actif" : "Inactif"}
+                        </Chip>
                       </Table.Cell>
                       <Table.Cell>
                         <div className="flex items-center gap-0.5 justify-end">
