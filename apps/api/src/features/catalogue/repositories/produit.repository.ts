@@ -256,6 +256,31 @@ export class ProduitRepository {
     });
   }
 
+  /**
+   * Compte le nombre de produits actifs (non supprimes) rattaches a chaque
+   * categorie. Renvoie une Map pour lookup en O(1) lors de l'enrichissement
+   * de la liste des categories.
+   */
+  async compterProduitsParCategorie(tenantId: string): Promise<Map<string, number>> {
+    const rows = await this.db
+      .select({
+        categoryId: products.categoryId,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(products)
+      .where(and(
+        eq(products.tenantId, tenantId),
+        isNull(products.deletedAt),
+      ))
+      .groupBy(products.categoryId);
+
+    const map = new Map<string, number>();
+    for (const r of rows) {
+      if (r.categoryId) map.set(r.categoryId, Number(r.count));
+    }
+    return map;
+  }
+
   async trouverCategorieParId(tenantId: string, id: string) {
     return this.db.query.categories.findFirst({
       where: and(

@@ -460,4 +460,6 @@ export class CategorieResponseDto {
   nom!: string;
   slug!: string;
   parentId!: string | null;
+  /** Nombre de produits actifs rattaches a cette categorie. */
+  nombreProduits!: number;
 }

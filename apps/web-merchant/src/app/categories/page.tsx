@@ -149,7 +149,18 @@ function NoeudCategorie({
             </span>
           )}
         </span>
-        <span className="text-[10px] text-muted/60 font-mono mr-2">{noeud.categorie.slug}</span>
+        <span
+          className={`text-xs tabular-nums px-2 py-0.5 rounded-full mr-1 ${
+            (noeud.categorie.nombreProduits ?? 0) > 0
+              ? "bg-accent/10 text-accent"
+              : "bg-muted/10 text-muted"
+          }`}
+          title={`${noeud.categorie.nombreProduits ?? 0} produit${
+            (noeud.categorie.nombreProduits ?? 0) > 1 ? "s" : ""
+          } dans cette catégorie`}
+        >
+          {noeud.categorie.nombreProduits ?? 0}
+        </span>
         <Button
           variant="ghost"
           className="text-muted hover:text-accent p-1.5 h-auto min-w-0"

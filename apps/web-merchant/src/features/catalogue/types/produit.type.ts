@@ -69,4 +69,6 @@ export interface ICategorie {
   nom: string;
   slug: string;
   parentId: string | null;
+  /** Nombre de produits actifs rattaches a cette categorie (lecture seule). */
+  nombreProduits?: number;
 }

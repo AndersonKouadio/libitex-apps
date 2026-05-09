@@ -208,12 +208,21 @@ export class CatalogueService {
       if (!parent) throw new RessourceIntrouvableException("Catégorie parent", dto.parentId);
     }
     const cat = await this.produitRepo.creerCategorie(tenantId, dto.nom, dto.parentId);
-    return { id: cat.id, nom: cat.name, slug: cat.slug, parentId: cat.parentId };
+    return { id: cat.id, nom: cat.name, slug: cat.slug, parentId: cat.parentId, nombreProduits: 0 };
   }
 
   async listerCategories(tenantId: string): Promise<CategorieResponseDto[]> {
-    const cats = await this.produitRepo.listerCategories(tenantId);
-    return cats.map((c) => ({ id: c.id, nom: c.name, slug: c.slug, parentId: c.parentId }));
+    const [cats, compteurs] = await Promise.all([
+      this.produitRepo.listerCategories(tenantId),
+      this.produitRepo.compterProduitsParCategorie(tenantId),
+    ]);
+    return cats.map((c) => ({
+      id: c.id,
+      nom: c.name,
+      slug: c.slug,
+      parentId: c.parentId,
+      nombreProduits: compteurs.get(c.id) ?? 0,
+    }));
   }
 
   async modifierCategorie(
@@ -234,7 +243,11 @@ export class CatalogueService {
       name: dto.nom,
       parentId: dto.parentId === "" ? null : dto.parentId,
     });
-    return { id: updated.id, nom: updated.name, slug: updated.slug, parentId: updated.parentId };
+    const compteurs = await this.produitRepo.compterProduitsParCategorie(tenantId);
+    return {
+      id: updated.id, nom: updated.name, slug: updated.slug, parentId: updated.parentId,
+      nombreProduits: compteurs.get(updated.id) ?? 0,
+    };
   }
 
   async supprimerCategorie(tenantId: string, id: string): Promise<void> {
