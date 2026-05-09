@@ -68,6 +68,18 @@ export const modifierProduitSchema = z.object({
   actif: z.boolean().optional(),
 });
 
+export const modifierVarianteSchema = z.object({
+  sku: z.string().min(1, "SKU requis").optional(),
+  nom: z.string().optional(),
+  codeBarres: z.string().optional(),
+  prixAchat: z.number().min(0, "Prix invalide").optional(),
+  prixDetail: z.number().min(0, "Prix invalide").optional(),
+  prixGros: z.number().min(0, "Prix invalide").optional(),
+  prixVip: z.number().min(0, "Prix invalide").optional(),
+  actif: z.boolean().optional(),
+});
+
 export type CreerProduitDTO = z.infer<typeof creerProduitSchema>;
 export type CreerVarianteDTO = z.infer<typeof creerVarianteSchema>;
 export type ModifierProduitDTO = z.infer<typeof modifierProduitSchema>;
+export type ModifierVarianteDTO = z.infer<typeof modifierVarianteSchema>;

@@ -41,6 +41,14 @@ export const catalogueAPI = {
   supprimerProduit: (token: string, id: string) =>
     httpClient.delete<void>(`${BASE}/produits/${id}`, { token }),
 
+  modifierVariante: (
+    token: string,
+    produitId: string,
+    varianteId: string,
+    data: unknown,
+  ) =>
+    httpClient.patch(`${BASE}/produits/${produitId}/variantes/${varianteId}`, data, { token }),
+
   listerCategories: (token: string) =>
     httpClient.get<ICategorie[]>(`${BASE}/categories`, { token }),
 
