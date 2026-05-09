@@ -4,9 +4,12 @@ import { useState, useMemo } from "react";
 import {
   Select, ListBox, Spinner, Chip, Button,
 } from "@heroui/react";
-import { History } from "lucide-react";
+import {
+  History, Banknote, Receipt, TrendingUp, AlertTriangle,
+} from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
+import { CarteKpi } from "@/features/tableau-de-bord/components/carte-kpi";
 import { useSessionListQuery } from "@/features/session-caisse/queries/session-list.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import {
@@ -66,6 +69,19 @@ export default function PageHistoriqueSessions() {
     return Array.from(parJour.values());
   }, [sessions]);
 
+  // KPIs agreges sur les sessions chargees (page courante).
+  // Pour le MVP on calcule cote front : si l'utilisateur veut des KPIs sur
+  // tout l'historique, on ajoutera un endpoint dedie cote backend.
+  const kpis = useMemo(() => {
+    const recettes = sessions.reduce((s, x) => s + (x.totalEncaisse ?? 0), 0);
+    const tickets = sessions.reduce((s, x) => s + (x.nombreTickets ?? 0), 0);
+    const moyen = tickets > 0 ? recettes / tickets : 0;
+    const ecartEspeces = sessions
+      .filter((s) => s.statut === "CLOSED")
+      .reduce((s, x) => s + (x.ecart?.CASH ?? 0), 0);
+    return { recettes, tickets, moyen, ecartEspeces };
+  }, [sessions]);
+
   return (
     <PageContainer>
       <PageHeader
@@ -114,6 +130,44 @@ export default function PageHistoriqueSessions() {
           </>
         }
       />
+
+      {!isLoading && sessions.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+          <CarteKpi
+            libelle="Recettes"
+            valeur={formatMontant(kpis.recettes)}
+            unite="F CFA"
+            icone={Banknote}
+            classesIcone="bg-accent/10 text-accent"
+          />
+          <CarteKpi
+            libelle="Tickets"
+            valeur={String(kpis.tickets)}
+            icone={Receipt}
+            classesIcone="bg-warning/10 text-warning"
+          />
+          <CarteKpi
+            libelle="Ticket moyen"
+            valeur={formatMontant(kpis.moyen)}
+            unite="F CFA"
+            icone={TrendingUp}
+            classesIcone="bg-success/10 text-success"
+          />
+          <CarteKpi
+            libelle="Écart espèces"
+            valeur={`${kpis.ecartEspeces > 0 ? "+" : ""}${formatMontant(kpis.ecartEspeces)}`}
+            unite="F CFA"
+            icone={AlertTriangle}
+            classesIcone={
+              kpis.ecartEspeces === 0
+                ? "bg-muted/10 text-muted"
+                : kpis.ecartEspeces > 0
+                ? "bg-success/10 text-success"
+                : "bg-danger/10 text-danger"
+            }
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <div className="py-16 flex justify-center"><Spinner /></div>
