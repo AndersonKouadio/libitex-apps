@@ -170,7 +170,7 @@ export function ModalClientPanier({ ouvert, clientCourant, onConfirmer, onFermer
             )}
           </Modal.Body>
 
-          <Modal.Footer>
+          <Modal.Footer className="flex-wrap gap-2">
             {clientCourant && !modeCreation && (
               <Button
                 variant="ghost"
@@ -180,14 +180,11 @@ export function ModalClientPanier({ ouvert, clientCourant, onConfirmer, onFermer
                 Retirer le client
               </Button>
             )}
-            {modeCreation && (
-              <Button variant="ghost" className="mr-auto" onPress={() => setModeCreation(false)}>
-                Retour
-              </Button>
-            )}
-            <Button variant="secondary" slot="close">Annuler</Button>
-            {modeCreation && (
+            {modeCreation ? (
               <>
+                <Button variant="ghost" className="mr-auto" onPress={() => setModeCreation(false)}>
+                  ← Retour
+                </Button>
                 <Button
                   variant="secondary"
                   onPress={libre}
@@ -200,9 +197,11 @@ export function ModalClientPanier({ ouvert, clientCourant, onConfirmer, onFermer
                   onPress={creerEtSelectionner}
                   isDisabled={!nouveauNom.trim() || creer.isPending}
                 >
-                  {creer.isPending ? "Création..." : "Créer le client"}
+                  {creer.isPending ? "Création..." : "Créer"}
                 </Button>
               </>
+            ) : (
+              <Button variant="secondary" slot="close">Annuler</Button>
             )}
           </Modal.Footer>
         </Modal.Dialog>
