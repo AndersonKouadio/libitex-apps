@@ -11,7 +11,9 @@ import { useRecapitulatifFermetureQuery } from "../queries/session-active.query"
 import { useSessionCaisse } from "../hooks/useSessionCaisse";
 import { useAnnulerTicketMutation } from "@/features/vente/queries/ticket-annuler.mutation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { formatMontant } from "@/features/vente/utils/format";
+import {
+  formatMontant, formatDateRelative, formatHeure, formatDuree,
+} from "@/features/vente/utils/format";
 import type { FondParMethode } from "../types/session-caisse.type";
 
 interface Props {
@@ -82,14 +84,19 @@ export function ModalFermetureCaisse({ ouvert, sessionId, onFermer, onReprendreT
               <div className="py-12 flex justify-center"><Spinner /></div>
             ) : (
               <>
-                {/* Recap session */}
+                {/* Recap session — date humaine d'abord, numero en discret */}
                 <div className="rounded-xl border border-border p-3 flex items-center gap-3 bg-muted/5">
                   <Clock size={16} className="text-muted shrink-0" />
-                  <div className="flex-1 text-xs">
-                    <p className="text-foreground">
-                      <span className="font-mono font-semibold">{recap.data.session.numeroSession}</span>
-                      {" · "}
+                  <div className="flex-1 text-xs min-w-0">
+                    <p className="text-foreground font-medium">
+                      {formatDateRelative(recap.data.session.ouvertA)} · depuis {formatHeure(recap.data.session.ouvertA)}
+                      <span className="text-muted ml-1">
+                        ({formatDuree(Math.round((Date.now() - new Date(recap.data.session.ouvertA).getTime()) / 60000))})
+                      </span>
+                    </p>
+                    <p className="text-muted mt-0.5 truncate">
                       {recap.data.session.caissierNom} — {recap.data.session.emplacementNom}
+                      <span className="font-mono ml-1.5 text-[10px] opacity-60">{recap.data.session.numeroSession}</span>
                     </p>
                     <p className="text-muted mt-0.5">
                       {recap.data.session.nombreTickets ?? 0} ticket(s) ·{" "}

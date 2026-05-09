@@ -188,11 +188,6 @@ export default function PagePOS() {
           <div className="h-14 flex items-center gap-2 min-w-0">
             <ShoppingCart size={18} className="text-accent shrink-0" />
             <span className="font-semibold text-foreground text-sm sm:text-base">Caisse</span>
-            {sessionActive && (
-              <Chip className="bg-success/10 text-success text-[10px] font-mono ml-1 hidden sm:inline-flex">
-                {sessionActive.numeroSession}
-              </Chip>
-            )}
           </div>
           <div className="h-14 flex items-center gap-1 sm:gap-2 shrink-0">
             {(emplacementsCaisse ?? []).length > 0 && (

@@ -1,17 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
-  Select, ListBox, Label, Spinner, Chip, Button,
+  Select, ListBox, Spinner, Chip, Button,
 } from "@heroui/react";
 import { History } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
 import { useSessionListQuery } from "@/features/session-caisse/queries/session-list.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
-import { formatMontant } from "@/features/vente/utils/format";
+import {
+  formatMontant, formatDateRelative, formatHeure, formatDuree, cleJour,
+} from "@/features/vente/utils/format";
 import type { ISessionCaisse } from "@/features/session-caisse/types/session-caisse.type";
 
 type FiltreStatut = "TOUS" | "OPEN" | "CLOSED";
+
+interface GroupeJour {
+  cle: string;
+  libelle: string;
+  sessions: ISessionCaisse[];
+  totalRecettes: number;
+  totalTickets: number;
+}
 
 export default function PageHistoriqueSessions() {
   const { data: emplacements } = useEmplacementListQuery();
@@ -23,7 +34,7 @@ export default function PageHistoriqueSessions() {
     emplacementId: empId || undefined,
     statut: statut === "TOUS" ? undefined : statut,
     page,
-    limit: 20,
+    limit: 50,
   });
 
   const sessions = data?.data ?? [];
@@ -31,62 +42,78 @@ export default function PageHistoriqueSessions() {
   const totalPages = data?.meta.totalPages ?? 1;
   const stores = (emplacements ?? []).filter((e) => e.type === "STORE");
 
+  // Regroupe les sessions par jour d'ouverture. Les sessions sont deja
+  // triees par ouvertA DESC cote backend, donc l'ordre des groupes suit.
+  const groupes = useMemo<GroupeJour[]>(() => {
+    const parJour = new Map<string, GroupeJour>();
+    for (const s of sessions) {
+      const cle = cleJour(s.ouvertA);
+      let g = parJour.get(cle);
+      if (!g) {
+        g = {
+          cle,
+          libelle: formatDateRelative(s.ouvertA),
+          sessions: [],
+          totalRecettes: 0,
+          totalTickets: 0,
+        };
+        parJour.set(cle, g);
+      }
+      g.sessions.push(s);
+      g.totalRecettes += s.totalEncaisse ?? 0;
+      g.totalTickets += s.nombreTickets ?? 0;
+    }
+    return Array.from(parJour.values());
+  }, [sessions]);
+
   return (
     <PageContainer>
-      <header className="flex items-start gap-3 mb-5">
-        <span className="w-10 h-10 rounded-lg bg-accent/10 text-accent flex items-center justify-center">
-          <History size={18} strokeWidth={2} />
-        </span>
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Historique des sessions</h1>
-          <p className="text-sm text-muted">
-            Toutes les sessions de caisse, ouvertes ou fermees, avec les ecarts de comptage.
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        titre={`${total} session${total > 1 ? "s" : ""}`}
+        description="Toutes les sessions de caisse, ouvertes ou fermees, avec les ecarts de comptage."
+        actions={
+          <>
+            <Select
+              selectedKey={empId || "all"}
+              onSelectionChange={(k) => { setEmpId(k === "all" ? "" : String(k)); setPage(1); }}
+              aria-label="Emplacement"
+              className="min-w-[180px]"
+            >
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id="all" textValue="Tous">Tous les emplacements</ListBox.Item>
+                  {stores.map((e) => (
+                    <ListBox.Item key={e.id} id={e.id} textValue={e.nom}>{e.nom}</ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
+            </Select>
 
-      <div className="flex flex-wrap gap-3 mb-4">
-        <Select
-          selectedKey={empId || "all"}
-          onSelectionChange={(k) => { setEmpId(k === "all" ? "" : String(k)); setPage(1); }}
-          aria-label="Emplacement"
-          className="min-w-[200px]"
-        >
-          <Label className="text-xs text-muted">Emplacement</Label>
-          <Select.Trigger>
-            <Select.Value />
-            <Select.Indicator />
-          </Select.Trigger>
-          <Select.Popover>
-            <ListBox>
-              <ListBox.Item id="all" textValue="Tous">Tous les emplacements</ListBox.Item>
-              {stores.map((e) => (
-                <ListBox.Item key={e.id} id={e.id} textValue={e.nom}>{e.nom}</ListBox.Item>
-              ))}
-            </ListBox>
-          </Select.Popover>
-        </Select>
-
-        <Select
-          selectedKey={statut}
-          onSelectionChange={(k) => { setStatut(k as FiltreStatut); setPage(1); }}
-          aria-label="Statut"
-          className="min-w-[160px]"
-        >
-          <Label className="text-xs text-muted">Statut</Label>
-          <Select.Trigger>
-            <Select.Value />
-            <Select.Indicator />
-          </Select.Trigger>
-          <Select.Popover>
-            <ListBox>
-              <ListBox.Item id="TOUS" textValue="Tous">Toutes</ListBox.Item>
-              <ListBox.Item id="OPEN" textValue="Ouvertes">Ouvertes</ListBox.Item>
-              <ListBox.Item id="CLOSED" textValue="Fermees">Fermees</ListBox.Item>
-            </ListBox>
-          </Select.Popover>
-        </Select>
-      </div>
+            <Select
+              selectedKey={statut}
+              onSelectionChange={(k) => { setStatut(k as FiltreStatut); setPage(1); }}
+              aria-label="Statut"
+              className="min-w-[140px]"
+            >
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id="TOUS" textValue="Tous">Toutes</ListBox.Item>
+                  <ListBox.Item id="OPEN" textValue="Ouvertes">Ouvertes</ListBox.Item>
+                  <ListBox.Item id="CLOSED" textValue="Fermees">Fermees</ListBox.Item>
+                </ListBox>
+              </Select.Popover>
+            </Select>
+          </>
+        }
+      />
 
       {isLoading ? (
         <div className="py-16 flex justify-center"><Spinner /></div>
@@ -98,12 +125,12 @@ export default function PageHistoriqueSessions() {
         </div>
       ) : (
         <>
-          <div className="space-y-2">
-            {sessions.map((s) => <CarteSession key={s.id} session={s} />)}
+          <div className="space-y-6">
+            {groupes.map((g) => <GroupeJourBloc key={g.cle} groupe={g} />)}
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 text-sm">
+            <div className="flex items-center justify-between mt-6 text-sm">
               <p className="text-xs text-muted">
                 {total} session(s) — page {page} / {totalPages}
               </p>
@@ -133,6 +160,26 @@ export default function PageHistoriqueSessions() {
   );
 }
 
+function GroupeJourBloc({ groupe }: { groupe: GroupeJour }) {
+  return (
+    <section>
+      <header className="flex items-baseline justify-between gap-2 mb-2 px-1">
+        <h2 className="text-sm font-semibold text-foreground">{groupe.libelle}</h2>
+        <p className="text-xs text-muted">
+          {groupe.sessions.length} session{groupe.sessions.length > 1 ? "s" : ""} ·{" "}
+          {groupe.totalTickets} ticket{groupe.totalTickets > 1 ? "s" : ""} ·{" "}
+          <span className="font-semibold text-foreground tabular-nums">
+            {formatMontant(groupe.totalRecettes)} F
+          </span>
+        </p>
+      </header>
+      <div className="space-y-2">
+        {groupe.sessions.map((s) => <CarteSession key={s.id} session={s} />)}
+      </div>
+    </section>
+  );
+}
+
 function CarteSession({ session }: { session: ISessionCaisse }) {
   const ouverte = session.statut === "OPEN";
   const ecartCash = session.ecart?.CASH ?? 0;
@@ -140,13 +187,18 @@ function CarteSession({ session }: { session: ISessionCaisse }) {
   const dureeMinutes = session.fermeA
     ? Math.round((new Date(session.fermeA).getTime() - new Date(session.ouvertA).getTime()) / 60000)
     : Math.round((Date.now() - new Date(session.ouvertA).getTime()) / 60000);
+  const horaire = session.fermeA
+    ? `${formatHeure(session.ouvertA)} → ${formatHeure(session.fermeA)}`
+    : `depuis ${formatHeure(session.ouvertA)}`;
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-3">
-      <div className="flex items-center gap-3">
+    <div className="rounded-xl border border-border bg-surface p-3 hover:border-accent/30 transition-colors">
+      <div className="flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <p className="font-mono text-sm font-semibold text-foreground">{session.numeroSession}</p>
+            <p className="text-sm font-semibold text-foreground tabular-nums">{horaire}</p>
+            <span className="text-xs text-muted">·</span>
+            <span className="text-xs text-muted tabular-nums">{formatDuree(dureeMinutes)}</span>
             <Chip className={`text-[10px] gap-1 ${
               ouverte ? "bg-success/10 text-success" : "bg-muted/10 text-muted"
             }`}>
@@ -162,12 +214,9 @@ function CarteSession({ session }: { session: ISessionCaisse }) {
           </div>
           <p className="text-xs text-muted truncate">
             {session.caissierNom} — {session.emplacementNom}
+            <span className="font-mono ml-2 text-[10px] opacity-50">{session.numeroSession}</span>
           </p>
           <div className="flex items-center gap-3 mt-1.5 text-xs flex-wrap">
-            <span className="text-muted">
-              Duree <span className="text-foreground font-medium tabular-nums">{formaterDuree(dureeMinutes)}</span>
-            </span>
-            <span className="text-muted">·</span>
             <span className="text-muted">
               Tickets <span className="text-foreground font-medium tabular-nums">{session.nombreTickets ?? 0}</span>
             </span>
@@ -182,11 +231,4 @@ function CarteSession({ session }: { session: ISessionCaisse }) {
       </div>
     </div>
   );
-}
-
-function formaterDuree(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h === 0) return `${m} min`;
-  return `${h}h${String(m).padStart(2, "0")}`;
 }

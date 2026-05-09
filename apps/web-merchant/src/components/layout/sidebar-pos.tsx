@@ -8,7 +8,7 @@ import { useKpisQuery } from "@/features/tableau-de-bord/queries/kpis.query";
 import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import { useSessionActiveQuery } from "@/features/session-caisse/queries/session-active.query";
-import { formatMontant } from "@/features/vente/utils/format";
+import { formatMontant, formatHeure, formatDateRelative } from "@/features/vente/utils/format";
 
 interface Props {
   /** Si true, sidebar repliee : on cache les libelles. */
@@ -70,9 +70,6 @@ export function SidebarPOS({ replie }: Props) {
   }
 
   const initiales = `${utilisateur?.prenom?.[0] ?? ""}${utilisateur?.nomFamille?.[0] ?? ""}`;
-  const heureOuverture = sessionActive
-    ? formatHeure(sessionActive.ouvertA)
-    : null;
 
   return (
     <nav className="flex-1 px-3 py-3 space-y-4 overflow-y-auto">
@@ -84,9 +81,11 @@ export function SidebarPOS({ replie }: Props) {
         <div className="min-w-0 flex-1">
           <p className="text-sm text-white truncate">{utilisateur?.prenom} {utilisateur?.nomFamille}</p>
           {sessionActive ? (
-            <p className="text-[10px] text-white/55 truncate">
-              <span className="font-mono">{sessionActive.numeroSession}</span>
-              {heureOuverture && <> · ouv. {heureOuverture}</>}
+            <p
+              className="text-[10px] text-white/55 truncate"
+              title={`Session ${sessionActive.numeroSession}`}
+            >
+              {formatDateRelative(sessionActive.ouvertA)} · depuis {formatHeure(sessionActive.ouvertA)}
             </p>
           ) : (
             <p className="text-[10px] text-warning/80 flex items-center gap-1">
@@ -153,9 +152,4 @@ function KpiLigne({ libelle, valeur }: { libelle: string; valeur: string }) {
       <span className="text-sm font-semibold text-white tabular-nums">{valeur}</span>
     </div>
   );
-}
-
-function formatHeure(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }

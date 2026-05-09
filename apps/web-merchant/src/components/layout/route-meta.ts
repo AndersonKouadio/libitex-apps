@@ -19,6 +19,7 @@ export const ROUTE_META: Record<string, RouteMeta> = {
   "/ingredients": { titre: "Ingrédients" },
   "/pos": { titre: "Point de vente", raccourci: "Caisse" },
   "/rapports": { titre: "Rapports" },
+  "/sessions-caisse": { titre: "Sessions caisse", raccourci: "Sessions" },
   "/stock": { titre: "Stock" },
   "/supplements": { titre: "Suppléments" },
   "/parametres": { titre: "Paramètres" },
