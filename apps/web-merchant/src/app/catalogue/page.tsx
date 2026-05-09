@@ -14,7 +14,7 @@ import type { IProduit } from "@/features/catalogue/types/produit.type";
 import {
   Table, Chip, Button, Skeleton, SearchField, Input, Select, ListBox,
 } from "@heroui/react";
-import { Package, Plus, Pencil, AlertTriangle } from "lucide-react";
+import { Package, Plus, Pencil, AlertTriangle, Copy } from "lucide-react";
 
 function formatPrix(n: number) {
   return new Intl.NumberFormat("fr-FR").format(n);
@@ -291,14 +291,27 @@ export default function PageCatalogue() {
                         </div>
                       </Table.Cell>
                       <Table.Cell>
-                        <Link href={`/catalogue/${p.id}`} aria-label={`Modifier ${p.nom}`}>
-                          <Button
-                            variant="ghost"
-                            className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
+                        <div className="flex items-center gap-0.5 justify-end">
+                          <Link
+                            href={`/catalogue/nouveau?dupliquer=${p.id}`}
+                            aria-label={`Dupliquer ${p.nom}`}
                           >
-                            <Pencil size={14} />
-                          </Button>
-                        </Link>
+                            <Button
+                              variant="ghost"
+                              className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
+                            >
+                              <Copy size={14} />
+                            </Button>
+                          </Link>
+                          <Link href={`/catalogue/${p.id}`} aria-label={`Modifier ${p.nom}`}>
+                            <Button
+                              variant="ghost"
+                              className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
+                            >
+                              <Pencil size={14} />
+                            </Button>
+                          </Link>
+                        </div>
                       </Table.Cell>
                     </Table.Row>
                   );

@@ -117,6 +117,56 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
     setSkuManuel(false); setPrefixeSkuManuel(false);
   }, [typeParDefaut]);
 
+  /**
+   * Pre-remplit le formulaire depuis un produit existant (pour duplication).
+   * Le nom recoit un suffixe "(copie)" pour eviter une collision SKU
+   * automatique. Le SKU est laisse vide pour etre regenere.
+   * Les variantes sont copiees sans leur id ni SKU.
+   */
+  const chargerDepuis = useCallback((source: {
+    nom: string;
+    description?: string | null;
+    typeProduit: TypeProduit;
+    marque?: string | null;
+    categorieId?: string | null;
+    tauxTva?: number | null;
+    images?: string[];
+    variantes?: Array<{
+      nom?: string | null;
+      prixDetail?: number;
+      uniteVente?: CreerVarianteDTO["uniteVente"];
+      pasMin?: number | null;
+      prixParUnite?: boolean;
+    }>;
+  }) => {
+    setNom(`${source.nom} (copie)`);
+    setDescription(source.description ?? "");
+    if (typesAutorises.includes(source.typeProduit)) {
+      setTypeProduit(source.typeProduit);
+    }
+    setMarque(source.marque ?? "");
+    setCategorieId(source.categorieId ?? "");
+    setTauxTva(source.tauxTva ? String(source.tauxTva) : "0");
+    setImages(source.images ?? []);
+    // Premiere variante recuperee pour pre-remplir la variante unique
+    // (cas SIMPLE/SERIALIZED/PERISHABLE/MENU). Pour VARIANT, l'utilisateur
+    // re-genere la matrice manuellement.
+    const v0 = source.variantes?.[0];
+    if (v0) {
+      setVarianteUnique({
+        ...VARIANTE_VIDE,
+        nom: v0.nom ?? "",
+        prixDetail: v0.prixDetail ?? 0,
+        uniteVente: v0.uniteVente ?? VARIANTE_VIDE.uniteVente,
+        pasMin: v0.pasMin ?? undefined,
+        prixParUnite: v0.prixParUnite ?? false,
+      });
+    }
+    // SKU vide → sera regenere depuis le nouveau nom
+    setSkuManuel(false);
+    setPrefixeSkuManuel(false);
+  }, [typesAutorises]);
+
   // Wrapper qui marque le SKU comme manuel quand l'utilisateur le modifie
   // (et permet de revenir en mode automatique en vidant le champ).
   const setVarianteUniqueAvecSkuTracking = useCallback((data: CreerVarianteDTO) => {
@@ -210,6 +260,6 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
     setModeDisponibilite, setPlanningDisponibilite, setEmplacementsDisponibles,
     ajouterAxe, retirerAxe, modifierAxe,
     regenererSku,
-    reinitialiser, valider, setErreur,
+    reinitialiser, chargerDepuis, valider, setErreur,
   };
 }

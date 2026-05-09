@@ -1,15 +1,17 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Card, toast } from "@heroui/react";
 import {
-  ArrowLeft, Save, Info, ImageIcon, Tag, UtensilsCrossed,
+  ArrowLeft, Save, Info, ImageIcon, Tag, UtensilsCrossed, Copy,
 } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { useFormProduit, type TypeProduit } from "@/features/catalogue/hooks/useFormProduit";
 import { useAjouterProduitMutation } from "@/features/catalogue/queries/produit-add.mutation";
 import { useCategorieListQuery } from "@/features/catalogue/queries/categorie-list.query";
+import { useProduitDetailQuery } from "@/features/catalogue/queries/produit-list.query";
 import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { ingredientAPI } from "@/features/ingredient/apis/ingredient.api";
@@ -37,6 +39,7 @@ const TITRES_SKU: Record<TypeProduit, { titre: string; description: string }> = 
 
 export default function PageNouveauProduit() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { token } = useAuth();
   const mutation = useAjouterProduitMutation();
   const { data: categories } = useCategorieListQuery();
@@ -44,6 +47,27 @@ export default function PageNouveauProduit() {
   const invalidateIngredients = useInvalidateIngredientQuery();
   const typesAutorises = (boutique?.typesProduitsAutorises ?? TYPES_PAR_DEFAUT) as TypeProduit[];
   const form = useFormProduit(typesAutorises);
+
+  // Duplication : si ?dupliquer=<id>, on charge le produit source et on
+  // pre-remplit le formulaire. Le suffixe " (copie)" est ajoute au nom.
+  const dupliquerId = searchParams.get("dupliquer");
+  const { data: produitSource } = useProduitDetailQuery(dupliquerId ?? "");
+  const dupliqueAppliquee = useRef(false);
+  useEffect(() => {
+    if (!produitSource || dupliqueAppliquee.current) return;
+    form.chargerDepuis({
+      nom: produitSource.nom,
+      description: produitSource.description,
+      typeProduit: produitSource.typeProduit as TypeProduit,
+      marque: produitSource.marque,
+      categorieId: produitSource.categorieId,
+      tauxTva: produitSource.tauxTva,
+      images: produitSource.images,
+      variantes: produitSource.variantes,
+    });
+    dupliqueAppliquee.current = true;
+    toast.success(`"${produitSource.nom}" dupliqué — ajustez puis enregistrez`);
+  }, [produitSource, form]);
 
   const {
     typeProduit, varianteUnique, axes, prefixeSku, variantesGenerees, images,

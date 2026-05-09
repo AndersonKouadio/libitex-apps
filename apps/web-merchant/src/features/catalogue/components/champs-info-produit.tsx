@@ -76,7 +76,10 @@ export function ChampsInfoProduit({
 
       <TextField name="description" value={description} onChange={onDescription}>
         <Label>Description (optionnel)</Label>
-        <TextArea placeholder="Specifications, points cles, conditions de garantie..." rows={2} />
+        <TextArea
+          placeholder="Quelques mots pour le client : ingrédients, taille, particularités…"
+          rows={2}
+        />
       </TextField>
 
       <Disclosure className="rounded-lg border border-border bg-surface-secondary/30">
