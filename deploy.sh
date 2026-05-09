@@ -24,17 +24,13 @@ fi
 # Pousse le schema Drizzle vers la base (Neon). A appeler apres chaque deploy
 # api/all ou en standalone via './deploy.sh db'. Idempotent : ne fait rien si
 # le schema est deja a jour.
+#
+# Tourne dans un container Node ephemere : pas besoin de Node/pnpm sur l'host
+# (utile en CI/CD ou en SSH non-interactif ou le PATH est minimal).
 push_schema() {
-  echo ">> Push du schema Drizzle vers la base..."
-  # drizzle-kit est en devDep, donc absent en prod sauf si pnpm install a deja
-  # ete fait sur le host. On installe a la demande si node_modules manquant.
-  if [ ! -f packages/db/node_modules/.bin/drizzle-kit ] && [ ! -f node_modules/.bin/drizzle-kit ]; then
-    echo ">> Installation des dependances pnpm (incluant drizzle-kit)..."
-    pnpm install --silent
-  fi
+  echo ">> Push du schema Drizzle vers la base (container Node)..."
   # Extrait DATABASE_URL via grep (et non par sourcing) car le caractere & dans
-  # une URL Neon non-quotee est interprete comme operateur de fork bash et
-  # tronque la variable. On retire les guillemets eventuels.
+  # une URL Neon non-quotee est interprete comme operateur de fork bash.
   local db_url
   db_url=$(grep '^DATABASE_URL=' .env | head -1 | cut -d= -f2-)
   db_url="${db_url%\"}"
@@ -45,7 +41,12 @@ push_schema() {
     echo "ERREUR: DATABASE_URL absent du .env"
     exit 1
   fi
-  (cd packages/db && DATABASE_URL="$db_url" pnpm exec drizzle-kit push --force)
+  docker run --rm \
+    -v "$(pwd):/app" \
+    -w /app/packages/db \
+    -e DATABASE_URL="$db_url" \
+    node:20-alpine \
+    sh -c "corepack enable pnpm >/dev/null 2>&1 && pnpm install --silent && pnpm exec drizzle-kit push --force"
   echo ">> Schema OK"
 }
 
