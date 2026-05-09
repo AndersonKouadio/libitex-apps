@@ -47,6 +47,8 @@ export interface ITicket {
   total: number;
   nomClient?: string;
   telephoneClient?: string;
+  /** Note libre du ticket : "Table 3", "A emporter", "Sans piment"... */
+  note?: string;
   lignes: ILigneTicket[];
   paiements: IPaiement[];
   completeLe?: string;

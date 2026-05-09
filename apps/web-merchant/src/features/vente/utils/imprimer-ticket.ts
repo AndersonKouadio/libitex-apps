@@ -8,6 +8,13 @@ interface InfosBoutique {
   devise?: string;
 }
 
+interface InfosContexte {
+  /** Nom complet du caissier (Anderson Kouadio). */
+  caissier?: string;
+  /** Numero de session caisse pour la tracabilite (SC-20260509-001). */
+  numeroSession?: string;
+}
+
 const LIBELLE_PAIEMENT: Record<string, string> = {
   CASH: "Espèces",
   CARD: "Carte bancaire",
@@ -21,8 +28,13 @@ const LIBELLE_PAIEMENT: Record<string, string> = {
  * dédiée et déclenche le dialogue d'impression. Compatible avec une imprimante
  * thermique (via le navigateur) ou une impression A4.
  */
-export function imprimerTicket(ticket: ITicket, boutique: InfosBoutique, monnaie = 0): void {
-  const html = construireHtml(ticket, boutique, monnaie);
+export function imprimerTicket(
+  ticket: ITicket,
+  boutique: InfosBoutique,
+  monnaie = 0,
+  contexte: InfosContexte = {},
+): void {
+  const html = construireHtml(ticket, boutique, monnaie, contexte);
   const fenetre = window.open("", "_blank", "width=380,height=600");
   if (!fenetre) {
     // Bloqueur de popup actif — fallback : impression dans la fenêtre courante.
@@ -41,11 +53,28 @@ export function imprimerTicket(ticket: ITicket, boutique: InfosBoutique, monnaie
   }, 200);
 }
 
-function construireHtml(ticket: ITicket, boutique: InfosBoutique, monnaie: number): string {
+function construireHtml(
+  ticket: ITicket,
+  boutique: InfosBoutique,
+  monnaie: number,
+  contexte: InfosContexte,
+): string {
   const date = new Date(ticket.completeLe ?? ticket.creeLe);
   const dateStr = date.toLocaleDateString("fr-FR");
   const heureStr = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const devise = boutique.devise ?? "F CFA";
+
+  const aClient = !!(ticket.nomClient || ticket.telephoneClient);
+  const aNote = !!ticket.note;
+  const blocClientNote = aClient || aNote
+    ? `<div class="bloc-meta">
+        ${aClient ? `<div><strong>Client :</strong> ${escape(ticket.nomClient ?? "")}${
+          ticket.telephoneClient ? ` · ${escape(ticket.telephoneClient)}` : ""
+        }</div>` : ""}
+        ${aNote ? `<div><strong>Note :</strong> ${escape(ticket.note!)}</div>` : ""}
+      </div>
+      <div class="separateur"></div>`
+    : "";
 
   const lignesHtml = ticket.lignes
     .map((l) => {
@@ -99,6 +128,8 @@ function construireHtml(ticket: ITicket, boutique: InfosBoutique, monnaie: numbe
     .header { text-align: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #000; }
     .header h1 { font-size: 16px; margin: 0 0 2px; }
     .meta { font-size: 11px; color: #333; }
+    .bloc-meta { font-size: 11px; color: #000; margin: 6px 0; }
+    .bloc-meta div { margin: 1px 0; }
     table { width: 100%; border-collapse: collapse; margin: 8px 0; }
     .ligne td { padding: 4px 0; vertical-align: top; }
     .nom { padding-right: 6px; }
@@ -120,7 +151,11 @@ function construireHtml(ticket: ITicket, boutique: InfosBoutique, monnaie: numbe
     <h1>${escape(boutique.nom)}</h1>
     <div class="meta">${dateStr} · ${heureStr}</div>
     <div class="meta">Ticket n° ${escape(ticket.numeroTicket)}</div>
+    ${contexte.caissier ? `<div class="meta">Caissier : ${escape(contexte.caissier)}</div>` : ""}
+    ${contexte.numeroSession ? `<div class="meta">Session : ${escape(contexte.numeroSession)}</div>` : ""}
   </div>
+
+  ${blocClientNote}
 
   <table>
     ${lignesHtml}
