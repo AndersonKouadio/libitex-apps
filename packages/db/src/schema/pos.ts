@@ -24,6 +24,44 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "CREDIT",
 ]);
 
+export const cashSessionStatusEnum = pgEnum("cash_session_status", [
+  "OPEN",
+  "CLOSED",
+]);
+
+// ─── Cash Sessions (Sessions caisse) ───
+// Une session = une "ouverture" de caisse par un caissier sur un emplacement.
+// Tous les tickets sont rattaches a une session pour le rapport Z.
+// Un caissier peut avoir au plus une session OPEN par emplacement.
+
+export const cashSessions = pgTable("cash_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").references(() => tenants.id).notNull(),
+  locationId: uuid("location_id").references(() => locations.id).notNull(),
+  cashierId: uuid("cashier_id").references(() => users.id).notNull(),
+  sessionNumber: varchar("session_number", { length: 50 }).notNull(),
+  status: cashSessionStatusEnum("status").notNull().default("OPEN"),
+  // Fonds initiaux par methode de paiement (espèces obligatoire, autres optionnels)
+  // Format: { CASH: 50000, MOBILE_MONEY: 0, CARD: 0, BANK_TRANSFER: 0 }
+  openingFloat: jsonb("opening_float").notNull().default({}),
+  // Theorique = openingFloat + somme des paiements de la session par methode
+  closingTheoretical: jsonb("closing_theoretical"),
+  // Declare = comptage saisi par le caissier a la fermeture
+  closingDeclared: jsonb("closing_declared"),
+  // Ecart = declared - theorical (positif = excedent, negatif = manquant)
+  variance: jsonb("variance"),
+  openingNote: text("opening_note"),
+  closingNote: text("closing_note"),
+  openedAt: timestamp("opened_at", { withTimezone: true }).notNull().defaultNow(),
+  closedAt: timestamp("closed_at", { withTimezone: true }),
+}, (table) => [
+  index("idx_cash_sessions_tenant").on(table.tenantId),
+  index("idx_cash_sessions_location").on(table.locationId),
+  index("idx_cash_sessions_cashier").on(table.cashierId),
+  index("idx_cash_sessions_status").on(table.status),
+  index("idx_cash_sessions_opened").on(table.openedAt),
+]);
+
 // ─── Tickets (Sales) ───
 
 export const tickets = pgTable("tickets", {
@@ -31,6 +69,10 @@ export const tickets = pgTable("tickets", {
   tenantId: uuid("tenant_id").references(() => tenants.id).notNull(),
   locationId: uuid("location_id").references(() => locations.id).notNull(),
   userId: uuid("user_id").references(() => users.id).notNull(),
+  // Session caisse a laquelle le ticket appartient. Nullable transitoirement
+  // pour les tickets PARKED "reportes" entre sessions (ils flottent en
+  // attendant d'etre repris par un caissier dont la session est ouverte).
+  sessionId: uuid("session_id").references(() => cashSessions.id),
   ticketNumber: varchar("ticket_number", { length: 50 }).notNull(),
   status: ticketStatusEnum("status").notNull().default("OPEN"),
   subtotal: numeric("subtotal", { precision: 15, scale: 2 }).notNull().default("0"),
@@ -47,6 +89,7 @@ export const tickets = pgTable("tickets", {
   index("idx_tickets_tenant").on(table.tenantId),
   index("idx_tickets_location").on(table.locationId),
   index("idx_tickets_user").on(table.userId),
+  index("idx_tickets_session").on(table.sessionId),
   index("idx_tickets_status").on(table.status),
   index("idx_tickets_number").on(table.ticketNumber),
   index("idx_tickets_created").on(table.createdAt),

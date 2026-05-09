@@ -42,6 +42,15 @@ export class VenteController {
     return this.venteService.mettreEnAttente(user.tenantId, user.userId, id);
   }
 
+  @Patch("tickets/:id/reporter")
+  @ApiOperation({
+    summary: "Reporter un ticket parqué — détache de la session pour reprise dans une nouvelle session",
+  })
+  @Roles("ADMIN", "MANAGER", "CASHIER")
+  reporter(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
+    return this.venteService.reporter(user.tenantId, id);
+  }
+
   @Patch("tickets/:id/annuler")
   @ApiOperation({ summary: "Annuler un ticket" })
   @Roles("ADMIN", "MANAGER")
@@ -66,15 +75,12 @@ export class VenteController {
     );
   }
 
-  @Get("rapport-z/:emplacementId")
-  @ApiOperation({ summary: "Rapport Z journalier (synthese des ventes par moyen de paiement)" })
-  @ApiQuery({ name: "date", required: false, description: "AAAA-MM-JJ, defaut aujourd'hui" })
-  @Roles("ADMIN", "MANAGER")
-  rapportZ(
-    @CurrentUser() user: CurrentUserData,
-    @Param("emplacementId") emplacementId: string,
-    @Query("date") date?: string,
-  ) {
-    return this.venteService.rapportZ(user.tenantId, emplacementId, date);
+  @Get("sessions/:sessionId/rapport-z")
+  @ApiOperation({
+    summary: "Rapport Z d'une session caisse (synthese ventes par methode de paiement)",
+  })
+  @Roles("ADMIN", "MANAGER", "CASHIER")
+  rapportZ(@CurrentUser() user: CurrentUserData, @Param("sessionId") sessionId: string) {
+    return this.venteService.rapportZ(user.tenantId, sessionId);
   }
 }

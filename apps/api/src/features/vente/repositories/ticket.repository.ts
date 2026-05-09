@@ -24,7 +24,7 @@ export class TicketRepository {
   }
 
   async creerTicket(data: {
-    tenantId: string; locationId: string; userId: string;
+    tenantId: string; locationId: string; userId: string; sessionId: string;
     ticketNumber: string; customerName?: string; customerPhone?: string; note?: string;
   }) {
     const [ticket] = await this.db
@@ -32,6 +32,36 @@ export class TicketRepository {
       .values({ ...data, status: "OPEN" })
       .returning();
     return ticket;
+  }
+
+  async rattacherSession(ticketId: string, sessionId: string) {
+    const [updated] = await this.db
+      .update(tickets)
+      .set({ sessionId, updatedAt: new Date() })
+      .where(eq(tickets.id, ticketId))
+      .returning();
+    return updated;
+  }
+
+  async detacherSession(ticketId: string) {
+    const [updated] = await this.db
+      .update(tickets)
+      .set({ sessionId: null, updatedAt: new Date() })
+      .where(eq(tickets.id, ticketId))
+      .returning();
+    return updated;
+  }
+
+  async listerParkesSansSession(tenantId: string, locationId: string) {
+    return this.db.query.tickets.findMany({
+      where: and(
+        eq(tickets.tenantId, tenantId),
+        eq(tickets.locationId, locationId),
+        eq(tickets.status, "PARKED"),
+        sql`${tickets.sessionId} IS NULL`,
+      ),
+      orderBy: desc(tickets.createdAt),
+    });
   }
 
   async mettreAJourTotaux(ticketId: string, totaux: {
@@ -168,14 +198,13 @@ export class TicketRepository {
     return { data, total: Number(countResult?.count ?? 0) };
   }
 
-  // --- Rapport Z ---
+  // --- Rapport Z par session ---
 
-  async rapportZ(tenantId: string, locationId: string, targetDate: string) {
+  async rapportZParSession(tenantId: string, sessionId: string) {
     const conditions = and(
       eq(tickets.tenantId, tenantId),
-      eq(tickets.locationId, locationId),
+      eq(tickets.sessionId, sessionId),
       eq(tickets.status, "COMPLETED"),
-      sql`DATE(${tickets.completedAt}) = ${targetDate}`,
     );
 
     const [summary] = await this.db

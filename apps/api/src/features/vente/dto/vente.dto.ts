@@ -183,8 +183,11 @@ export class TicketResponseDto {
 }
 
 export class RapportZResponseDto {
-  date!: string;
+  sessionId!: string;
+  numeroSession!: string;
   emplacementId!: string;
+  ouvertA!: string;
+  fermeA!: string | null;
   resume!: {
     totalTickets: number;
     chiffreAffaires: number;

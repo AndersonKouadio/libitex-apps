@@ -90,3 +90,43 @@ export class TicketNonModifiableException extends MetierException {
     );
   }
 }
+
+export class SessionCaisseRequiseException extends MetierException {
+  constructor() {
+    super(
+      "Aucune session caisse ouverte. Ouvrez la caisse avant d'encaisser.",
+      HttpStatus.CONFLICT,
+      "SESSION_CAISSE_REQUISE",
+    );
+  }
+}
+
+export class SessionCaisseDejaOuverteException extends MetierException {
+  constructor() {
+    super(
+      "Vous avez deja une session ouverte sur cet emplacement.",
+      HttpStatus.CONFLICT,
+      "SESSION_CAISSE_DEJA_OUVERTE",
+    );
+  }
+}
+
+export class SessionCaisseFermeeException extends MetierException {
+  constructor() {
+    super(
+      "Cette session est deja fermee.",
+      HttpStatus.CONFLICT,
+      "SESSION_CAISSE_FERMEE",
+    );
+  }
+}
+
+export class TicketsEnCoursException extends MetierException {
+  constructor(nombre: number) {
+    super(
+      `${nombre} ticket(s) en cours d'encaissement. Encaissez ou annulez avant de fermer la caisse.`,
+      HttpStatus.CONFLICT,
+      "TICKETS_EN_COURS",
+    );
+  }
+}

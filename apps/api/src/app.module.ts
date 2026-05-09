@@ -7,6 +7,7 @@ import { AuthModule } from "./features/auth/auth.module";
 import { CatalogueModule } from "./features/catalogue/catalogue.module";
 import { StockModule } from "./features/stock/stock.module";
 import { VenteModule } from "./features/vente/vente.module";
+import { SessionCaisseModule } from "./features/session-caisse/session-caisse.module";
 import { TableauDeBordModule } from "./features/tableau-de-bord/tableau-de-bord.module";
 import { BoutiqueModule } from "./features/boutique/boutique.module";
 import { UploadModule } from "./features/upload/upload.module";
@@ -27,6 +28,7 @@ import { ClientModule } from "./features/client/client.module";
     CatalogueModule,
     StockModule,
     VenteModule,
+    SessionCaisseModule,
     TableauDeBordModule,
     BoutiqueModule,
     UploadModule,
