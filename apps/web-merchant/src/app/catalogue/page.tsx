@@ -12,12 +12,13 @@ import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-act
 import { SelectCategorieArborescence } from "@/features/catalogue/components/select-categorie-arborescence";
 import type { IProduit } from "@/features/catalogue/types/produit.type";
 import {
-  Table, Chip, Button, Skeleton, SearchField, Input, Select, ListBox,
+  Table, Chip, Button, Skeleton, SearchField, Input, Select, ListBox, Checkbox,
 } from "@heroui/react";
 import { Package, Plus, Pencil, AlertTriangle, Copy, Trash2, Folder, Upload } from "lucide-react";
 import { useSupprimerProduitMutation } from "@/features/catalogue/queries/produit-delete.mutation";
 import { useConfirmation } from "@/providers/confirmation-provider";
 import { ToggleActifProduit } from "@/features/catalogue/components/toggle-actif-produit";
+import { BarreActionsLot } from "@/features/catalogue/components/barre-actions-lot";
 
 function formatPrix(n: number) {
   return new Intl.NumberFormat("fr-FR").format(n);
@@ -75,6 +76,25 @@ export default function PageCatalogue() {
   });
   const supprimer = useSupprimerProduitMutation();
   const confirmer = useConfirmation();
+  // Selection en lot. Set d'IDs : conservee tant que l'utilisateur navigue
+  // dans la pagination ; reset apres une action en masse ou un clic Annuler.
+  const [selection, setSelection] = useState<Set<string>>(new Set());
+
+  function toggleLigne(id: string, selected: boolean) {
+    setSelection((prev) => {
+      const next = new Set(prev);
+      if (selected) next.add(id); else next.delete(id);
+      return next;
+    });
+  }
+  function toggleTout(selected: boolean, ids: string[]) {
+    setSelection((prev) => {
+      const next = new Set(prev);
+      if (selected) ids.forEach((id) => next.add(id));
+      else ids.forEach((id) => next.delete(id));
+      return next;
+    });
+  }
 
   async function handleSupprimer(p: IProduit) {
     const ok = await confirmer({
@@ -255,6 +275,15 @@ export default function PageCatalogue() {
           <Table.ScrollContainer>
             <Table.Content aria-label="Catalogue produits">
               <Table.Header className="table-header-libitex">
+                <Table.Column className="w-10">
+                  <Checkbox
+                    isSelected={produits.length > 0 && produits.every((p) => selection.has(p.id))}
+                    onChange={(s) => toggleTout(s, produits.map((p) => p.id))}
+                    aria-label="Sélectionner toute la page"
+                  >
+                    <Checkbox.Indicator />
+                  </Checkbox>
+                </Table.Column>
                 <Table.Column isRowHeader>Produit</Table.Column>
                 <Table.Column>Type</Table.Column>
                 <Table.Column>Variantes</Table.Column>
@@ -268,6 +297,15 @@ export default function PageCatalogue() {
                   const typeInfo = LABELS_TYPE[p.typeProduit] || { label: p.typeProduit, color: "default" };
                   return (
                     <Table.Row key={p.id}>
+                      <Table.Cell>
+                        <Checkbox
+                          isSelected={selection.has(p.id)}
+                          onChange={(s) => toggleLigne(p.id, s)}
+                          aria-label={`Sélectionner ${p.nom}`}
+                        >
+                          <Checkbox.Indicator />
+                        </Checkbox>
+                      </Table.Cell>
                       <Table.Cell>
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-lg bg-surface-secondary overflow-hidden flex items-center justify-center shrink-0">
@@ -367,6 +405,14 @@ export default function PageCatalogue() {
             ))}
           </div>
         </div>
+      )}
+
+      {selection.size > 0 && (
+        <BarreActionsLot
+          selection={Array.from(selection)}
+          categories={categories ?? []}
+          onTermine={() => setSelection(new Set())}
+        />
       )}
     </PageContainer>
   );
