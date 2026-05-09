@@ -24,7 +24,11 @@ export function SectionDisponibilite({
   modeDisponibilite, planningDisponibilite, emplacementsDisponibles,
   onModeDisponibilite, onPlanningDisponibilite, onEmplacementsDisponibles,
 }: Props) {
-  const { data: emplacements } = useEmplacementListQuery();
+  // Seules les boutiques (STORE) sont des emplacements de vente. Les
+  // entrepots, camions, stands restent invisibles ici car le POS ne vend pas
+  // depuis ces points (le stock peut y etre, mais pas la caisse).
+  const { data: tousEmplacements } = useEmplacementListQuery();
+  const emplacements = (tousEmplacements ?? []).filter((e) => e.type === "STORE");
 
   return (
     <section className="space-y-4">
@@ -78,7 +82,7 @@ export function SectionDisponibilite({
         )}
       </div>
 
-      {(emplacements ?? []).length <= 1 ? (
+      {emplacements.length <= 1 ? (
         <div>
           <Label className="text-sm font-medium text-foreground mb-2 flex items-center gap-1.5">
             <MapPin size={12} />
@@ -104,7 +108,7 @@ export function SectionDisponibilite({
             Cliquez sur les emplacements où ce produit est vendu. Si rien n'est sélectionné, il sera disponible partout.
           </p>
           <TagGroup.List className="flex flex-wrap gap-1.5">
-            {(emplacements ?? []).map((e) => (
+            {emplacements.map((e) => (
               <Tag key={e.id} id={e.id}>{e.nom}</Tag>
             ))}
           </TagGroup.List>
