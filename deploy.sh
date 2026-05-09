@@ -32,15 +32,20 @@ push_schema() {
     echo ">> Installation des dependances pnpm (incluant drizzle-kit)..."
     pnpm install --silent
   fi
-  # Charge DATABASE_URL depuis .env (sourcing securise par set -a).
-  set -a
-  . ./.env
-  set +a
-  if [ -z "${DATABASE_URL:-}" ]; then
+  # Extrait DATABASE_URL via grep (et non par sourcing) car le caractere & dans
+  # une URL Neon non-quotee est interprete comme operateur de fork bash et
+  # tronque la variable. On retire les guillemets eventuels.
+  local db_url
+  db_url=$(grep '^DATABASE_URL=' .env | head -1 | cut -d= -f2-)
+  db_url="${db_url%\"}"
+  db_url="${db_url#\"}"
+  db_url="${db_url%\'}"
+  db_url="${db_url#\'}"
+  if [ -z "$db_url" ]; then
     echo "ERREUR: DATABASE_URL absent du .env"
     exit 1
   fi
-  (cd packages/db && pnpm exec drizzle-kit push --force)
+  (cd packages/db && DATABASE_URL="$db_url" pnpm exec drizzle-kit push --force)
   echo ">> Schema OK"
 }
 
