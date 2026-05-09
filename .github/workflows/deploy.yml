@@ -14,6 +14,7 @@ on:
           - all
           - api
           - web
+          - db
 
 jobs:
   deploy:
@@ -27,62 +28,17 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
+          # Augmente le timeout (defaut 30s) car GitHub Actions a parfois des
+          # latences SSH importantes vers les petits VPS.
+          timeout: 60s
+          command_timeout: 15m
           script: |
             set -e
             cd /opt/libitex
-            git pull origin main
-
             COMPONENT="${{ github.event.inputs.component || 'all' }}"
-
             echo "=== LIBITEX CI/CD Deploy ==="
-            echo "Composant: $COMPONENT"
-            echo "Commit: ${{ github.sha }}"
-
-            # Quand "all", on ne passe rien a docker compose pour qu'il traite tous les services
-            if [ "$COMPONENT" = "all" ]; then
-              SERVICES=""
-            else
-              SERVICES="$COMPONENT"
-            fi
-
-            docker compose -f docker-compose.prod.yml build $SERVICES
-            docker compose -f docker-compose.prod.yml up -d --force-recreate $SERVICES
-
-            # Sync des configs nginx versionnees (best-effort).
-            # Necessite sudo sans mot de passe pour cp/nginx/systemctl.
-            # Si non configure, on log un warning et on continue : l'utilisateur
-            # peut appliquer manuellement via `./deploy.sh nginx` sur le VPS.
-            if sudo -n true 2>/dev/null; then
-              for fichier in /opt/libitex/infra/nginx/libitex-*.lunion-lab.com; do
-                nom=$(basename "$fichier")
-                if [ -f "$fichier" ] && ! sudo cmp -s "$fichier" "/etc/nginx/sites-available/$nom" 2>/dev/null; then
-                  echo ">> Mise a jour nginx: $nom"
-                  sudo cp "$fichier" "/etc/nginx/sites-available/$nom"
-                  NGINX_CHANGED=1
-                fi
-              done
-              if [ -n "$NGINX_CHANGED" ]; then
-                if sudo nginx -t; then
-                  sudo systemctl reload nginx
-                  echo ">> Nginx recharge"
-                else
-                  echo ">> ATTENTION: nginx -t a echoue, configuration non appliquee"
-                fi
-              fi
-            else
-              # Detecte un changement sans pouvoir l'appliquer : avertit.
-              for fichier in /opt/libitex/infra/nginx/libitex-*.lunion-lab.com; do
-                nom=$(basename "$fichier")
-                if [ -f "$fichier" ] && [ -f "/etc/nginx/sites-available/$nom" ] \
-                  && ! cmp -s "$fichier" "/etc/nginx/sites-available/$nom" 2>/dev/null; then
-                  echo ">> WARN: $nom a change mais sudo sans mot de passe non configure."
-                  echo ">> Lance manuellement sur le VPS : sudo /opt/libitex/deploy.sh nginx"
-                fi
-              done
-            fi
-
-            # Verify
-            sleep 10
-            docker compose -f docker-compose.prod.yml ps
-
-            echo "=== Deploy termine ==="
+            echo "Composant : $COMPONENT"
+            echo "Commit    : ${{ github.sha }}"
+            # deploy.sh fait deja le git pull, le push de schema (api/all/db),
+            # le build et le restart Docker. Source unique de verite.
+            ./deploy.sh "$COMPONENT"
