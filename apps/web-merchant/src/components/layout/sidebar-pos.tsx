@@ -26,14 +26,19 @@ interface Props {
 export function SidebarPOS({ replie }: Props) {
   const { utilisateur } = useAuth();
   const { data: kpis } = useKpisQuery();
-  const { data: ticketsAttenteData } = useTicketListQuery({ statut: "PARKED", page: 1 });
-  const nombreEnAttente = (ticketsAttenteData?.data ?? []).filter((t) => t.statut === "PARKED").length;
+  // Compteur 'tickets en cours' = parques + ouverts. Les deux sont des paniers
+  // que le caissier peut reprendre depuis la modale.
+  const { data: parkedData } = useTicketListQuery({ statut: "PARKED", page: 1 });
+  const { data: openData } = useTicketListQuery({ statut: "OPEN", page: 1 });
+  const nombreEnAttente =
+    (parkedData?.data ?? []).filter((t) => t.statut === "PARKED").length +
+    (openData?.data ?? []).filter((t) => t.statut === "OPEN").length;
 
   if (replie) {
     return (
       <nav className="flex-1 px-2.5 py-3 space-y-1.5">
         <Link
-          href="/pos?attente=1"
+          href={`/pos?attente=${Date.now()}`}
           className="relative w-full h-10 rounded-lg flex items-center justify-center text-white/65 hover:text-white hover:bg-white/5 transition-colors"
           aria-label="Tickets en attente"
         >
@@ -90,7 +95,7 @@ export function SidebarPOS({ replie }: Props) {
         </p>
         <div className="space-y-0.5">
           <Link
-            href="/pos?attente=1"
+            href={`/pos?attente=${Date.now()}`}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-white/65 hover:text-white hover:bg-white/5 transition-colors"
           >
             <PauseCircle size={16} strokeWidth={1.5} />

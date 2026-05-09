@@ -42,14 +42,16 @@ export default function PagePOS() {
   const [modalEmpOuvert, setModalEmpOuvert] = useState(false);
   const [modalAttenteOuvert, setModalAttenteOuvert] = useState(false);
 
-  // La sidebar POS pousse ?attente=1 dans l'URL pour ouvrir la modale tickets
-  // en attente. On la reprend ici puis on nettoie l'URL.
+  // La sidebar POS pousse ?attente=<timestamp> dans l'URL pour ouvrir la
+  // modale tickets en attente. Le timestamp force le re-fire du useEffect a
+  // chaque clic meme si on est deja sur /pos.
+  const attenteParam = searchParams.get("attente");
   useEffect(() => {
-    if (searchParams.get("attente") === "1") {
+    if (attenteParam) {
       setModalAttenteOuvert(true);
       router.replace("/pos");
     }
-  }, [searchParams, router]);
+  }, [attenteParam, router]);
 
   // Le POS ne propose que les emplacements de type STORE (boutique). Les
   // entrepots, stands, camions etc. peuvent contenir du stock mais ne servent
