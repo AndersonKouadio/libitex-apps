@@ -2,9 +2,10 @@
 
 import {
   TextField, Label, Input, FieldError, Switch,
-  Select, ListBox, CheckboxGroup, Checkbox,
+  Select, ListBox, TagGroup, Tag,
 } from "@heroui/react";
-import { Clock, Tag, Flame, AlertTriangle, UtensilsCrossed } from "lucide-react";
+import type { Key } from "@heroui/react";
+import { Clock, Tag as TagIcon, Flame, AlertTriangle, UtensilsCrossed } from "lucide-react";
 import type { NiveauEpice } from "../types/produit.type";
 import { TAGS_CUISINE, NIVEAUX_EPICE } from "../utils/restauration-options";
 
@@ -83,7 +84,7 @@ export function SectionRestauration(props: Props) {
       <div className="rounded-lg border border-border p-3 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Tag size={14} className="text-accent" />
+            <TagIcon size={14} className="text-accent" />
             <p className="text-sm font-medium text-foreground">Promotion active</p>
           </div>
           <Switch
@@ -109,28 +110,22 @@ export function SectionRestauration(props: Props) {
         )}
       </div>
 
-      <div>
+      <TagGroup
+        selectionMode="multiple"
+        selectedKeys={new Set(props.tagsCuisine)}
+        onSelectionChange={(keys) => {
+          props.onTagsCuisine(Array.from(keys as Iterable<Key>).map(String));
+        }}
+      >
         <Label className="text-sm font-medium text-foreground mb-2 block">
           Tags & régimes
         </Label>
-        <CheckboxGroup
-          value={props.tagsCuisine}
-          onChange={(v) => props.onTagsCuisine(v as string[])}
-          className="grid grid-cols-2 sm:grid-cols-3 gap-1.5"
-          aria-label="Tags cuisine"
-        >
+        <TagGroup.List className="flex flex-wrap gap-1.5">
           {TAGS_CUISINE.map((t) => (
-            <Checkbox key={t.id} value={t.id}>
-              <Checkbox.Control>
-                <Checkbox.Indicator />
-              </Checkbox.Control>
-              <Checkbox.Content>
-                <span className="text-xs">{t.label}</span>
-              </Checkbox.Content>
-            </Checkbox>
+            <Tag key={t.id} id={t.id}>{t.label}</Tag>
           ))}
-        </CheckboxGroup>
-      </div>
+        </TagGroup.List>
+      </TagGroup>
 
       <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-border">
         <div className="min-w-0 flex items-start gap-2">

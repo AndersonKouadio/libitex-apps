@@ -1,8 +1,9 @@
 "use client";
 
 import {
-  Label, RadioGroup, Radio, CheckboxGroup, Checkbox,
+  Label, RadioGroup, Radio, TagGroup, Tag,
 } from "@heroui/react";
+import type { Key } from "@heroui/react";
 import { Calendar, MapPin } from "lucide-react";
 import type {
   ModeDisponibilite, PlanningDisponibilite,
@@ -77,43 +78,38 @@ export function SectionDisponibilite({
         )}
       </div>
 
-      <div>
-        <Label className="text-sm font-medium text-foreground mb-2 flex items-center gap-1.5">
-          <MapPin size={12} />
-          Emplacements de vente
-        </Label>
-        {(emplacements ?? []).length <= 1 ? (
+      {(emplacements ?? []).length <= 1 ? (
+        <div>
+          <Label className="text-sm font-medium text-foreground mb-2 flex items-center gap-1.5">
+            <MapPin size={12} />
+            Emplacements de vente
+          </Label>
           <p className="text-xs text-muted">
             Vous n'avez qu'un seul emplacement. Le produit y sera disponible automatiquement.
           </p>
-        ) : (
-          <>
-            <p className="text-xs text-muted mb-2">
-              Cochez les emplacements où ce produit est vendu. Si vous laissez tout décoché, il sera disponible partout.
-            </p>
-            <CheckboxGroup
-              value={emplacementsDisponibles}
-              onChange={(v) => onEmplacementsDisponibles(v as string[])}
-              className="space-y-1"
-              aria-label="Emplacements"
-            >
-              {(emplacements ?? []).map((e) => (
-                <Checkbox key={e.id} value={e.id}>
-                  <Checkbox.Control>
-                    <Checkbox.Indicator />
-                  </Checkbox.Control>
-                  <Checkbox.Content>
-                    <span className="flex items-center gap-2 text-sm">
-                      <MapPin size={11} className="text-muted" />
-                      {e.nom}
-                    </span>
-                  </Checkbox.Content>
-                </Checkbox>
-              ))}
-            </CheckboxGroup>
-          </>
-        )}
-      </div>
+        </div>
+      ) : (
+        <TagGroup
+          selectionMode="multiple"
+          selectedKeys={new Set(emplacementsDisponibles)}
+          onSelectionChange={(keys) => {
+            onEmplacementsDisponibles(Array.from(keys as Iterable<Key>).map(String));
+          }}
+        >
+          <Label className="text-sm font-medium text-foreground mb-2 flex items-center gap-1.5">
+            <MapPin size={12} />
+            Emplacements de vente
+          </Label>
+          <p className="text-xs text-muted mb-2">
+            Cliquez sur les emplacements où ce produit est vendu. Si rien n'est sélectionné, il sera disponible partout.
+          </p>
+          <TagGroup.List className="flex flex-wrap gap-1.5">
+            {(emplacements ?? []).map((e) => (
+              <Tag key={e.id} id={e.id}>{e.nom}</Tag>
+            ))}
+          </TagGroup.List>
+        </TagGroup>
+      )}
     </section>
   );
 }

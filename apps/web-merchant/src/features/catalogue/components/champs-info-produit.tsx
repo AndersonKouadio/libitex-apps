@@ -79,14 +79,17 @@ export function ChampsInfoProduit({
         <TextArea placeholder="Specifications, points cles, conditions de garantie..." rows={2} />
       </TextField>
 
-      <Disclosure>
+      <Disclosure className="rounded-lg border border-border bg-surface-secondary/30">
         <Disclosure.Heading>
-          <Disclosure.Trigger className="flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground">
-            Details avances
-            <ChevronDown size={12} />
+          <Disclosure.Trigger className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-medium text-foreground hover:bg-surface-secondary/60 rounded-lg transition-colors">
+            <span className="flex items-center gap-2">
+              <ChevronDown size={14} className="text-muted transition-transform group-data-[expanded]:rotate-180" />
+              Détails avancés
+              <span className="text-xs text-muted font-normal">— marque, catégorie, code-barres, TVA</span>
+            </span>
           </Disclosure.Trigger>
         </Disclosure.Heading>
-        <Disclosure.Content className="pt-3 space-y-3">
+        <Disclosure.Content className="px-3 pb-3 pt-1 space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <TextField name="marque" value={marque} onChange={onMarque}>
                 <Label>Marque</Label>
