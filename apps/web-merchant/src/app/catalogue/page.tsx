@@ -277,6 +277,7 @@ export default function PageCatalogue() {
               <Table.Header className="table-header-libitex">
                 <Table.Column className="w-10">
                   <Checkbox
+                    slot="selection"
                     isSelected={produits.length > 0 && produits.every((p) => selection.has(p.id))}
                     onChange={(s) => toggleTout(s, produits.map((p) => p.id))}
                     aria-label="Sélectionner toute la page"
@@ -299,6 +300,7 @@ export default function PageCatalogue() {
                     <Table.Row key={p.id}>
                       <Table.Cell>
                         <Checkbox
+                          slot="selection"
                           isSelected={selection.has(p.id)}
                           onChange={(s) => toggleLigne(p.id, s)}
                           aria-label={`Sélectionner ${p.nom}`}
