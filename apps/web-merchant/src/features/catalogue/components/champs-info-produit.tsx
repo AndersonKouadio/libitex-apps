@@ -4,6 +4,7 @@ import { TextField, Label, Input, Select, ListBox, Disclosure, TextArea } from "
 import { ChevronDown } from "lucide-react";
 import type { ICategorie } from "../types/produit.type";
 import type { TypeProduit } from "../hooks/useFormProduit";
+import { SelectCategorieArborescence } from "./select-categorie-arborescence";
 
 const TYPES_PRODUIT: Array<{ id: TypeProduit; label: string; description: string }> = [
   { id: "SIMPLE", label: "Standard", description: "Un seul SKU, sans variantes ni suivi unitaire." },
@@ -94,28 +95,17 @@ export function ChampsInfoProduit({
                 <Label>Marque</Label>
                 <Input placeholder="Samsung, Nike..." />
               </TextField>
-              <Select
-                name="categorieId"
-                selectedKey={categorieId || undefined}
-                onSelectionChange={(key) => onCategorieId(key ? String(key) : "")}
-                isDisabled={categories.length === 0}
-                placeholder={categories.length === 0 ? "Aucune catégorie" : "Sélectionner..."}
-              >
+              <div>
                 <Label>Catégorie</Label>
-                <Select.Trigger>
-                  <Select.Value />
-                  <Select.Indicator />
-                </Select.Trigger>
-                <Select.Popover>
-                  <ListBox>
-                    {categories.map((c) => (
-                      <ListBox.Item key={c.id} id={c.id} textValue={c.nom}>
-                        {c.nom}
-                      </ListBox.Item>
-                    ))}
-                  </ListBox>
-                </Select.Popover>
-              </Select>
+                <SelectCategorieArborescence
+                  categories={categories}
+                  valeur={categorieId}
+                  onChange={onCategorieId}
+                  label="Catégorie"
+                  optionVideLabel="Aucune catégorie"
+                  isDisabled={categories.length === 0}
+                />
+              </div>
             </div>
             <TextField name="tauxTva" type="number" value={tauxTva} onChange={onTauxTva}>
               <Label>Taux TVA (%)</Label>

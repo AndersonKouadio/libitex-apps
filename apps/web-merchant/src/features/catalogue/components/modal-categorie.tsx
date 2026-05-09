@@ -3,13 +3,13 @@
 import { useState, useEffect } from "react";
 import {
   Modal, Button, TextField, Label, Input, FieldError,
-  Select, ListBox,
 } from "@heroui/react";
 import { Plus, Pencil, FolderTree } from "lucide-react";
 import { useAjouterCategorieMutation } from "../queries/categorie-add.mutation";
 import { useModifierCategorieMutation } from "../queries/categorie.mutations";
 import { useCategorieListQuery } from "../queries/categorie-list.query";
 import type { ICategorie } from "../types/produit.type";
+import { SelectCategorieArborescence } from "./select-categorie-arborescence";
 
 interface Props {
   ouvert: boolean;
@@ -26,9 +26,6 @@ export function ModalCategorie({ ouvert, onFermer, categorie }: Props) {
   const [erreur, setErreur] = useState("");
 
   const editing = !!categorie;
-  const parentsPossibles = (categories ?? []).filter(
-    (c) => !categorie || c.id !== categorie.id, // pas soi-meme
-  );
 
   useEffect(() => {
     if (categorie) {
@@ -90,32 +87,20 @@ export function ModalCategorie({ ouvert, onFermer, categorie }: Props) {
               <FieldError />
             </TextField>
 
-            <Select
-              selectedKey={parentId || null}
-              onSelectionChange={(k) => setParentId(k ? String(k) : "")}
-              aria-label="Catégorie parent"
-            >
+            <div>
               <Label className="flex items-center gap-1.5">
                 <FolderTree size={12} />
                 Catégorie parent (optionnel)
               </Label>
-              <Select.Trigger>
-                <Select.Value />
-                <Select.Indicator />
-              </Select.Trigger>
-              <Select.Popover>
-                <ListBox>
-                  <ListBox.Item id="" textValue="Aucun (catégorie racine)">
-                    Aucun (catégorie racine)
-                  </ListBox.Item>
-                  {parentsPossibles.map((c) => (
-                    <ListBox.Item key={c.id} id={c.id} textValue={c.nom}>
-                      {c.nom}
-                    </ListBox.Item>
-                  ))}
-                </ListBox>
-              </Select.Popover>
-            </Select>
+              <SelectCategorieArborescence
+                categories={categories ?? []}
+                valeur={parentId}
+                onChange={setParentId}
+                label="Catégorie parent"
+                optionVideLabel="Aucun (catégorie racine)"
+                exclureId={categorie?.id}
+              />
+            </div>
           </Modal.Body>
 
           <Modal.Footer>
