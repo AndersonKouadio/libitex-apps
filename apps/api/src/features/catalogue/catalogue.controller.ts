@@ -30,7 +30,7 @@ export class CatalogueController {
   }
 
   @Get("produits")
-  @ApiOperation({ summary: "Lister les produits (pagine, recherche, filtre supplément)" })
+  @ApiOperation({ summary: "Lister les produits (pagine, recherche, filtres)" })
   listerProduits(
     @CurrentUser() user: CurrentUserData,
     @Query() query: ListerProduitsQueryDto,
@@ -39,9 +39,19 @@ export class CatalogueController {
       query.isSupplement === "true" ? true :
       query.isSupplement === "false" ? false :
       undefined;
-    return this.catalogueService.listerProduits(
-      user.tenantId, query.page, query.limit, query.recherche, isSupp,
-    );
+    const actif =
+      query.actif === "true" ? true :
+      query.actif === "false" ? false :
+      undefined;
+    return this.catalogueService.listerProduits(user.tenantId, {
+      page: query.page,
+      limit: query.limit,
+      recherche: query.recherche,
+      isSupplement: isSupp,
+      typeProduit: query.typeProduit,
+      categorieId: query.categorieId,
+      actif,
+    });
   }
 
   @Get("produits/:id")
