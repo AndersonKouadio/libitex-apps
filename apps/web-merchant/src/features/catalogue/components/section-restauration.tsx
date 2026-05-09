@@ -90,7 +90,11 @@ export function SectionRestauration(props: Props) {
             isSelected={props.enPromotion}
             onChange={props.onEnPromotion}
             aria-label="En promotion"
-          />
+          >
+            <Switch.Control>
+              <Switch.Thumb />
+            </Switch.Control>
+          </Switch>
         </div>
         {props.enPromotion && (
           <TextField
@@ -117,7 +121,12 @@ export function SectionRestauration(props: Props) {
         >
           {TAGS_CUISINE.map((t) => (
             <Checkbox key={t.id} value={t.id}>
-              <span className="text-xs">{t.label}</span>
+              <Checkbox.Control>
+                <Checkbox.Indicator />
+              </Checkbox.Control>
+              <Checkbox.Content>
+                <span className="text-xs">{t.label}</span>
+              </Checkbox.Content>
             </Checkbox>
           ))}
         </CheckboxGroup>
@@ -137,7 +146,11 @@ export function SectionRestauration(props: Props) {
           isSelected={props.enRupture}
           onChange={props.onEnRupture}
           aria-label="En rupture"
-        />
+        >
+          <Switch.Control>
+            <Switch.Thumb />
+          </Switch.Control>
+        </Switch>
       </div>
     </section>
   );

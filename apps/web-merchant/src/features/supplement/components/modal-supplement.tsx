@@ -158,7 +158,11 @@ export function ModalSupplement({ ouvert, onFermer, supplement }: Props) {
                   <p className="text-sm font-medium text-foreground">Supplément actif</p>
                   <p className="text-xs text-muted">Décochez pour le retirer du POS sans le supprimer.</p>
                 </div>
-                <Switch isSelected={actif} onChange={setActif} aria-label="Actif" />
+                <Switch isSelected={actif} onChange={setActif} aria-label="Actif">
+                  <Switch.Control>
+                    <Switch.Thumb />
+                  </Switch.Control>
+                </Switch>
               </div>
             )}
           </Modal.Body>

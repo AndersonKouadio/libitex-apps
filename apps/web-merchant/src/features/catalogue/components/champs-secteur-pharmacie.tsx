@@ -42,7 +42,11 @@ export function ChampsSecteurPharmacie({ metadata, maj }: Props) {
           isSelected={Boolean(metadata.surOrdonnance)}
           onChange={(v) => maj("surOrdonnance", v)}
           aria-label="Sur ordonnance"
-        />
+        >
+          <Switch.Control>
+            <Switch.Thumb />
+          </Switch.Control>
+        </Switch>
       </div>
     </div>
   );

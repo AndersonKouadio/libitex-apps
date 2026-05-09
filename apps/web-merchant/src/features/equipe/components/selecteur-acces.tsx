@@ -39,27 +39,37 @@ export function SelecteurAcces({
         className="gap-2"
       >
         <Radio value="tous">
-          <div className="flex items-start gap-2 ml-2">
-            <Globe size={14} className="text-accent shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm text-foreground">Tous les emplacements</p>
-              <p className="text-xs text-muted mt-0.5">
-                Accès à tous vos points de vente actuels et futurs.
-              </p>
+          <Radio.Control>
+            <Radio.Indicator />
+          </Radio.Control>
+          <Radio.Content>
+            <div className="flex items-start gap-2">
+              <Globe size={14} className="text-accent shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-foreground">Tous les emplacements</p>
+                <p className="text-xs text-muted mt-0.5">
+                  Accès à tous vos points de vente actuels et futurs.
+                </p>
+              </div>
             </div>
-          </div>
+          </Radio.Content>
         </Radio>
 
         <Radio value="specifiques" isDisabled={emplacements.length === 0 || disabled}>
-          <div className="flex items-start gap-2 ml-2">
-            <MapPin size={14} className="text-warning shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm text-foreground">Emplacements spécifiques</p>
-              <p className="text-xs text-muted mt-0.5">
-                Limiter l'accès à un ou plusieurs points de vente.
-              </p>
+          <Radio.Control>
+            <Radio.Indicator />
+          </Radio.Control>
+          <Radio.Content>
+            <div className="flex items-start gap-2">
+              <MapPin size={14} className="text-warning shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-foreground">Emplacements spécifiques</p>
+                <p className="text-xs text-muted mt-0.5">
+                  Limiter l'accès à un ou plusieurs points de vente.
+                </p>
+              </div>
             </div>
-          </div>
+          </Radio.Content>
         </Radio>
       </RadioGroup>
 
@@ -78,10 +88,15 @@ export function SelecteurAcces({
             >
               {emplacements.map((e) => (
                 <Checkbox key={e.id} value={e.id}>
-                  <span className="flex items-center gap-2 text-sm">
-                    <MapPin size={12} className="text-muted" />
-                    {e.nom}
-                  </span>
+                  <Checkbox.Control>
+                    <Checkbox.Indicator />
+                  </Checkbox.Control>
+                  <Checkbox.Content>
+                    <span className="flex items-center gap-2 text-sm">
+                      <MapPin size={12} className="text-muted" />
+                      {e.nom}
+                    </span>
+                  </Checkbox.Content>
                 </Checkbox>
               ))}
             </CheckboxGroup>

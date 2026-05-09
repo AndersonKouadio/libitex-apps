@@ -250,7 +250,11 @@ export default function PageModifierProduit({ params }: { params: Promise<{ id: 
                     Désactivez pour le retirer du POS sans le supprimer du catalogue.
                   </p>
                 </div>
-                <Switch isSelected={actif} onChange={setActif} aria-label="Produit actif" />
+                <Switch isSelected={actif} onChange={setActif} aria-label="Produit actif">
+                  <Switch.Control>
+                    <Switch.Thumb />
+                  </Switch.Control>
+                </Switch>
               </div>
             </>
           )}

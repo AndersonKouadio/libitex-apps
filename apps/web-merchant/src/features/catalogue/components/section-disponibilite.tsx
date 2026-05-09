@@ -48,18 +48,24 @@ export function SectionDisponibilite({
           className="gap-2"
         >
           <Radio value="TOUJOURS">
-            <div className="ml-2">
+            <Radio.Control>
+              <Radio.Indicator />
+            </Radio.Control>
+            <Radio.Content>
               <p className="text-sm text-foreground">Toujours disponible</p>
               <p className="text-xs text-muted mt-0.5">Vendable à toute heure d'ouverture.</p>
-            </div>
+            </Radio.Content>
           </Radio>
           <Radio value="PROGRAMME">
-            <div className="ml-2">
+            <Radio.Control>
+              <Radio.Indicator />
+            </Radio.Control>
+            <Radio.Content>
               <p className="text-sm text-foreground">Sur plages horaires</p>
               <p className="text-xs text-muted mt-0.5">
                 Limité à certains jours et créneaux (petit-déjeuner, brunch, plat du jour…).
               </p>
-            </div>
+            </Radio.Content>
           </Radio>
         </RadioGroup>
 
@@ -93,10 +99,15 @@ export function SectionDisponibilite({
             >
               {(emplacements ?? []).map((e) => (
                 <Checkbox key={e.id} value={e.id}>
-                  <span className="flex items-center gap-2 text-sm">
-                    <MapPin size={11} className="text-muted" />
-                    {e.nom}
-                  </span>
+                  <Checkbox.Control>
+                    <Checkbox.Indicator />
+                  </Checkbox.Control>
+                  <Checkbox.Content>
+                    <span className="flex items-center gap-2 text-sm">
+                      <MapPin size={11} className="text-muted" />
+                      {e.nom}
+                    </span>
+                  </Checkbox.Content>
                 </Checkbox>
               ))}
             </CheckboxGroup>
