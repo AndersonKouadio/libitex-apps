@@ -14,8 +14,13 @@ interface Props {
 }
 
 export function CarteArticle({ produit, variante, stock, onAjouter }: Props) {
-  const enRupture = stock !== null && stock <= 0;
-  const stockBas = stock !== null && stock > 0 && stock < 5;
+  // MENU : stock gere via les ingredients de la recette, pas au niveau variant
+  // → on n'affiche jamais de quantite ni de rupture sur la carte.
+  const stockGeré = produit.typeProduit !== "MENU";
+  // Pour les autres types, null (jamais aucun mouvement) = 0 = rupture.
+  const stockEffectif = stockGeré ? (stock ?? 0) : null;
+  const enRupture = stockEffectif !== null && stockEffectif <= 0;
+  const stockBas = stockEffectif !== null && stockEffectif > 0 && stockEffectif < 5;
   const image = produit.images?.[0];
   const unite = variante.uniteVente ?? UniteMesure.PIECE;
   const peseur = uniteAccepteDecimal(unite);
@@ -57,14 +62,14 @@ export function CarteArticle({ produit, variante, stock, onAjouter }: Props) {
           </div>
         )}
 
-        {!enRupture && stock !== null && (
+        {!enRupture && stockGeré && stockEffectif !== null && stockEffectif > 0 && (
           <div className="absolute top-2 right-2">
             <Chip
               className={`text-[10px] font-semibold ${
                 stockBas ? "bg-warning/90 text-warning-foreground" : "bg-foreground/70 text-white"
               }`}
             >
-              {stock} {peseur ? UNITE_LABELS[unite] : "en stock"}
+              {stockEffectif} {peseur ? UNITE_LABELS[unite] : "en stock"}
             </Chip>
           </div>
         )}

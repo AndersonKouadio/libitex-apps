@@ -10,6 +10,7 @@ const TYPES_PRODUIT: Array<{ id: TypeProduit; label: string; description: string
   { id: "VARIANT", label: "Avec variantes", description: "Génère une matrice (couleur, taille, matière...)." },
   { id: "SERIALIZED", label: "Sérialisé", description: "Numéros de série ou IMEI saisis à la réception." },
   { id: "PERISHABLE", label: "Périssable", description: "Suivi par lots et dates de péremption." },
+  { id: "MENU", label: "Menu (recette)", description: "Plat composé d'ingrédients consommés à chaque vente." },
 ];
 
 interface Props {
