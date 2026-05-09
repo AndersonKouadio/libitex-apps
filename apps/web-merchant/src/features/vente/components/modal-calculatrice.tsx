@@ -122,37 +122,39 @@ export function ModalCalculatrice({ ouvert, onFermer }: Props) {
               </p>
             </div>
 
-            {/* Clavier */}
+            {/* Clavier 4 colonnes x 5 lignes — chiffres en bloc 3x3 a gauche,
+                operations en colonne a droite, ligne du bas = 0 (large) + virgule + = */}
             <div className="grid grid-cols-4 gap-2">
-              <BoutonCalc onPress={reset} variant="danger-soft" colSpan={2}>C</BoutonCalc>
-              <BoutonCalc onPress={effacer} variant="ghost-bordered">
-                <Delete size={16} />
+              <BoutonCalc onPress={reset} variant="danger-soft">C</BoutonCalc>
+              <BoutonCalc onPress={effacer} variant="warning-soft" aria-label="Effacer">
+                <Delete size={20} strokeWidth={2} />
               </BoutonCalc>
               <BoutonCalc onPress={() => appliquerOperation("/")} variant="accent" actif={operation === "/"}>÷</BoutonCalc>
+              <BoutonCalc onPress={() => appliquerOperation("*")} variant="accent" actif={operation === "*"}>×</BoutonCalc>
 
               <BoutonCalc onPress={() => ajouterChiffre("7")}>7</BoutonCalc>
               <BoutonCalc onPress={() => ajouterChiffre("8")}>8</BoutonCalc>
               <BoutonCalc onPress={() => ajouterChiffre("9")}>9</BoutonCalc>
-              <BoutonCalc onPress={() => appliquerOperation("*")} variant="accent" actif={operation === "*"}>×</BoutonCalc>
+              <BoutonCalc onPress={() => appliquerOperation("-")} variant="accent" actif={operation === "-"}>−</BoutonCalc>
 
               <BoutonCalc onPress={() => ajouterChiffre("4")}>4</BoutonCalc>
               <BoutonCalc onPress={() => ajouterChiffre("5")}>5</BoutonCalc>
               <BoutonCalc onPress={() => ajouterChiffre("6")}>6</BoutonCalc>
-              <BoutonCalc onPress={() => appliquerOperation("-")} variant="accent" actif={operation === "-"}>−</BoutonCalc>
+              <BoutonCalc onPress={() => appliquerOperation("+")} variant="accent" actif={operation === "+"}>+</BoutonCalc>
 
               <BoutonCalc onPress={() => ajouterChiffre("1")}>1</BoutonCalc>
               <BoutonCalc onPress={() => ajouterChiffre("2")}>2</BoutonCalc>
               <BoutonCalc onPress={() => ajouterChiffre("3")}>3</BoutonCalc>
-              <BoutonCalc onPress={() => appliquerOperation("+")} variant="accent" actif={operation === "+"}>+</BoutonCalc>
+              <BoutonCalc onPress={egal} variant="primary">=</BoutonCalc>
 
               <BoutonCalc onPress={() => ajouterChiffre("0")} colSpan={2}>0</BoutonCalc>
+              <BoutonCalc onPress={() => { ajouterChiffre("0"); ajouterChiffre("0"); }}>00</BoutonCalc>
               <BoutonCalc onPress={ajouterDecimale}>,</BoutonCalc>
-              <BoutonCalc onPress={egal} variant="primary">=</BoutonCalc>
             </div>
           </Modal.Body>
 
           <Modal.Footer>
-            <Button variant="primary" slot="close">Fermer</Button>
+            <Button variant="secondary" className="mr-auto" slot="close">Fermer</Button>
           </Modal.Footer>
         </Modal.Dialog>
       </Modal.Container>
@@ -165,15 +167,16 @@ function symboleOperation(op: Exclude<Operation, null>): string {
 }
 
 function BoutonCalc({
-  children, onPress, variant = "ghost-bordered", actif, colSpan,
+  children, onPress, variant = "ghost-bordered", actif, colSpan, "aria-label": ariaLabel,
 }: {
   children: React.ReactNode;
   onPress: () => void;
-  variant?: "ghost-bordered" | "accent" | "primary" | "danger-soft";
+  variant?: "ghost-bordered" | "accent" | "primary" | "danger-soft" | "warning-soft";
   actif?: boolean;
   colSpan?: 1 | 2;
+  "aria-label"?: string;
 }) {
-  const base = "h-12 text-base font-semibold rounded-md transition-colors";
+  const base = "h-12 text-base font-semibold rounded-md transition-colors flex items-center justify-center";
   const styles = {
     "ghost-bordered": "bg-surface-secondary text-foreground hover:bg-foreground/5 border border-border",
     "accent": actif
@@ -181,12 +184,14 @@ function BoutonCalc({
       : "bg-accent/10 text-accent hover:bg-accent/15 border border-accent/30",
     "primary": "bg-accent text-accent-foreground hover:bg-accent/90",
     "danger-soft": "bg-danger/10 text-danger hover:bg-danger/15 border border-danger/30",
+    "warning-soft": "bg-warning/10 text-warning hover:bg-warning/15 border border-warning/30",
   };
   const span = colSpan === 2 ? "col-span-2" : "";
   return (
     <button
       type="button"
       onClick={onPress}
+      aria-label={ariaLabel}
       className={`${base} ${styles[variant]} ${span}`}
     >
       {children}
