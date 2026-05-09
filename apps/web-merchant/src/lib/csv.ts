@@ -78,6 +78,64 @@ export const CHAMPS_PRODUIT = {
 } as const;
 
 /**
+ * Echappe une cellule CSV : si elle contient virgule, guillemet ou
+ * saut de ligne, on l'entoure de guillemets et on double les
+ * guillemets internes (RFC 4180).
+ */
+function echaperCellule(v: unknown): string {
+  const s = v === null || v === undefined ? "" : String(v);
+  if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+/**
+ * Genere le CSV d'export du catalogue. Format compatible avec
+ * l'import : meme headers, ordre des colonnes coherent, lignes au
+ * format CRLF (Excel/Google Sheets). Utilise la premiere variante
+ * (cas SIMPLE/MENU). Pour VARIANT, il faudra une route export
+ * dediee qui denormalise une ligne par variante.
+ */
+export function produitsVersCsv(produits: ReadonlyArray<{
+  nom: string;
+  description?: string | null;
+  marque?: string | null;
+  tauxTva?: number | null;
+  actif?: boolean;
+  variantes?: Array<{
+    sku?: string;
+    codeBarres?: string | null;
+    prixAchat?: number | null;
+    prixDetail?: number;
+    prixGros?: number | null;
+    prixVip?: number | null;
+  }>;
+}>): string {
+  const headers = [
+    "nom", "sku", "prixDetail", "prixAchat", "prixGros", "prixVip",
+    "marque", "description", "codeBarres", "tauxTva", "actif",
+  ];
+  const lignes = produits.map((p) => {
+    const v = p.variantes?.[0];
+    return [
+      p.nom,
+      v?.sku ?? "",
+      v?.prixDetail ?? "",
+      v?.prixAchat ?? "",
+      v?.prixGros ?? "",
+      v?.prixVip ?? "",
+      p.marque ?? "",
+      p.description ?? "",
+      v?.codeBarres ?? "",
+      p.tauxTva ?? "",
+      p.actif === false ? "0" : "1",
+    ].map(echaperCellule).join(",");
+  });
+  return [headers.join(","), ...lignes].join("\r\n");
+}
+
+/**
  * Convertit une ligne CSV (array de cellules) + un mapping
  * (champ -> index colonne) en payload CreerProduitDTO partiel.
  * Les valeurs vides sont omises pour laisser les defauts Zod jouer.

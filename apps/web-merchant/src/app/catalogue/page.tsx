@@ -12,13 +12,16 @@ import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-act
 import { SelectCategorieArborescence } from "@/features/catalogue/components/select-categorie-arborescence";
 import type { IProduit } from "@/features/catalogue/types/produit.type";
 import {
-  Table, Chip, Button, Skeleton, SearchField, Input, Select, ListBox,
+  Table, Chip, Button, Skeleton, SearchField, Input, Select, ListBox, toast,
 } from "@heroui/react";
-import { Package, Plus, Pencil, AlertTriangle, Copy, Trash2, Folder, Upload, ChevronUp, ChevronDown } from "lucide-react";
+import { Package, Plus, Pencil, AlertTriangle, Copy, Trash2, Folder, Upload, ChevronUp, ChevronDown, Download } from "lucide-react";
 import { useSupprimerProduitMutation } from "@/features/catalogue/queries/produit-delete.mutation";
 import { useConfirmation } from "@/providers/confirmation-provider";
 import { ToggleActifProduit } from "@/features/catalogue/components/toggle-actif-produit";
 import { BarreActionsLot } from "@/features/catalogue/components/barre-actions-lot";
+import { catalogueAPI } from "@/features/catalogue/apis/catalogue.api";
+import { useAuth } from "@/features/auth/hooks/useAuth";
+import { produitsVersCsv } from "@/lib/csv";
 
 function formatPrix(n: number) {
   return new Intl.NumberFormat("fr-FR").format(n);
@@ -98,6 +101,46 @@ export default function PageCatalogue() {
   });
   const supprimer = useSupprimerProduitMutation();
   const confirmer = useConfirmation();
+  const { token } = useAuth();
+  const [exportEnCours, setExportEnCours] = useState(false);
+
+  /**
+   * Export complet du catalogue (toutes les pages, en parallele apres
+   * avoir lu le total via le premier appel). Inclut les produits
+   * inactifs pour offrir une vraie sauvegarde.
+   */
+  async function handleExporter() {
+    if (!token) return;
+    setExportEnCours(true);
+    try {
+      const premier = await catalogueAPI.listerProduits(token, { page: 1, isSupplement: false });
+      let tous = [...premier.data];
+      const totalPages = premier.meta?.totalPages ?? 1;
+      if (totalPages > 1) {
+        const restes = await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_, i) => i + 2).map((page) =>
+            catalogueAPI.listerProduits(token, { page, isSupplement: false }),
+          ),
+        );
+        restes.forEach((r) => tous.push(...r.data));
+      }
+      const csv = produitsVersCsv(tous);
+      // BOM UTF-8 (﻿) pour qu'Excel detecte l'encodage et n'affiche
+      // pas "?" sur les accents.
+      const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `catalogue-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${tous.length} produit${tous.length > 1 ? "s exportés" : " exporté"}`);
+    } catch (err) {
+      toast.danger(err instanceof Error ? err.message : "Erreur lors de l'export");
+    } finally {
+      setExportEnCours(false);
+    }
+  }
   // Selection en lot. Set d'IDs : conservee a travers la pagination,
   // reset au clic Annuler ou apres une action en masse.
   // Note : on utilise des inputs natifs <input type="checkbox"> car le
@@ -205,6 +248,15 @@ export default function PageCatalogue() {
           <Input placeholder="Rechercher un produit..." />
         </SearchField>
         <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="ghost"
+            className="gap-1.5"
+            onPress={handleExporter}
+            isDisabled={exportEnCours || produits.length === 0}
+          >
+            <Download size={16} />
+            {exportEnCours ? "Export..." : "Exporter CSV"}
+          </Button>
           <Link href="/catalogue/import">
             <Button variant="ghost" className="gap-1.5">
               <Upload size={16} />
