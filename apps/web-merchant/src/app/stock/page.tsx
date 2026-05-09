@@ -1,19 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { PageContainer } from "@/components/layout/page-container";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import { useStockEmplacementQuery } from "@/features/stock/queries/stock-emplacement.query";
-import { useSupprimerEmplacementMutation } from "@/features/stock/queries/emplacement.mutations";
 import { ModalEntreeStock } from "@/features/stock/components/modal-entree-stock";
-import { ModalEmplacement } from "@/features/stock/components/modal-emplacement";
 import { ModalTransfertStock } from "@/features/stock/components/modal-transfert-stock";
-import type { IEmplacement } from "@/features/stock/types/stock.type";
-import { useConfirmation } from "@/providers/confirmation-provider";
 import { Table, Chip, Card, Button, Skeleton } from "@heroui/react";
 import {
-  MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus, Plus,
-  Pencil, Trash2,
+  MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus,
+  Settings,
 } from "lucide-react";
 
 const LABELS_TYPE: Record<string, string> = {
@@ -22,40 +19,12 @@ const LABELS_TYPE: Record<string, string> = {
 
 export default function PageStock() {
   const { data: emplacements, isLoading: chargementEmpList } = useEmplacementListQuery();
-  const supprimer = useSupprimerEmplacementMutation();
-  const confirmer = useConfirmation();
   const [empSelectionne, setEmpSelectionne] = useState("");
   const [modalOuvert, setModalOuvert] = useState(false);
-  const [modalEmpOuvert, setModalEmpOuvert] = useState(false);
-  const [empEnEdition, setEmpEnEdition] = useState<IEmplacement | null>(null);
   const [modalTransfertOuvert, setModalTransfertOuvert] = useState(false);
 
-  const { data: stockDetail, isLoading: chargementStock } = useStockEmplacementQuery(empSelectionne || undefined);
-
-  function ouvrirCreation() {
-    setEmpEnEdition(null);
-    setModalEmpOuvert(true);
-  }
-
-  function ouvrirEdition(emp: IEmplacement) {
-    setEmpEnEdition(emp);
-    setModalEmpOuvert(true);
-  }
-
-  async function supprimerEmplacement(emp: IEmplacement) {
-    const ok = await confirmer({
-      titre: "Supprimer cet emplacement ?",
-      description: `L'emplacement « ${emp.nom} » sera supprimé. Cette action échoue s'il contient encore du stock.`,
-      actionLibelle: "Supprimer",
-    });
-    if (!ok) return;
-    try {
-      await supprimer.mutateAsync(emp.id);
-      if (empSelectionne === emp.id) setEmpSelectionne("");
-    } catch {
-      // toast deja affiche par la mutation
-    }
-  }
+  const { data: stockDetail, isLoading: chargementStock } =
+    useStockEmplacementQuery(empSelectionne || undefined);
 
   return (
     <PageContainer>
@@ -64,10 +33,12 @@ export default function PageStock() {
             Emplacements {chargementEmpList ? "..." : `(${emplacements?.length ?? 0})`}
           </p>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="ghost" className="gap-1.5" onPress={ouvrirCreation}>
-              <Plus size={16} />
-              Emplacement
-            </Button>
+            <Link href="/parametres/emplacements">
+              <Button variant="ghost" className="gap-1.5">
+                <Settings size={16} />
+                Gérer les emplacements
+              </Button>
+            </Link>
             <Button
               variant="secondary"
               className="gap-1.5"
@@ -90,48 +61,40 @@ export default function PageStock() {
             {(emplacements ?? []).map((emp) => {
               const actif = empSelectionne === emp.id;
               return (
-                <div
+                <button
                   key={emp.id}
-                  className={`flex items-center gap-1 rounded-lg border bg-surface group ${
+                  type="button"
+                  onClick={() => setEmpSelectionne(emp.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg border bg-surface text-left transition-colors ${
                     actif ? "border-accent shadow-sm" : "border-border hover:border-foreground/20"
                   }`}
                 >
-                  <Button
-                    variant="ghost"
-                    className="flex-1 justify-start gap-3 px-3 py-3 h-auto rounded-l-lg rounded-r-none"
-                    onPress={() => setEmpSelectionne(emp.id)}
-                  >
-                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                      actif ? "bg-accent/10 text-accent" : "bg-surface-secondary text-muted"
-                    }`}>
-                      <MapPin size={16} />
-                    </span>
-                    <span className="min-w-0 text-left">
-                      <span className="block text-sm font-medium text-foreground truncate">{emp.nom}</span>
-                      <span className="block text-xs text-muted capitalize">{emp.type.toLowerCase()}</span>
-                    </span>
-                  </Button>
-                  <div className="flex items-center pr-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
-                      onPress={() => ouvrirEdition(emp)}
-                      aria-label={`Modifier ${emp.nom}`}
-                    >
-                      <Pencil size={13} />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="text-muted hover:text-danger p-1.5 h-auto min-w-0"
-                      onPress={() => supprimerEmplacement(emp)}
-                      aria-label={`Supprimer ${emp.nom}`}
-                    >
-                      <Trash2 size={13} />
-                    </Button>
-                  </div>
-                </div>
+                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                    actif ? "bg-accent/10 text-accent" : "bg-surface-secondary text-muted"
+                  }`}>
+                    <MapPin size={16} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-foreground truncate">{emp.nom}</span>
+                    <span className="block text-xs text-muted capitalize">{emp.type.toLowerCase()}</span>
+                  </span>
+                </button>
               );
             })}
+            {(emplacements ?? []).length === 0 && !chargementEmpList && (
+              <Card>
+                <Card.Content className="py-6 text-center">
+                  <MapPin size={20} className="text-muted/30 mx-auto mb-2" />
+                  <p className="text-xs text-muted mb-3">Aucun emplacement</p>
+                  <Link href="/parametres/emplacements">
+                    <Button variant="primary" className="text-xs gap-1.5">
+                      <Settings size={12} />
+                      Gérer
+                    </Button>
+                  </Link>
+                </Card.Content>
+              </Card>
+            )}
           </div>
 
           <div className="lg:col-span-3">
@@ -203,11 +166,6 @@ export default function PageStock() {
         </div>
 
       <ModalEntreeStock ouvert={modalOuvert} onFermer={() => setModalOuvert(false)} />
-      <ModalEmplacement
-        ouvert={modalEmpOuvert}
-        emplacement={empEnEdition}
-        onFermer={() => setModalEmpOuvert(false)}
-      />
       <ModalTransfertStock
         ouvert={modalTransfertOuvert}
         onFermer={() => setModalTransfertOuvert(false)}

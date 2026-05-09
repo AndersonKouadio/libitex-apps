@@ -5,9 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@heroui/react";
 import {
-  LayoutDashboard, ShoppingCart, Package, Warehouse, Wheat, UtensilsCrossed,
+  LayoutDashboard, ShoppingCart, Package, Warehouse,
   Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight,
-  Monitor, FolderTree,
+  Monitor,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { SwitcherBoutique } from "@/features/boutique/components/switcher-boutique";
@@ -17,16 +17,18 @@ interface ItemNav {
   libelle: string;
   icone: typeof LayoutDashboard;
   visibleSi?: (secteur: string | undefined) => boolean;
+  /** Routes additionnelles qui doivent rendre cet item actif. */
+  routesActives?: string[];
 }
 
 const NAV_ERP: ItemNav[] = [
   { href: "/dashboard", libelle: "Tableau de bord", icone: LayoutDashboard },
-  { href: "/catalogue", libelle: "Catalogue", icone: Package },
-  { href: "/categories", libelle: "Catégories", icone: FolderTree },
-  { href: "/ingredients", libelle: "Ingrédients", icone: Wheat,
-    visibleSi: (s) => s === "RESTAURATION" || s === "AUTRE" },
-  { href: "/supplements", libelle: "Suppléments", icone: UtensilsCrossed,
-    visibleSi: (s) => s === "RESTAURATION" || s === "AUTRE" },
+  {
+    href: "/catalogue",
+    libelle: "Catalogue",
+    icone: Package,
+    routesActives: ["/categories", "/ingredients", "/supplements"],
+  },
   { href: "/stock", libelle: "Stock", icone: Warehouse },
   { href: "/clients", libelle: "Clients", icone: Users },
   { href: "/rapports", libelle: "Rapports", icone: BarChart3 },
@@ -109,7 +111,8 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
       {!modePOS && (
         <nav className="flex-1 py-1 px-2.5 space-y-0.5 overflow-y-auto">
           {NAV_ERP.filter((item) => !item.visibleSi || item.visibleSi(boutiqueActive?.secteurActivite)).map((item) => {
-            const actif = pathname === item.href || pathname.startsWith(item.href + "/");
+            const routes = [item.href, ...(item.routesActives ?? [])];
+            const actif = routes.some((r) => pathname === r || pathname.startsWith(r + "/"));
             const Icone = item.icone;
             return (
               <Link

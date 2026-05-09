@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
+import { NavCatalogue } from "@/components/layout/nav-catalogue";
 import { Button, Skeleton, Chip } from "@heroui/react";
 import { Plus, Pencil, Trash2, UtensilsCrossed, Package } from "lucide-react";
 import {
@@ -51,6 +52,7 @@ export default function PageSupplements() {
 
   return (
     <PageContainer>
+      <NavCatalogue />
       <PageHeader
         titre={`${supplements.length} supplément${supplements.length > 1 ? "s" : ""}`}
         description="Sauces, accompagnements, boissons et options en surcoût proposés à la commande."

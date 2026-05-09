@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { PageContainer } from "@/components/layout/page-container";
+import { NavCatalogue } from "@/components/layout/nav-catalogue";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
 import type { IProduit } from "@/features/catalogue/types/produit.type";
 import { Table, Chip, Button, Skeleton, SearchField, Input } from "@heroui/react";
@@ -29,6 +30,7 @@ export default function PageCatalogue() {
 
   return (
     <PageContainer>
+        <NavCatalogue />
         <div className="flex items-center justify-between gap-3 mb-5">
           <SearchField
             value={recherche}

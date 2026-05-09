@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
+import { NavCatalogue } from "@/components/layout/nav-catalogue";
 import { Button, Skeleton } from "@heroui/react";
 import { Plus, Pencil, Trash2, FolderTree, Folder, ChevronRight } from "lucide-react";
 import { useCategorieListQuery } from "@/features/catalogue/queries/categorie-list.query";
@@ -64,6 +65,7 @@ export default function PageCategories() {
 
   return (
     <PageContainer>
+      <NavCatalogue />
       <PageHeader
         titre={`${categories.length} catégorie${categories.length > 1 ? "s" : ""}`}
         description="Structurez votre catalogue en familles et sous-familles. Une catégorie ne peut être supprimée que si aucun produit n'y est rattaché."

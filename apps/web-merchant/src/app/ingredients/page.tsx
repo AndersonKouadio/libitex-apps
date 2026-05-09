@@ -5,6 +5,7 @@ import { Button, Table, Chip, Card, Skeleton } from "@heroui/react";
 import { Plus, PackagePlus, Wheat, AlertTriangle, MapPin, Pencil, Trash2 } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
+import { NavCatalogue } from "@/components/layout/nav-catalogue";
 import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import {
@@ -80,6 +81,7 @@ export default function PageIngredients() {
 
   return (
     <PageContainer>
+      <NavCatalogue />
       <PageHeader
         titre={`${(ingredients ?? []).length} ingrédient${(ingredients ?? []).length > 1 ? "s" : ""}`}
         description="Matières premières en grammes ou litres. Les menus consomment leurs ingrédients à chaque vente selon la recette définie."
