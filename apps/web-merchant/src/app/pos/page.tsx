@@ -112,8 +112,8 @@ export default function PagePOS() {
     setLigneSupplements(null);
   }
 
-  async function lancerEncaissement(methode: string) {
-    await encaissement.encaisser(methode);
+  async function lancerEncaissement(paiements: { methode: string; montant: number }[]) {
+    await encaissement.encaisser(paiements);
     setPaiementOuvert(false);
     setPanierMobileOuvert(false);
   }
