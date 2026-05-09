@@ -36,9 +36,12 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
   // closure si l'utilisateur tape deux fois avant le prochain re-render.
   const verrou = useRef(false);
 
-  const encaisser = useCallback(async (methode: string) => {
+  const encaisser = useCallback(async (
+    paiementsSaisis: { methode: string; montant: number }[],
+  ) => {
     if (!token || !empId || panier.articles.length === 0) return;
     if (verrou.current) return;
+    if (paiementsSaisis.length === 0) return;
 
     const payload = creerTicketSchema.safeParse({
       emplacementId: empId,
@@ -68,7 +71,7 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
     try {
       const ticket = await venteAPI.creerTicket(token, payload.data);
       const resultat = await venteAPI.completerTicket(token, ticket.id, {
-        paiements: [{ methode, montant: ticket.total }],
+        paiements: paiementsSaisis,
       });
       setDerniereVente({
         numero: resultat.numeroTicket,
