@@ -8,7 +8,7 @@ import { CatalogueService } from "./catalogue.service";
 import {
   CreerProduitDto, ModifierProduitDto, ModifierVarianteDto,
   CreerCategorieDto, ModifierCategorieDto,
-  ListerProduitsQueryDto,
+  ListerProduitsQueryDto, ImporterProduitsDto,
 } from "./dto/produit.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
@@ -77,6 +77,19 @@ export class CatalogueController {
   @Roles("ADMIN", "MANAGER")
   supprimerProduit(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
     return this.catalogueService.supprimerProduit(user.tenantId, user.userId, id);
+  }
+
+  @Post("produits/import")
+  @ApiOperation({
+    summary: "Importer plusieurs produits en lot (CSV).",
+    description: "Cree N produits en sequence. Les erreurs sont accumulees ligne par ligne et n'interrompent pas le traitement.",
+  })
+  @Roles("ADMIN", "MANAGER")
+  importerProduits(
+    @CurrentUser() user: CurrentUserData,
+    @Body() dto: ImporterProduitsDto,
+  ) {
+    return this.catalogueService.importerProduits(user.tenantId, user.userId, dto);
   }
 
   @Patch("produits/:produitId/variantes/:varianteId")

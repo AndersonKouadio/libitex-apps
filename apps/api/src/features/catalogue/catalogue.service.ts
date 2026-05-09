@@ -5,6 +5,7 @@ import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import {
   CreerProduitDto, ModifierProduitDto, CreerCategorieDto,
   ProduitResponseDto, VarianteResponseDto, CategorieResponseDto,
+  ImporterProduitsDto, ImportResultatDto, ImportErreurDto,
 } from "./dto/produit.dto";
 import { PaginatedResponseDto } from "../../common/dto/api-response.dto";
 
@@ -172,6 +173,33 @@ export class CatalogueService {
     await this.audit.logDelete(tenantId, userId, "PRODUIT", id, {
       nom: avant.nom, type: avant.typeProduit,
     });
+  }
+
+  /**
+   * Import en lot de produits (CSV). Les erreurs ligne par ligne n'interrompent
+   * pas le traitement : on accumule les succes et les echecs, l'UI affichera
+   * un recap. Pas de transaction globale — un user qui re-importe un CSV
+   * partiellement OK ne perd pas les lignes valides deja inserees.
+   */
+  async importerProduits(
+    tenantId: string, userId: string, dto: ImporterProduitsDto,
+  ): Promise<ImportResultatDto> {
+    const erreurs: ImportErreurDto[] = [];
+    let succes = 0;
+    for (let i = 0; i < dto.produits.length; i++) {
+      const p = dto.produits[i];
+      try {
+        await this.creerProduit(tenantId, userId, p);
+        succes++;
+      } catch (err) {
+        erreurs.push({
+          ligne: i + 1,
+          nom: p.nom,
+          message: err instanceof Error ? err.message : "Erreur inconnue",
+        });
+      }
+    }
+    return { succes, total: dto.produits.length, erreurs };
   }
 
   async modifierVariante(

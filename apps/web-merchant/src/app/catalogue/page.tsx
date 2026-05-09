@@ -14,7 +14,7 @@ import type { IProduit } from "@/features/catalogue/types/produit.type";
 import {
   Table, Chip, Button, Skeleton, SearchField, Input, Select, ListBox,
 } from "@heroui/react";
-import { Package, Plus, Pencil, AlertTriangle, Copy, Trash2, Folder } from "lucide-react";
+import { Package, Plus, Pencil, AlertTriangle, Copy, Trash2, Folder, Upload } from "lucide-react";
 import { useSupprimerProduitMutation } from "@/features/catalogue/queries/produit-delete.mutation";
 import { useConfirmation } from "@/providers/confirmation-provider";
 import { ToggleActifProduit } from "@/features/catalogue/components/toggle-actif-produit";
@@ -123,12 +123,20 @@ export default function PageCatalogue() {
         >
           <Input placeholder="Rechercher un produit..." />
         </SearchField>
-        <Link href="/catalogue/nouveau">
-          <Button variant="primary" className="gap-1.5 shrink-0">
-            <Plus size={16} />
-            Nouveau produit
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link href="/catalogue/import">
+            <Button variant="ghost" className="gap-1.5">
+              <Upload size={16} />
+              Importer CSV
+            </Button>
+          </Link>
+          <Link href="/catalogue/nouveau">
+            <Button variant="primary" className="gap-1.5">
+              <Plus size={16} />
+              Nouveau produit
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {categorieActive && (

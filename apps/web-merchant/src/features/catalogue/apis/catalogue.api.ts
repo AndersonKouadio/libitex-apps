@@ -49,6 +49,13 @@ export const catalogueAPI = {
   ) =>
     httpClient.patch(`${BASE}/produits/${produitId}/variantes/${varianteId}`, data, { token }),
 
+  importerProduits: (token: string, produits: unknown[]) =>
+    httpClient.post<{
+      succes: number;
+      total: number;
+      erreurs: Array<{ ligne: number; nom: string; message: string }>;
+    }>(`${BASE}/produits/import`, { produits }, { token }),
+
   listerCategories: (token: string) =>
     httpClient.get<ICategorie[]>(`${BASE}/categories`, { token }),
 

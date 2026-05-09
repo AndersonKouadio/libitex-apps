@@ -340,6 +340,31 @@ export class ModifierProduitDto {
   actif?: boolean;
 }
 
+export class ImporterProduitsDto {
+  @ApiProperty({ type: [CreerProduitDto], description: "Liste des produits a creer en lot." })
+  @ValidateNested({ each: true })
+  @Type(() => CreerProduitDto)
+  @IsArray()
+  produits!: CreerProduitDto[];
+}
+
+export class ImportErreurDto {
+  /** Index de la ligne dans le CSV (1-based, sans le header). */
+  ligne!: number;
+  /** Nom du produit en erreur (pour faciliter le repere dans le UI). */
+  nom!: string;
+  message!: string;
+}
+
+export class ImportResultatDto {
+  /** Nombre de produits cree avec succes. */
+  succes!: number;
+  /** Nombre total de lignes traitees (succes + erreurs). */
+  total!: number;
+  /** Liste des erreurs rencontrees, avec leur ligne d'origine. */
+  erreurs!: ImportErreurDto[];
+}
+
 export class CreerCategorieDto {
   @ApiProperty({ example: "Electronique" })
   @IsString()
