@@ -38,7 +38,9 @@ export default function PagePOS() {
   const searchParams = useSearchParams();
   // POS : charger TOUS les produits (vrais + supplements) pour pouvoir vendre
   // n'importe quel article a la commande. Filtrage par categorie cote front.
-  const { data: produitsData } = useProduitListQuery(1, undefined, { isSupplement: null });
+  // actif=true : un produit desactive depuis le catalogue ne doit plus
+  // apparaitre au POS — invalidation TanStack provoque un refetch immediat.
+  const { data: produitsData } = useProduitListQuery(1, undefined, { isSupplement: null, actif: true });
   const { data: emplacements } = useEmplacementListQuery();
   const panier = usePanier();
 

@@ -17,6 +17,7 @@ import {
 import { Package, Plus, Pencil, AlertTriangle, Copy, Trash2, Folder } from "lucide-react";
 import { useSupprimerProduitMutation } from "@/features/catalogue/queries/produit-delete.mutation";
 import { useConfirmation } from "@/providers/confirmation-provider";
+import { ToggleActifProduit } from "@/features/catalogue/components/toggle-actif-produit";
 
 function formatPrix(n: number) {
   return new Intl.NumberFormat("fr-FR").format(n);
@@ -289,14 +290,8 @@ export default function PageCatalogue() {
                         </span>
                       </Table.Cell>
                       <Table.Cell>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <Chip className={`text-xs ${
-                            p.actif
-                              ? "bg-success/10 text-success"
-                              : "bg-muted/10 text-muted"
-                          }`}>
-                            {p.actif ? "Actif" : "Inactif"}
-                          </Chip>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <ToggleActifProduit produitId={p.id} produitNom={p.nom} actif={p.actif} />
                           {p.enRupture && (
                             <Chip className="text-xs gap-1 bg-warning/10 text-warning">
                               <AlertTriangle size={10} />
