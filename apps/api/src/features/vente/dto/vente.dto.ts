@@ -4,6 +4,19 @@ import {
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { PaginationDto } from "../../../common/dto/pagination.dto";
+
+export class ListerTicketsQueryDto extends PaginationDto {
+  @ApiPropertyOptional({ description: "Filtrer par emplacement" })
+  @IsOptional()
+  @IsString()
+  emplacementId?: string;
+
+  @ApiPropertyOptional({ description: "Statut : OPEN, PARKED, COMPLETED, CANCELLED" })
+  @IsOptional()
+  @IsString()
+  statut?: string;
+}
 
 // --- Enums ---
 

@@ -5,7 +5,7 @@ import {
 import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiQuery } from "@nestjs/swagger";
 import { VenteService } from "./vente.service";
-import { CreerTicketDto, CompleterTicketDto } from "./dto/vente.dto";
+import { CreerTicketDto, CompleterTicketDto, ListerTicketsQueryDto } from "./dto/vente.dto";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
@@ -56,17 +56,13 @@ export class VenteController {
   }
 
   @Get("tickets")
-  @ApiOperation({ summary: "Lister les tickets (pagine)" })
-  @ApiQuery({ name: "emplacementId", required: false })
-  @ApiQuery({ name: "statut", required: false })
+  @ApiOperation({ summary: "Lister les tickets (pagine, filtres emplacement/statut)" })
   listerTickets(
     @CurrentUser() user: CurrentUserData,
-    @Query() pagination: PaginationDto,
-    @Query("emplacementId") emplacementId?: string,
-    @Query("statut") statut?: string,
+    @Query() query: ListerTicketsQueryDto,
   ) {
     return this.venteService.listerTickets(
-      user.tenantId, pagination.page, pagination.limit, emplacementId, statut,
+      user.tenantId, query.page, query.limit, query.emplacementId, query.statut,
     );
   }
 
