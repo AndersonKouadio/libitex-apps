@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { PageContainer } from "@/components/layout/page-container";
 import { NavCatalogue } from "@/components/layout/nav-catalogue";
 import {
   useProduitListQuery, useCategorieListQuery,
 } from "@/features/catalogue/queries/produit-list.query";
+import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
 import type { IProduit } from "@/features/catalogue/types/produit.type";
 import {
   Table, Chip, Button, Skeleton, SearchField, Input, Select, ListBox,
@@ -25,8 +27,8 @@ const LABELS_TYPE: Record<string, { label: string; color: string }> = {
   MENU: { label: "Menu", color: "warning" },
 };
 
-const TYPES_FILTRE = [
-  { id: "all", label: "Tous types" },
+/** Tous les types disponibles, filtres par typesProduitsAutorises de la boutique. */
+const TOUS_TYPES_FILTRE: { id: string; label: string }[] = [
   { id: "SIMPLE", label: "Standard" },
   { id: "VARIANT", label: "Variantes" },
   { id: "SERIALIZED", label: "Sérialisé" },
@@ -41,12 +43,26 @@ const STATUTS_FILTRE = [
 ];
 
 export default function PageCatalogue() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
   const [recherche, setRecherche] = useState("");
   const [filtreType, setFiltreType] = useState<string>("all");
   const [filtreCategorie, setFiltreCategorie] = useState<string>("all");
   const [filtreStatut, setFiltreStatut] = useState<string>("all");
 
+  // Drill-down depuis /categories : pre-rempli filtreCategorie via ?categorie=<id>.
+  // Une fois consomme, on nettoie l'URL pour eviter de re-filtrer apres reset.
+  const categorieParam = searchParams.get("categorie");
+  useEffect(() => {
+    if (categorieParam) {
+      setFiltreCategorie(categorieParam);
+      setPage(1);
+      router.replace("/catalogue");
+    }
+  }, [categorieParam, router]);
+
+  const { data: boutique } = useBoutiqueActiveQuery();
   const { data: categories } = useCategorieListQuery();
   const { data, isLoading } = useProduitListQuery(page, recherche || undefined, {
     typeProduit: filtreType !== "all" ? filtreType : undefined,
@@ -56,6 +72,23 @@ export default function PageCatalogue() {
 
   const produits = data?.data ?? [];
   const meta = data?.meta;
+
+  // Filtre Type adapte au secteur d'activite : on ne montre que les types
+  // que la boutique peut creer (RESTAURATION → SIMPLE+MENU, BIJOUTERIE →
+  // SIMPLE+SERIALIZED, etc.). Si la boutique n'a pas de restriction (AUTRE),
+  // on affiche tout.
+  const typesFiltre = useMemo(() => {
+    const autorises = boutique?.typesProduitsAutorises;
+    const types = autorises && autorises.length > 0
+      ? TOUS_TYPES_FILTRE.filter((t) => (autorises as readonly string[]).includes(t.id))
+      : TOUS_TYPES_FILTRE;
+    return [{ id: "all", label: "Tous types" }, ...types];
+  }, [boutique?.typesProduitsAutorises]);
+
+  // Nom de la categorie active (pour le bandeau drill-down)
+  const categorieActive = filtreCategorie !== "all"
+    ? categories?.find((c) => c.id === filtreCategorie)
+    : undefined;
 
   function changerFiltre(setter: (v: string) => void) {
     return (v: string) => { setter(v); setPage(1); };
@@ -82,6 +115,22 @@ export default function PageCatalogue() {
         </Link>
       </div>
 
+      {categorieActive && (
+        <div className="mb-3 flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-sm">
+          <span className="text-accent font-medium">📂 {categorieActive.nom}</span>
+          <span className="text-muted text-xs">
+            {meta?.total ?? 0} produit{(meta?.total ?? 0) > 1 ? "s" : ""}
+          </span>
+          <Button
+            variant="ghost"
+            className="ml-auto text-xs text-muted hover:text-foreground h-7 px-2"
+            onPress={() => { setFiltreCategorie("all"); setPage(1); }}
+          >
+            Tout afficher
+          </Button>
+        </div>
+      )}
+
       <div className="flex items-center gap-2 mb-5 flex-wrap">
         <Select
           selectedKey={filtreType}
@@ -92,7 +141,7 @@ export default function PageCatalogue() {
           <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
           <Select.Popover>
             <ListBox>
-              {TYPES_FILTRE.map((t) => (
+              {typesFiltre.map((t) => (
                 <ListBox.Item key={t.id} id={t.id} textValue={t.label}>{t.label}</ListBox.Item>
               ))}
             </ListBox>
