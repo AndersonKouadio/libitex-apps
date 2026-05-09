@@ -79,6 +79,10 @@ export const products = pgTable("products", {
     .$type<Record<string, Array<{ from: string; to: string }>>>()
     .default({}),
   isActive: boolean("is_active").notNull().default(true),
+  // Marque le produit comme « supplément » : il est listé séparément au POS
+  // (modale d'ajout sur une ligne de commande). Stock géré via le pipeline
+  // standard comme tout produit type=SIMPLE.
+  isSupplement: boolean("is_supplement").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -87,6 +91,7 @@ export const products = pgTable("products", {
   index("idx_products_type").on(table.tenantId, table.productType),
   index("idx_products_barcode").on(table.barcodeEan13),
   index("idx_products_barcode_internal").on(table.barcodeInternal),
+  index("idx_products_supplement").on(table.tenantId, table.isSupplement),
 ]);
 
 // ─── Disponibilite par emplacement (N:M, optionnelle) ───

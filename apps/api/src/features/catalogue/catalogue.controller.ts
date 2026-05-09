@@ -29,14 +29,19 @@ export class CatalogueController {
   }
 
   @Get("produits")
-  @ApiOperation({ summary: "Lister les produits (pagine, recherche)" })
+  @ApiOperation({ summary: "Lister les produits (pagine, recherche, filtre supplément)" })
   listerProduits(
     @CurrentUser() user: CurrentUserData,
     @Query() pagination: PaginationDto,
     @Query("recherche") recherche?: string,
+    @Query("isSupplement") isSupplement?: string,
   ) {
+    const filtreSupplement =
+      isSupplement === "true" ? true :
+      isSupplement === "false" ? false :
+      undefined;
     return this.catalogueService.listerProduits(
-      user.tenantId, pagination.page, pagination.limit, recherche,
+      user.tenantId, pagination.page, pagination.limit, recherche, filtreSupplement,
     );
   }
 

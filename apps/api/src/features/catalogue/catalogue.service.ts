@@ -34,6 +34,7 @@ export class CatalogueService {
       outOfStock: dto.enRupture,
       availabilityMode: dto.modeDisponibilite,
       availabilitySchedule: dto.planningDisponibilite,
+      isSupplement: dto.isSupplement,
     });
 
     if (dto.emplacementsDisponibles && dto.emplacementsDisponibles.length > 0) {
@@ -84,10 +85,12 @@ export class CatalogueService {
   }
 
   async listerProduits(
-    tenantId: string, page: number, limit: number, recherche?: string,
+    tenantId: string, page: number, limit: number, recherche?: string, isSupplement?: boolean,
   ): Promise<PaginatedResponseDto<ProduitResponseDto>> {
     const offset = (page - 1) * limit;
-    const { data, total } = await this.produitRepo.listerProduits(tenantId, offset, limit, recherche);
+    const { data, total } = await this.produitRepo.listerProduits(
+      tenantId, offset, limit, recherche, isSupplement,
+    );
 
     const produits = await Promise.all(
       data.map(async (p) => {
@@ -125,6 +128,7 @@ export class CatalogueService {
       availabilityMode: dto.modeDisponibilite,
       availabilitySchedule: dto.planningDisponibilite,
       isActive: dto.actif,
+      isSupplement: dto.isSupplement,
     });
 
     if (dto.emplacementsDisponibles !== undefined) {
@@ -238,6 +242,7 @@ export class CatalogueService {
       emplacementsDisponibles,
       // Communs
       actif: raw.isActive,
+      isSupplement: raw.isSupplement ?? false,
       variantes,
       creeLe: raw.createdAt?.toISOString?.() ?? raw.createdAt,
     };

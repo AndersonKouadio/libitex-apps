@@ -28,6 +28,7 @@ export class ProduitRepository {
     outOfStock?: boolean;
     availabilityMode?: "TOUJOURS" | "PROGRAMME";
     availabilitySchedule?: Record<string, Array<{ from: string; to: string }>>;
+    isSupplement?: boolean;
   }) {
     const [produit] = await this.db
       .insert(products)
@@ -95,7 +96,13 @@ export class ProduitRepository {
     });
   }
 
-  async listerProduits(tenantId: string, offset: number, limit: number, recherche?: string) {
+  async listerProduits(
+    tenantId: string,
+    offset: number,
+    limit: number,
+    recherche?: string,
+    isSupplement?: boolean,
+  ) {
     const conditions = [eq(products.tenantId, tenantId), isNull(products.deletedAt)];
 
     if (recherche) {
@@ -105,6 +112,10 @@ export class ProduitRepository {
           ilike(products.brand, `%${recherche}%`),
         )!,
       );
+    }
+
+    if (isSupplement !== undefined) {
+      conditions.push(eq(products.isSupplement, isSupplement));
     }
 
     const data = await this.db.query.products.findMany({
@@ -138,6 +149,7 @@ export class ProduitRepository {
     availabilityMode: "TOUJOURS" | "PROGRAMME";
     availabilitySchedule: Record<string, Array<{ from: string; to: string }>>;
     isActive: boolean;
+    isSupplement: boolean;
   }>) {
     // Filtre les undefined : sinon Drizzle ecrase a NULL les champs non fournis.
     const cleaned = Object.fromEntries(

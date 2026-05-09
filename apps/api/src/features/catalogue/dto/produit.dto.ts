@@ -147,6 +147,11 @@ export class CreerProduitDto {
   @IsOptional()
   metadataSecteur?: Record<string, unknown>;
 
+  @ApiPropertyOptional({ example: false, description: "Marque le produit comme supplément (proposé en POS sur les lignes de commande)." })
+  @IsBoolean()
+  @IsOptional()
+  isSupplement?: boolean;
+
   // ─── Champs RESTAURATION (pertinents pour les produits MENU) ───
 
   @ApiPropertyOptional({ example: 15, description: "Temps de préparation en minutes" })
@@ -248,6 +253,11 @@ export class ModifierProduitDto {
   @ApiPropertyOptional({ description: "Métadonnées spécifiques au secteur" })
   @IsOptional()
   metadataSecteur?: Record<string, unknown>;
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  isSupplement?: boolean;
 
   @ApiPropertyOptional()
   @IsInt()
@@ -367,6 +377,7 @@ export class ProduitResponseDto {
   emplacementsDisponibles!: string[];
   // ─── Communs ───
   actif!: boolean;
+  isSupplement!: boolean;
   variantes!: VarianteResponseDto[];
   creeLe!: string;
 }
