@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { PageContainer } from "@/components/layout/page-container";
@@ -48,6 +48,42 @@ function BoutonTri({
     </button>
   );
 }
+
+/**
+ * Checkbox du header avec gestion correcte des 3 etats :
+ * - aucun coche : decoche
+ * - tous coches : coche
+ * - certains seulement : indeterminate (case avec un trait, signal visuel
+ *   que la selection est partielle). L'attribut indeterminate n'existe
+ *   pas en JSX, il doit etre defini en JS via une ref.
+ */
+const HeaderCheckbox = React.forwardRef<HTMLInputElement, {
+  produits: ReadonlyArray<{ id: string }>;
+  selection: ReadonlySet<string>;
+  onToggleTout: (selected: boolean, ids: string[]) => void;
+}>(function HeaderCheckbox({ produits, selection, onToggleTout }, ref) {
+  const ids = produits.map((p) => p.id);
+  const tousCoches = ids.length > 0 && ids.every((id) => selection.has(id));
+  const certainsCoches = !tousCoches && ids.some((id) => selection.has(id));
+
+  // Synchronise l'attribut indeterminate (DOM only, pas dispo en JSX)
+  useEffect(() => {
+    if (ref && typeof ref !== "function" && ref.current) {
+      ref.current.indeterminate = certainsCoches;
+    }
+  }, [certainsCoches, ref]);
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      aria-label="Sélectionner toute la page"
+      checked={tousCoches}
+      onChange={(e) => onToggleTout(e.target.checked, ids)}
+      className="w-4 h-4 rounded border-border accent-accent cursor-pointer"
+    />
+  );
+});
 
 const LABELS_TYPE: Record<string, { label: string; color: string }> = {
   SIMPLE: { label: "Standard", color: "primary" },
@@ -176,6 +212,15 @@ export default function PageCatalogue() {
       return next;
     });
   }
+
+  // Ref + effet pour l'etat indeterminé du checkbox header :
+  // - cocher : tous les produits visibles sont selectionnes
+  // - indeterminate : au moins un mais pas tous
+  // - decocher : aucun
+  // Sans ce useEffect le state intermediaire (qq lignes cochees) faisait
+  // que le header restait visuellement vide meme apres avoir tout coche
+  // un par un — l'attribut HTML indeterminate doit etre defini en JS.
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
 
   async function handleSupprimer(p: IProduit) {
     const ok = await confirmer({
@@ -389,12 +434,11 @@ export default function PageCatalogue() {
             <Table.Content aria-label="Catalogue produits">
               <Table.Header className="table-header-libitex">
                 <Table.Column className="w-10">
-                  <input
-                    type="checkbox"
-                    aria-label="Sélectionner toute la page"
-                    checked={produits.length > 0 && produits.every((p) => selection.has(p.id))}
-                    onChange={(e) => toggleTout(e.target.checked, produits.map((p) => p.id))}
-                    className="w-4 h-4 rounded border-border accent-accent cursor-pointer"
+                  <HeaderCheckbox
+                    ref={headerCheckboxRef}
+                    produits={produits}
+                    selection={selection}
+                    onToggleTout={toggleTout}
                   />
                 </Table.Column>
                 <Table.Column isRowHeader>
