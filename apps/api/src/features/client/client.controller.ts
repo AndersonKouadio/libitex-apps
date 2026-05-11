@@ -31,6 +31,23 @@ export class ClientController {
     return this.clientService.obtenir(user.tenantId, id);
   }
 
+  @Get(":id/kpis")
+  @ApiOperation({ summary: "KPIs cumules : CA total, nb tickets, ticket moyen, premier/dernier achat" })
+  kpis(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
+    return this.clientService.kpis(user.tenantId, id);
+  }
+
+  @Get(":id/historique")
+  @ApiOperation({ summary: "Historique des tickets COMPLETED du client (pagine)" })
+  historique(
+    @CurrentUser() user: CurrentUserData,
+    @Param("id") id: string,
+    @Query("page") page = "1",
+    @Query("pageSize") pageSize = "25",
+  ) {
+    return this.clientService.historique(user.tenantId, id, Number(page), Number(pageSize));
+  }
+
   @Post()
   @ApiOperation({ summary: "Créer un client" })
   creer(@CurrentUser() user: CurrentUserData, @Body() dto: CreerClientDto) {

@@ -75,3 +75,24 @@ export class ClientResponseDto {
   notes!: string | null;
   creeLe!: string;
 }
+
+export class KpisClientDto {
+  caTotal!: number;
+  nbTickets!: number;
+  ticketMoyen!: number;
+  premierAchat!: string | null;
+  dernierAchat!: string | null;
+}
+
+export class LigneHistoriqueClientDto {
+  id!: string;
+  numeroTicket!: string;
+  total!: number;
+  completeLe!: string | null;
+  emplacementId!: string;
+}
+
+export class HistoriqueClientDto {
+  data!: LigneHistoriqueClientDto[];
+  meta!: { page: number; pageSize: number; total: number; totalPages: number };
+}

@@ -1,6 +1,6 @@
 import { httpClient } from "@/lib/http";
 import type { PaginatedResponse } from "@/types/api.type";
-import type { IClient } from "../types/client.type";
+import type { IClient, IKpisClient, IHistoriqueClient } from "../types/client.type";
 import type { CreerClientDTO } from "../schemas/client.schema";
 
 const BASE = "/clients";
@@ -24,4 +24,10 @@ export const clientAPI = {
 
   supprimer: (token: string, id: string) =>
     httpClient.delete<void>(`${BASE}/${id}`, { token }),
+
+  kpis: (token: string, id: string) =>
+    httpClient.get<IKpisClient>(`${BASE}/${id}/kpis`, { token }),
+
+  historique: (token: string, id: string, page = 1, pageSize = 25) =>
+    httpClient.get<IHistoriqueClient>(`${BASE}/${id}/historique?page=${page}&pageSize=${pageSize}`, { token }),
 };
