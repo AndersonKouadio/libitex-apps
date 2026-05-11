@@ -28,15 +28,13 @@ export function CarteKpiTendance({
   const positif = variation != null && variation > 0;
   const negatif = variation != null && variation < 0;
   const stable = variation === 0;
-  const nouveau = variation === null;
+  const sansComparaison = variation === null;
 
   const couleurTendance = positif ? "text-success"
     : negatif ? "text-danger"
-    : stable ? "text-muted"
     : "text-muted";
   const IconeTendance = positif ? ArrowUpRight
     : negatif ? ArrowDownRight
-    : nouveau ? ArrowUpRight
     : Minus;
 
   return (
@@ -46,12 +44,14 @@ export function CarteKpiTendance({
           <span className={`rounded-lg w-9 h-9 flex items-center justify-center ${classesIcone}`}>
             <Icone size={18} strokeWidth={1.8} />
           </span>
-          <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${couleurTendance}`}>
-            <IconeTendance size={14} />
-            {nouveau ? "nouveau"
-              : variation == null ? "—"
-              : `${variation > 0 ? "+" : ""}${variation.toFixed(0)}%`}
-          </span>
+          {sansComparaison ? (
+            <span className="text-[10px] text-muted/70">aucune base</span>
+          ) : (
+            <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${couleurTendance}`}>
+              <IconeTendance size={14} />
+              {stable ? "0%" : `${variation > 0 ? "+" : ""}${variation.toFixed(0)}%`}
+            </span>
+          )}
         </div>
         <p className="text-xs text-muted mb-1">{libelle}</p>
         <p className="text-xl font-semibold text-foreground tabular-nums tracking-tight">

@@ -114,7 +114,7 @@ export function ChartRepartitionPaiements({ donnees, enChargement, jours }: Prop
               <span className="text-[10px] text-muted">F CFA</span>
             </div>
           </div>
-          <ul className="flex-1 min-w-0 space-y-1.5">
+          <ul className="flex-1 min-w-[180px] space-y-1.5">
             {data.map((d) => {
               const meta = LABELS_METHODE[d.methode] ?? { label: d.methode, couleur: "var(--muted)" };
               return (
@@ -123,9 +123,9 @@ export function ChartRepartitionPaiements({ donnees, enChargement, jours }: Prop
                     className="w-2.5 h-2.5 rounded-sm shrink-0"
                     style={{ backgroundColor: meta.couleur }}
                   />
-                  <span className="flex-1 min-w-0 truncate text-foreground">{meta.label}</span>
-                  <span className="tabular-nums text-muted">{d.pourcentage}%</span>
-                  <span className="tabular-nums font-medium text-foreground w-20 text-right">
+                  <span className="flex-1 text-foreground whitespace-nowrap">{meta.label}</span>
+                  <span className="tabular-nums text-muted whitespace-nowrap">{d.pourcentage}%</span>
+                  <span className="tabular-nums font-medium text-foreground text-right whitespace-nowrap">
                     {formatMontant(d.total)} F
                   </span>
                 </li>
