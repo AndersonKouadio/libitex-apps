@@ -16,7 +16,7 @@ import {
 import {
   CreerTicketDto, CompleterTicketDto,
   TicketResponseDto, LigneTicketResponseDto, PaiementResponseDto, RapportZResponseDto,
-  RapportZJourResponseDto,
+  RapportZJourResponseDto, RapportVentesPeriodeDto, RapportMargesDto,
 } from "./dto/vente.dto";
 import { PaginatedResponseDto } from "../../common/dto/api-response.dto";
 
@@ -344,6 +344,83 @@ export class VenteService {
         recettes: Math.round(Number(v.recettes)),
         nombre: Number(v.nombre),
       })),
+    };
+  }
+
+  async rapportVentesPeriode(
+    tenantId: string, debut: string, fin: string, emplacementId?: string,
+  ): Promise<RapportVentesPeriodeDto> {
+    const rows = await this.ticketRepo.ventesParPeriode(tenantId, debut, fin, emplacementId);
+    const jours = rows.map((r) => {
+      const recettes = Math.round(Number(r.recettes));
+      const nombre = Number(r.nombre);
+      return {
+        date: r.date,
+        recettes,
+        nombre,
+        tva: Math.round(Number(r.tva)),
+        remises: Math.round(Number(r.remises)),
+        ticketMoyen: nombre > 0 ? Math.round(recettes / nombre) : 0,
+      };
+    });
+    const totaux = jours.reduce(
+      (acc, j) => ({
+        recettes: acc.recettes + j.recettes,
+        tickets: acc.tickets + j.nombre,
+        tva: acc.tva + j.tva,
+        remises: acc.remises + j.remises,
+      }),
+      { recettes: 0, tickets: 0, tva: 0, remises: 0 },
+    );
+    return {
+      debut, fin, emplacementId: emplacementId ?? null, jours,
+      totaux: {
+        ...totaux,
+        ticketMoyen: totaux.tickets > 0 ? Math.round(totaux.recettes / totaux.tickets) : 0,
+      },
+    };
+  }
+
+  async rapportMarges(
+    tenantId: string, debut: string, fin: string, emplacementId?: string,
+  ): Promise<RapportMargesDto> {
+    const rows = await this.ticketRepo.margesParProduit(tenantId, debut, fin, emplacementId);
+    const lignes = rows.map((r) => {
+      const ca = Number(r.chiffreAffaires);
+      const qty = Number(r.quantiteTotale);
+      const pa = Number(r.prixAchat ?? 0);
+      const cout = qty * pa;
+      const marge = ca - cout;
+      return {
+        variantId: r.variantId,
+        nomProduit: r.nomProduit,
+        nomVariante: r.nomVariante,
+        sku: r.sku,
+        quantiteTotale: qty,
+        chiffreAffaires: Math.round(ca),
+        coutTotal: Math.round(cout),
+        margeBrute: Math.round(marge),
+        margePourcent: ca > 0 ? Math.round((marge / ca) * 1000) / 10 : 0,
+        prixAchatManquant: pa === 0,
+      };
+    });
+    const totaux = lignes.reduce(
+      (acc, l) => ({
+        chiffreAffaires: acc.chiffreAffaires + l.chiffreAffaires,
+        coutTotal: acc.coutTotal + l.coutTotal,
+        quantiteTotale: acc.quantiteTotale + l.quantiteTotale,
+      }),
+      { chiffreAffaires: 0, coutTotal: 0, quantiteTotale: 0 },
+    );
+    const margeBrute = totaux.chiffreAffaires - totaux.coutTotal;
+    return {
+      debut, fin, emplacementId: emplacementId ?? null, lignes,
+      totaux: {
+        ...totaux, margeBrute,
+        margePourcent: totaux.chiffreAffaires > 0
+          ? Math.round((margeBrute / totaux.chiffreAffaires) * 1000) / 10
+          : 0,
+      },
     };
   }
 

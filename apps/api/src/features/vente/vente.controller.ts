@@ -97,4 +97,32 @@ export class VenteController {
     const dateEffective = date ?? new Date().toISOString().split("T")[0]!;
     return this.venteService.rapportZParJour(user.tenantId, emplacementId, dateEffective);
   }
+
+  @Get("rapports/ventes-periode")
+  @ApiOperation({
+    summary: "Ventes agregees par jour sur une periode (filtrable par emplacement)",
+  })
+  @Roles("ADMIN", "MANAGER")
+  rapportVentesPeriode(
+    @CurrentUser() user: CurrentUserData,
+    @Query("debut") debut: string,
+    @Query("fin") fin: string,
+    @Query("emplacementId") emplacementId?: string,
+  ) {
+    return this.venteService.rapportVentesPeriode(user.tenantId, debut, fin, emplacementId);
+  }
+
+  @Get("rapports/marges")
+  @ApiOperation({
+    summary: "Marges brutes par produit sur une periode (CA - cout d'achat * quantite vendue)",
+  })
+  @Roles("ADMIN", "MANAGER")
+  rapportMarges(
+    @CurrentUser() user: CurrentUserData,
+    @Query("debut") debut: string,
+    @Query("fin") fin: string,
+    @Query("emplacementId") emplacementId?: string,
+  ) {
+    return this.venteService.rapportMarges(user.tenantId, debut, fin, emplacementId);
+  }
 }

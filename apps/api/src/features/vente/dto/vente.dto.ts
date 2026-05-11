@@ -218,6 +218,56 @@ export class RapportZResponseDto {
   }[];
 }
 
+export class LigneVentePeriodeDto {
+  date!: string;
+  recettes!: number;
+  nombre!: number;
+  tva!: number;
+  remises!: number;
+  ticketMoyen!: number;
+}
+
+export class RapportVentesPeriodeDto {
+  debut!: string;
+  fin!: string;
+  emplacementId!: string | null;
+  jours!: LigneVentePeriodeDto[];
+  totaux!: {
+    recettes: number;
+    tickets: number;
+    tva: number;
+    remises: number;
+    ticketMoyen: number;
+  };
+}
+
+export class LigneMargeDto {
+  variantId!: string;
+  nomProduit!: string;
+  nomVariante!: string | null;
+  sku!: string;
+  quantiteTotale!: number;
+  chiffreAffaires!: number;
+  coutTotal!: number;
+  margeBrute!: number;
+  margePourcent!: number;
+  prixAchatManquant!: boolean;
+}
+
+export class RapportMargesDto {
+  debut!: string;
+  fin!: string;
+  emplacementId!: string | null;
+  lignes!: LigneMargeDto[];
+  totaux!: {
+    chiffreAffaires: number;
+    coutTotal: number;
+    margeBrute: number;
+    margePourcent: number;
+    quantiteTotale: number;
+  };
+}
+
 /**
  * Rapport Z agrege par jour pour un emplacement (independant des sessions).
  * Inclut top produits du jour et ventes par heure pour analyse rapide.

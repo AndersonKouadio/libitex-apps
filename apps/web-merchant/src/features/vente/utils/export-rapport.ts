@@ -1,4 +1,4 @@
-import type { IRapportZ } from "../types/vente.type";
+import type { IRapportZ, IRapportVentesPeriode, IRapportMarges } from "../types/vente.type";
 import { libelleMethode } from "./methode-paiement";
 
 /**
@@ -60,4 +60,34 @@ export function exporterRapportZCsv(rapport: IRapportZ, nomEmplacement: string) 
   }
   const nom = `rapport-z-${rapport.date}.csv`;
   telechargerFichier(nom, lignes.join("\n"));
+}
+
+export function exporterVentesPeriodeCsv(rapport: IRapportVentesPeriode, nomEmplacement?: string) {
+  const lignes: string[] = [];
+  lignes.push(`Ventes par periode,${csvEscape(nomEmplacement || "Tous emplacements")},${csvEscape(rapport.debut)} -> ${csvEscape(rapport.fin)}`);
+  lignes.push("");
+  lignes.push("Date,Tickets,Recettes (F),Ticket moyen (F),TVA (F),Remises (F)");
+  for (const j of rapport.jours) {
+    lignes.push(`${j.date},${j.nombre},${j.recettes},${j.ticketMoyen},${j.tva},${j.remises}`);
+  }
+  lignes.push("");
+  lignes.push(`Total,${rapport.totaux.tickets},${rapport.totaux.recettes},${rapport.totaux.ticketMoyen},${rapport.totaux.tva},${rapport.totaux.remises}`);
+  telechargerFichier(`ventes-${rapport.debut}_${rapport.fin}.csv`, lignes.join("\n"));
+}
+
+export function exporterMargesCsv(rapport: IRapportMarges, nomEmplacement?: string) {
+  const lignes: string[] = [];
+  lignes.push(`Marges par produit,${csvEscape(nomEmplacement || "Tous emplacements")},${csvEscape(rapport.debut)} -> ${csvEscape(rapport.fin)}`);
+  lignes.push("");
+  lignes.push("Produit,SKU,Quantite,CA (F),Cout (F),Marge brute (F),Marge %,Prix achat manquant");
+  for (const l of rapport.lignes) {
+    lignes.push([
+      csvEscape(l.nomProduit), csvEscape(l.sku),
+      l.quantiteTotale, l.chiffreAffaires, l.coutTotal, l.margeBrute, l.margePourcent,
+      l.prixAchatManquant ? "oui" : "non",
+    ].join(","));
+  }
+  lignes.push("");
+  lignes.push(`Total,,${rapport.totaux.quantiteTotale},${rapport.totaux.chiffreAffaires},${rapport.totaux.coutTotal},${rapport.totaux.margeBrute},${rapport.totaux.margePourcent},`);
+  telechargerFichier(`marges-${rapport.debut}_${rapport.fin}.csv`, lignes.join("\n"));
 }
