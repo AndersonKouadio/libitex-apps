@@ -217,3 +217,36 @@ export class RapportZResponseDto {
     nombre: number;
   }[];
 }
+
+/**
+ * Rapport Z agrege par jour pour un emplacement (independant des sessions).
+ * Inclut top produits du jour et ventes par heure pour analyse rapide.
+ */
+export class RapportZJourResponseDto {
+  emplacementId!: string;
+  date!: string;
+  resume!: {
+    totalTickets: number;
+    chiffreAffaires: number;
+    totalTva: number;
+    totalRemise: number;
+  };
+  ventilationPaiements!: {
+    methode: string;
+    total: number;
+    nombre: number;
+  }[];
+  topProduits!: {
+    variantId: string;
+    nomProduit: string;
+    nomVariante: string | null;
+    sku: string;
+    quantite: number;
+    chiffreAffaires: number;
+  }[];
+  ventesParHeure!: {
+    heure: number;
+    recettes: number;
+    nombre: number;
+  }[];
+}

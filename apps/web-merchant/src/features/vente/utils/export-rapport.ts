@@ -1,0 +1,63 @@
+import type { IRapportZ } from "../types/vente.type";
+import { libelleMethode } from "./methode-paiement";
+
+/**
+ * Telecharge un fichier texte/CSV dans le navigateur sans backend.
+ * Note: ajoute le BOM UTF-8 pour qu'Excel reconnaisse les accents.
+ */
+function telechargerFichier(nom: string, contenu: string, mime = "text/csv;charset=utf-8") {
+  const blob = new Blob(["﻿" + contenu], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nom;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function csvEscape(v: string | number): string {
+  const s = String(v);
+  if (s.includes(",") || s.includes("\"") || s.includes("\n")) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
+}
+
+/**
+ * Exporte un rapport Z en CSV (separateur virgule). 5 sections separees
+ * par une ligne vide : entete, resume, ventilation paiements, top produits,
+ * ventes par heure.
+ */
+export function exporterRapportZCsv(rapport: IRapportZ, nomEmplacement: string) {
+  const lignes: string[] = [];
+  lignes.push(`Rapport Z,${csvEscape(nomEmplacement)},${csvEscape(rapport.date)}`);
+  lignes.push("");
+  lignes.push("Indicateur,Valeur");
+  lignes.push(`Recettes (F),${rapport.resume.chiffreAffaires}`);
+  lignes.push(`Tickets,${rapport.resume.totalTickets}`);
+  lignes.push(`TVA collectee (F),${rapport.resume.totalTva}`);
+  lignes.push(`Remises (F),${rapport.resume.totalRemise}`);
+  lignes.push("");
+  lignes.push("Methode,Total (F),Nb transactions");
+  for (const p of rapport.ventilationPaiements) {
+    lignes.push(`${csvEscape(libelleMethode(p.methode))},${p.total},${p.nombre}`);
+  }
+  if (rapport.topProduits.length > 0) {
+    lignes.push("");
+    lignes.push("Top produit,SKU,Quantite,CA (F)");
+    for (const t of rapport.topProduits) {
+      lignes.push(`${csvEscape(t.nomProduit)},${csvEscape(t.sku)},${t.quantite},${t.chiffreAffaires}`);
+    }
+  }
+  if (rapport.ventesParHeure.length > 0) {
+    lignes.push("");
+    lignes.push("Heure,Recettes (F),Tickets");
+    for (const v of rapport.ventesParHeure) {
+      lignes.push(`${String(v.heure).padStart(2, "0")}h,${v.recettes},${v.nombre}`);
+    }
+  }
+  const nom = `rapport-z-${rapport.date}.csv`;
+  telechargerFichier(nom, lignes.join("\n"));
+}
