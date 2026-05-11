@@ -40,7 +40,7 @@ const TYPES_INGREDIENTS = [
   { id: "TRANSFER_IN", label: "Transfert ↘" },
 ];
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 25;
 
 type Onglet = "variantes" | "ingredients";
 
@@ -79,6 +79,11 @@ export default function PageMouvementsStock() {
 
   const totalPagesVar = queryVar.data?.meta.totalPages ?? 1;
   const totalPagesIng = queryIng.data?.meta.totalPages ?? 1;
+  const totalVar = queryVar.data?.meta.total ?? 0;
+  const totalIng = queryIng.data?.meta.total ?? 0;
+  const totalCourant = onglet === "variantes" ? totalVar : totalIng;
+  const pageCourante = onglet === "variantes" ? pageVar : pageIng;
+  const totalPagesCourant = onglet === "variantes" ? totalPagesVar : totalPagesIng;
 
   return (
     <PageContainer>
@@ -122,6 +127,13 @@ export default function PageMouvementsStock() {
           optionsType={onglet === "variantes" ? TYPES_VARIANTES : TYPES_INGREDIENTS}
         />
 
+        {totalCourant > 0 && (
+          <p className="text-xs text-muted mb-2 tabular-nums">
+            {totalCourant} mouvement{totalCourant > 1 ? "s" : ""}
+            {totalPagesCourant > 1 && ` · page ${pageCourante} / ${totalPagesCourant}`}
+          </p>
+        )}
+
         {onglet === "variantes" ? (
           queryVar.isLoading ? <SkeletonLignes />
             : <TableMouvementsStock lignes={queryVar.data?.data ?? []} />
@@ -130,10 +142,10 @@ export default function PageMouvementsStock() {
             : <TableMouvementsIngredients lignes={queryIng.data?.data ?? []} />
         )}
 
-        {(onglet === "variantes" ? totalPagesVar : totalPagesIng) > 1 && (
+        {totalPagesCourant > 1 && (
           <PaginationBar
-            page={onglet === "variantes" ? pageVar : pageIng}
-            total={onglet === "variantes" ? totalPagesVar : totalPagesIng}
+            page={pageCourante}
+            total={totalPagesCourant}
             onChange={(p) => onglet === "variantes" ? setPageVar(p) : setPageIng(p)}
           />
         )}
