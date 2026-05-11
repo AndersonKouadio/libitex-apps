@@ -7,7 +7,7 @@ import { ApiBearerAuth, ApiTags, ApiOperation, ApiQuery } from "@nestjs/swagger"
 import { StockService } from "./stock.service";
 import {
   CreerEmplacementDto, ModifierEmplacementDto, EntreeStockDto,
-  AjustementStockDto, TransfertStockDto,
+  AjustementStockDto, TransfertStockDto, ListerMouvementsQueryDto,
 } from "./dto/stock.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
@@ -89,5 +89,14 @@ export class StockController {
     @Param("emplacementId") emplacementId: string,
   ) {
     return this.stockService.obtenirStockParEmplacement(user.tenantId, emplacementId);
+  }
+
+  @Get("mouvements")
+  @ApiOperation({ summary: "Historique paginé des mouvements de stock (variantes)" })
+  listerMouvements(
+    @CurrentUser() user: CurrentUserData,
+    @Query() query: ListerMouvementsQueryDto,
+  ) {
+    return this.stockService.listerMouvements(user.tenantId, query);
   }
 }

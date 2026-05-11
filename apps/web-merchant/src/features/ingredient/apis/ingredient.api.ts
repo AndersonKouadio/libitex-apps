@@ -1,9 +1,17 @@
 import { httpClient } from "@/lib/http";
-import type { IIngredient, IStockIngredient, ILigneRecette } from "../types/ingredient.type";
+import type {
+  IIngredient, IStockIngredient, ILigneRecette,
+  IMouvementIngredient, FiltreMouvementsIngredients,
+} from "../types/ingredient.type";
 import type {
   CreerIngredientDTO, EntreeIngredientDTO, AjustementIngredientDTO,
   TransfertIngredientDTO, DefinirRecetteDTO,
 } from "../schemas/ingredient.schema";
+
+export interface MouvementsIngredientsResponse {
+  data: IMouvementIngredient[];
+  meta: { page: number; pageSize: number; total: number; totalPages: number };
+}
 
 const BASE = "/ingredients";
 
@@ -37,4 +45,19 @@ export const ingredientAPI = {
 
   definirRecette: (token: string, varianteId: string, data: DefinirRecetteDTO) =>
     httpClient.post<void>(`${BASE}/recettes/${varianteId}`, data, { token }),
+
+  listerMouvements: (token: string, filtres: FiltreMouvementsIngredients) => {
+    const qs = new URLSearchParams();
+    qs.set("page", String(filtres.page ?? 1));
+    qs.set("pageSize", String(filtres.pageSize ?? 50));
+    if (filtres.type) qs.set("type", filtres.type);
+    if (filtres.ingredientId) qs.set("ingredientId", filtres.ingredientId);
+    if (filtres.emplacementId) qs.set("emplacementId", filtres.emplacementId);
+    if (filtres.dateDebut) qs.set("dateDebut", filtres.dateDebut);
+    if (filtres.dateFin) qs.set("dateFin", filtres.dateFin);
+    return httpClient.get<MouvementsIngredientsResponse>(
+      `${BASE}/mouvements?${qs.toString()}`,
+      { token },
+    );
+  },
 };

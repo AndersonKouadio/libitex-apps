@@ -1,7 +1,9 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { eq, and, sql, isNull } from "drizzle-orm";
+import { eq, and, sql, isNull, desc, gte, lte, SQL } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
-import { type Database, locations, stockMovements, variants, products, batches } from "@libitex/db";
+import {
+  type Database, locations, stockMovements, variants, products, batches, users,
+} from "@libitex/db";
 
 @Injectable()
 export class StockRepository {
@@ -54,6 +56,63 @@ export class StockRepository {
       .update(locations)
       .set({ deletedAt: new Date() })
       .where(and(eq(locations.id, id), eq(locations.tenantId, tenantId)));
+  }
+
+  /**
+   * Liste paginee des mouvements de stock pour un tenant, avec filtres
+   * optionnels (type, variante, emplacement, plage de dates) et joins
+   * pour retourner les noms produit / variante / emplacement / auteur.
+   */
+  async listerMouvements(
+    tenantId: string,
+    filtres: {
+      page: number; pageSize: number;
+      type?: string; varianteId?: string; emplacementId?: string;
+      dateDebut?: Date; dateFin?: Date;
+    },
+  ) {
+    const conditions: SQL[] = [eq(stockMovements.tenantId, tenantId)];
+    if (filtres.type) conditions.push(eq(stockMovements.movementType, filtres.type as any));
+    if (filtres.varianteId) conditions.push(eq(stockMovements.variantId, filtres.varianteId));
+    if (filtres.emplacementId) conditions.push(eq(stockMovements.locationId, filtres.emplacementId));
+    if (filtres.dateDebut) conditions.push(gte(stockMovements.createdAt, filtres.dateDebut));
+    if (filtres.dateFin) conditions.push(lte(stockMovements.createdAt, filtres.dateFin));
+    const where = and(...conditions);
+
+    const [countRow] = await this.db
+      .select({ total: sql<number>`COUNT(*)::int` })
+      .from(stockMovements)
+      .where(where);
+
+    const offset = (filtres.page - 1) * filtres.pageSize;
+    const rows = await this.db
+      .select({
+        id: stockMovements.id,
+        movementType: stockMovements.movementType,
+        quantity: stockMovements.quantity,
+        note: stockMovements.note,
+        createdAt: stockMovements.createdAt,
+        variantId: stockMovements.variantId,
+        sku: variants.sku,
+        nomVariante: variants.name,
+        nomProduit: products.name,
+        locationId: stockMovements.locationId,
+        nomEmplacement: locations.name,
+        userId: stockMovements.userId,
+        prenomAuteur: users.firstName,
+        nomAuteur: users.lastName,
+      })
+      .from(stockMovements)
+      .innerJoin(variants, eq(stockMovements.variantId, variants.id))
+      .innerJoin(products, eq(variants.productId, products.id))
+      .innerJoin(locations, eq(stockMovements.locationId, locations.id))
+      .leftJoin(users, eq(stockMovements.userId, users.id))
+      .where(where)
+      .orderBy(desc(stockMovements.createdAt))
+      .limit(filtres.pageSize)
+      .offset(offset);
+
+    return { rows, total: Number(countRow?.total ?? 0) };
   }
 
   async sommeStockEmplacement(tenantId: string, locationId: string): Promise<number> {

@@ -201,6 +201,53 @@ export class IngredientService {
     });
   }
 
+  async listerMouvements(
+    tenantId: string,
+    query: {
+      page?: number; pageSize?: number; type?: string;
+      ingredientId?: string; emplacementId?: string;
+      dateDebut?: string; dateFin?: string;
+    },
+  ) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 50;
+    const dateDebut = query.dateDebut ? new Date(query.dateDebut) : undefined;
+    let dateFin: Date | undefined;
+    if (query.dateFin) {
+      dateFin = new Date(query.dateFin);
+      dateFin.setHours(23, 59, 59, 999);
+    }
+
+    const { rows, total } = await this.repo.listerMouvements(tenantId, {
+      page, pageSize, type: query.type,
+      ingredientId: query.ingredientId, emplacementId: query.emplacementId,
+      dateDebut, dateFin,
+    });
+
+    return {
+      data: rows.map((r) => ({
+        id: r.id,
+        type: r.type,
+        quantite: Number(r.quantity),
+        unite: r.unit,
+        note: r.note,
+        reference: r.reference,
+        creeLe: r.createdAt?.toISOString?.() ?? r.createdAt,
+        ingredientId: r.ingredientId,
+        nomIngredient: r.nomIngredient,
+        emplacementId: r.locationId,
+        nomEmplacement: r.nomEmplacement,
+        auteur: r.prenomAuteur || r.nomAuteur
+          ? `${r.prenomAuteur ?? ""} ${r.nomAuteur ?? ""}`.trim()
+          : null,
+      })),
+      meta: {
+        page, pageSize, total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
+  }
+
   async stockParEmplacement(tenantId: string, locationId: string): Promise<StockIngredientDto[]> {
     const list = await this.repo.stockParEmplacement(tenantId, locationId);
     return list.map((s) => {
