@@ -9,19 +9,25 @@ import { ModalEntreeStock } from "@/features/stock/components/modal-entree-stock
 import { ModalTransfertStock } from "@/features/stock/components/modal-transfert-stock";
 import { ModalAjustementStock } from "@/features/stock/components/modal-ajustement-stock";
 import { ModalReceptionIngredient } from "@/features/ingredient/components/modal-reception-ingredient";
+import { ModalAjustementIngredient } from "@/features/ingredient/components/modal-ajustement-ingredient";
+import { ModalTransfertIngredient } from "@/features/ingredient/components/modal-transfert-ingredient";
 import { KpisStock } from "@/features/stock/components/kpis-stock";
 import { BandeauAlertesStock } from "@/features/stock/components/bandeau-alertes-stock";
 import { TableStockVariantes } from "@/features/stock/components/table-stock-variantes";
+import { KpisStockIngredients } from "@/features/ingredient/components/kpis-stock-ingredients";
+import { TableStockIngredients } from "@/features/ingredient/components/table-stock-ingredients";
+import {
+  fusionnerStockIngredients, calculerKpisIngredients,
+} from "@/features/ingredient/utils/calcul-kpi";
 import { calculerKpisStock } from "@/features/stock/utils/calcul-kpi";
 import {
   useIngredientListQuery, useStockIngredientsQuery,
 } from "@/features/ingredient/queries/ingredient-list.query";
 import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
-import { UNITE_LABELS } from "@/features/unite/types/unite.type";
-import { Table, Chip, Card, Button, Skeleton, Tabs } from "@heroui/react";
+import { Card, Button, Skeleton, Tabs } from "@heroui/react";
 import {
   MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus,
-  Settings, Wheat, AlertTriangle, Scale,
+  Settings, Wheat, Scale,
 } from "lucide-react";
 
 type Onglet = "variantes" | "ingredients";
@@ -35,7 +41,10 @@ export default function PageStock() {
   const [modalTransfertOuvert, setModalTransfertOuvert] = useState(false);
   const [modalAjustementOuvert, setModalAjustementOuvert] = useState(false);
   const [modalReceptionOuvert, setModalReceptionOuvert] = useState(false);
+  const [modalAjustIngOuvert, setModalAjustIngOuvert] = useState(false);
+  const [modalTransfertIngOuvert, setModalTransfertIngOuvert] = useState(false);
   const [filtreAlerte, setFiltreAlerte] = useState(false);
+  const [filtreAlerteIng, setFiltreAlerteIng] = useState(false);
 
   const { data: stockDetail, isLoading: chargementStock } =
     useStockEmplacementQuery(empSelectionne || undefined);
@@ -46,11 +55,15 @@ export default function PageStock() {
   const secteur = boutique?.secteurActivite;
   const ingredientsDisponible = secteur === "RESTAURATION" || secteur === "AUTRE";
 
-  // Index stock ingredient par ingredientId pour lookup rapide.
-  const stockIngMap = new Map((stockIng ?? []).map((s) => [s.ingredientId, s]));
-
   // KPIs calcules au vol sur les lignes chargees pour l'emplacement courant.
   const kpis = useMemo(() => calculerKpisStock(stockDetail ?? []), [stockDetail]);
+
+  // Fusion fiche + stock + KPIs ingredients.
+  const lignesIng = useMemo(
+    () => fusionnerStockIngredients(ingredients ?? [], stockIng ?? []),
+    [ingredients, stockIng],
+  );
+  const kpisIng = useMemo(() => calculerKpisIngredients(lignesIng), [lignesIng]);
 
   return (
     <PageContainer>
@@ -108,10 +121,29 @@ export default function PageStock() {
               </>
             )}
             {onglet === "ingredients" && (
-              <Button variant="primary" className="gap-1.5" onPress={() => setModalReceptionOuvert(true)}>
-                <PackagePlus size={16} />
-                Réceptionner ingrédient
-              </Button>
+              <>
+                <Button
+                  variant="secondary" className="gap-1.5"
+                  onPress={() => setModalAjustIngOuvert(true)}
+                  aria-label="Ajuster un ingrédient"
+                >
+                  <Scale size={16} />
+                  Ajuster
+                </Button>
+                <Button
+                  variant="secondary" className="gap-1.5"
+                  onPress={() => setModalTransfertIngOuvert(true)}
+                  isDisabled={(emplacements?.length ?? 0) < 2}
+                  aria-label="Transférer un ingrédient"
+                >
+                  <ArrowRightLeft size={16} />
+                  Transférer
+                </Button>
+                <Button variant="primary" className="gap-1.5" onPress={() => setModalReceptionOuvert(true)}>
+                  <PackagePlus size={16} />
+                  Réceptionner
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -217,62 +249,16 @@ export default function PageStock() {
                   </Card.Content>
                 </Card>
               ) : (
-                <Table>
-                  <Table.ScrollContainer>
-                    <Table.Content aria-label="Stock ingrédients par emplacement">
-                      <Table.Header className="table-header-libitex">
-                        <Table.Column isRowHeader>Ingrédient</Table.Column>
-                        <Table.Column>Stock actuel</Table.Column>
-                        <Table.Column>Seuil d'alerte</Table.Column>
-                        <Table.Column>Coût unitaire</Table.Column>
-                      </Table.Header>
-                      <Table.Body>
-                        {(ingredients ?? []).map((i) => {
-                          const stock = stockIngMap.get(i.id);
-                          const enAlerte = stock?.enAlerte ?? false;
-                          return (
-                            <Table.Row key={i.id}>
-                              <Table.Cell>
-                                <div className="flex items-center gap-2">
-                                  <span className="w-7 h-7 rounded-lg bg-warning/10 text-warning flex items-center justify-center shrink-0">
-                                    <Wheat size={12} />
-                                  </span>
-                                  <div>
-                                    <p className="text-sm font-medium text-foreground">{i.nom}</p>
-                                    <p className="text-[10px] text-muted">en {UNITE_LABELS[i.unite]}</p>
-                                  </div>
-                                </div>
-                              </Table.Cell>
-                              <Table.Cell>
-                                <span className={`text-sm font-semibold tabular-nums flex items-center gap-1 ${
-                                  enAlerte ? "text-warning" : "text-foreground"
-                                }`}>
-                                  {enAlerte && <AlertTriangle size={12} />}
-                                  {stock?.quantite.toLocaleString("fr-FR", { maximumFractionDigits: 3 }) ?? "0"}
-                                  <span className="text-[10px] font-normal text-muted ml-0.5">
-                                    {UNITE_LABELS[i.unite]}
-                                  </span>
-                                </span>
-                              </Table.Cell>
-                              <Table.Cell>
-                                <span className="text-xs text-muted tabular-nums">
-                                  {i.seuilAlerte > 0 ? `${i.seuilAlerte} ${UNITE_LABELS[i.unite]}` : "—"}
-                                </span>
-                              </Table.Cell>
-                              <Table.Cell>
-                                <span className="text-xs text-muted tabular-nums">
-                                  {i.prixUnitaire > 0
-                                    ? `${i.prixUnitaire.toLocaleString("fr-FR")} F / ${UNITE_LABELS[i.unite]}`
-                                    : "—"}
-                                </span>
-                              </Table.Cell>
-                            </Table.Row>
-                          );
-                        })}
-                      </Table.Body>
-                    </Table.Content>
-                  </Table.ScrollContainer>
-                </Table>
+                <div>
+                  <KpisStockIngredients kpis={kpisIng} />
+                  <BandeauAlertesStock
+                    nbAlertes={kpisIng.nbAlertes}
+                    nbRuptures={kpisIng.nbRuptures}
+                    filtreActif={filtreAlerteIng}
+                    onBasculerFiltre={() => setFiltreAlerteIng((v) => !v)}
+                  />
+                  <TableStockIngredients lignes={lignesIng} filtreAlerte={filtreAlerteIng} />
+                </div>
               )
             )}
           </div>
@@ -292,6 +278,16 @@ export default function PageStock() {
       <ModalReceptionIngredient
         ouvert={modalReceptionOuvert}
         onFermer={() => setModalReceptionOuvert(false)}
+      />
+      <ModalAjustementIngredient
+        ouvert={modalAjustIngOuvert}
+        onFermer={() => setModalAjustIngOuvert(false)}
+        emplacementParDefautId={empSelectionne}
+      />
+      <ModalTransfertIngredient
+        ouvert={modalTransfertIngOuvert}
+        onFermer={() => setModalTransfertIngOuvert(false)}
+        emplacementSourceParDefaut={empSelectionne}
       />
     </PageContainer>
   );

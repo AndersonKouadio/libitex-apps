@@ -121,6 +121,30 @@ export class AjustementIngredientDto {
   note?: string;
 }
 
+export class TransfertIngredientDto {
+  @ApiProperty()
+  @IsUUID("4")
+  ingredientId!: string;
+
+  @ApiProperty({ description: "Emplacement source" })
+  @IsUUID("4")
+  depuisEmplacementId!: string;
+
+  @ApiProperty({ description: "Emplacement destination" })
+  @IsUUID("4")
+  versEmplacementId!: string;
+
+  @ApiProperty({ example: 5 })
+  @IsNumber()
+  @Min(0.001, { message: "La quantite doit etre superieure a 0" })
+  quantite!: number;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  note?: string;
+}
+
 // --- Recettes ---
 
 export class LigneRecetteDto {

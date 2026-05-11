@@ -28,6 +28,17 @@ export const ajustementIngredientSchema = z.object({
   note: z.string().optional(),
 });
 
+export const transfertIngredientSchema = z.object({
+  ingredientId: z.string().min(1, "Sélectionnez un ingrédient"),
+  depuisEmplacementId: z.string().min(1, "Sélectionnez l'emplacement source"),
+  versEmplacementId: z.string().min(1, "Sélectionnez l'emplacement destination"),
+  quantite: z.number().min(0.001, "La quantité doit être supérieure à 0"),
+  note: z.string().optional(),
+}).refine((d) => d.depuisEmplacementId !== d.versEmplacementId, {
+  message: "Les emplacements source et destination doivent être différents",
+  path: ["versEmplacementId"],
+});
+
 export const ligneRecetteSchema = z.object({
   ingredientId: z.string().min(1),
   quantite: z.number().min(0.001, "Quantité requise"),
@@ -41,5 +52,6 @@ export const definirRecetteSchema = z.object({
 export type CreerIngredientDTO = z.infer<typeof creerIngredientSchema>;
 export type EntreeIngredientDTO = z.infer<typeof entreeIngredientSchema>;
 export type AjustementIngredientDTO = z.infer<typeof ajustementIngredientSchema>;
+export type TransfertIngredientDTO = z.infer<typeof transfertIngredientSchema>;
 export type LigneRecetteDTO = z.infer<typeof ligneRecetteSchema>;
 export type DefinirRecetteDTO = z.infer<typeof definirRecetteSchema>;

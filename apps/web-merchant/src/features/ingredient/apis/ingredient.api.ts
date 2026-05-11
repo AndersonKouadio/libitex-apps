@@ -1,7 +1,8 @@
 import { httpClient } from "@/lib/http";
 import type { IIngredient, IStockIngredient, ILigneRecette } from "../types/ingredient.type";
 import type {
-  CreerIngredientDTO, EntreeIngredientDTO, AjustementIngredientDTO, DefinirRecetteDTO,
+  CreerIngredientDTO, EntreeIngredientDTO, AjustementIngredientDTO,
+  TransfertIngredientDTO, DefinirRecetteDTO,
 } from "../schemas/ingredient.schema";
 
 const BASE = "/ingredients";
@@ -24,6 +25,9 @@ export const ingredientAPI = {
 
   ajuster: (token: string, data: AjustementIngredientDTO) =>
     httpClient.post(`${BASE}/ajustement`, data, { token }),
+
+  transferer: (token: string, data: TransfertIngredientDTO) =>
+    httpClient.post(`${BASE}/transfert`, data, { token }),
 
   stockParEmplacement: (token: string, emplacementId: string) =>
     httpClient.get<IStockIngredient[]>(`${BASE}/emplacement/${emplacementId}/stock`, { token }),

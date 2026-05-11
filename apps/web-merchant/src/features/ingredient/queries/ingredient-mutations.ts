@@ -6,7 +6,7 @@ import { ingredientAPI } from "../apis/ingredient.api";
 import { useInvalidateIngredientQuery } from "./index.query";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type {
-  CreerIngredientDTO, EntreeIngredientDTO, AjustementIngredientDTO,
+  CreerIngredientDTO, EntreeIngredientDTO, AjustementIngredientDTO, TransfertIngredientDTO,
 } from "../schemas/ingredient.schema";
 
 export function useAjouterIngredientMutation() {
@@ -36,6 +36,16 @@ export function useAjusterIngredientMutation() {
     mutationFn: (data: AjustementIngredientDTO) => ingredientAPI.ajuster(token!, data),
     onSuccess: () => { invalidate(); toast.success("Stock ajusté"); },
     onError: (err: Error) => toast.danger(err.message || "Erreur lors de l'ajustement"),
+  });
+}
+
+export function useTransfererIngredientMutation() {
+  const { token } = useAuth();
+  const invalidate = useInvalidateIngredientQuery();
+  return useMutation({
+    mutationFn: (data: TransfertIngredientDTO) => ingredientAPI.transferer(token!, data),
+    onSuccess: () => { invalidate(); toast.success("Ingrédient transféré"); },
+    onError: (err: Error) => toast.danger(err.message || "Erreur lors du transfert"),
   });
 }
 
