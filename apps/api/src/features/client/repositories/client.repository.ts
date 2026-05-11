@@ -36,18 +36,41 @@ export class ClientRepository {
       );
     }
 
+    const where = and(...conditions);
     const offset = (page - 1) * limit;
-    const data = await this.db.query.customers.findMany({
-      where: and(...conditions),
-      limit,
-      offset,
-      orderBy: customers.firstName,
-    });
+
+    // Liste avec agregats par client (CA cumule, nb tickets, dernier achat,
+    // nb tickets sur 30 derniers jours) en un seul aller-retour SQL.
+    const data = await this.db
+      .select({
+        id: customers.id,
+        firstName: customers.firstName,
+        lastName: customers.lastName,
+        phone: customers.phone,
+        email: customers.email,
+        address: customers.address,
+        notes: customers.notes,
+        createdAt: customers.createdAt,
+        caTotal: sql<number>`COALESCE(SUM(CASE WHEN ${tickets.status} = 'COMPLETED' THEN CAST(${tickets.total} AS NUMERIC) ELSE 0 END), 0)`,
+        nbTickets: sql<number>`COUNT(${tickets.id}) FILTER (WHERE ${tickets.status} = 'COMPLETED')`,
+        nbTickets30j: sql<number>`COUNT(${tickets.id}) FILTER (WHERE ${tickets.status} = 'COMPLETED' AND ${tickets.completedAt} >= NOW() - INTERVAL '30 days')`,
+        dernierAchat: sql<Date | null>`MAX(${tickets.completedAt}) FILTER (WHERE ${tickets.status} = 'COMPLETED')`,
+      })
+      .from(customers)
+      .leftJoin(tickets, and(
+        eq(tickets.customerId, customers.id),
+        eq(tickets.tenantId, customers.tenantId),
+      ))
+      .where(where)
+      .groupBy(customers.id)
+      .orderBy(customers.firstName)
+      .limit(limit)
+      .offset(offset);
 
     const [countResult] = await this.db
       .select({ count: sql<number>`COUNT(*)` })
       .from(customers)
-      .where(and(...conditions));
+      .where(where);
 
     return { data, total: Number(countResult?.count ?? 0) };
   }
@@ -83,6 +106,7 @@ export class ClientRepository {
       .select({
         caTotal: sql<number>`COALESCE(SUM(CAST(${tickets.total} AS NUMERIC)), 0)`,
         nbTickets: sql<number>`COUNT(*)`,
+        nbTickets30j: sql<number>`COUNT(*) FILTER (WHERE ${tickets.completedAt} >= NOW() - INTERVAL '30 days')`,
         premierAchat: sql<Date | null>`MIN(${tickets.completedAt})`,
         dernierAchat: sql<Date | null>`MAX(${tickets.completedAt})`,
       })
@@ -95,6 +119,7 @@ export class ClientRepository {
     return {
       caTotal: Number(row?.caTotal ?? 0),
       nbTickets: Number(row?.nbTickets ?? 0),
+      nbTickets30j: Number(row?.nbTickets30j ?? 0),
       premierAchat: row?.premierAchat ?? null,
       dernierAchat: row?.dernierAchat ?? null,
     };

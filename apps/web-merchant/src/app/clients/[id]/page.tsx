@@ -17,6 +17,7 @@ import {
 import { ModalClient } from "@/features/client/components/modal-client";
 import { KpisClient } from "@/features/client/components/kpis-client";
 import { HistoriqueClient } from "@/features/client/components/historique-client";
+import { ChipSegment } from "@/features/client/components/chip-segment";
 import { useConfirmation } from "@/providers/confirmation-provider";
 
 interface Props {
@@ -87,7 +88,12 @@ export default function PageClientDetail({ params }: Props) {
   return (
     <PageContainer>
       <PageHeader
-        titre={nomComplet}
+        titre={
+          <span className="inline-flex items-center gap-2 flex-wrap">
+            {nomComplet}
+            {kpis?.segment && <ChipSegment segment={kpis.segment} />}
+          </span>
+        }
         description={client.creeLe ? `Client depuis le ${FORMAT_DATE.format(new Date(client.creeLe))}` : undefined}
         actions={
           <>

@@ -15,14 +15,15 @@ export class ClientController {
   constructor(private readonly clientService: ClientService) {}
 
   @Get()
-  @ApiOperation({ summary: "Lister les clients de la boutique active" })
+  @ApiOperation({ summary: "Lister les clients (avec segment calcule)" })
   lister(
     @CurrentUser() user: CurrentUserData,
     @Query("page") page = "1",
     @Query("limit") limit = "50",
     @Query("recherche") recherche?: string,
+    @Query("segment") segment?: "VIP" | "REGULIER" | "OCCASIONNEL" | "INACTIF" | "NOUVEAU",
   ) {
-    return this.clientService.lister(user.tenantId, Number(page), Number(limit), recherche);
+    return this.clientService.lister(user.tenantId, Number(page), Number(limit), recherche, segment);
   }
 
   @Get(":id")

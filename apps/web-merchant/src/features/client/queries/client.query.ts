@@ -7,11 +7,11 @@ import { clientKeyQuery, useInvalidateClientQuery } from "./index.query";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { CreerClientDTO } from "../schemas/client.schema";
 
-export function useClientListQuery(page = 1, recherche?: string) {
+export function useClientListQuery(page = 1, recherche?: string, segment?: string) {
   const { token } = useAuth();
   return useQuery({
-    queryKey: clientKeyQuery("list", page, recherche ?? ""),
-    queryFn: () => clientAPI.lister(token!, { page, recherche }),
+    queryKey: clientKeyQuery("list", page, recherche ?? "", segment ?? ""),
+    queryFn: () => clientAPI.lister(token!, { page, recherche, segment }),
     enabled: !!token,
   });
 }
