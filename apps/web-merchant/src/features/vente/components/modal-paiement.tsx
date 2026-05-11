@@ -3,11 +3,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@heroui/react";
 import {
-  Banknote, Smartphone, CreditCard, Landmark, X, type LucideIcon,
+  Banknote, Smartphone, CreditCard, Landmark, Hourglass, X, type LucideIcon,
 } from "lucide-react";
 import { MethodePaiement } from "../types/vente.type";
 import { formatMontant } from "../utils/format";
 import { BoutonPOS } from "./bouton-pos";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 export interface PaiementSaisi {
   methode: string;
@@ -30,11 +31,12 @@ interface MethodeUI {
   classes: string;
 }
 
-const METHODES: MethodeUI[] = [
+const TOUTES_METHODES: MethodeUI[] = [
   { code: MethodePaiement.CASH, libelle: "Espèces", icone: Banknote, classes: "bg-success/10 text-success" },
   { code: MethodePaiement.MOBILE_MONEY, libelle: "Mobile Money", icone: Smartphone, classes: "bg-warning/10 text-warning" },
   { code: MethodePaiement.CARD, libelle: "Carte", icone: CreditCard, classes: "bg-accent/10 text-accent" },
   { code: MethodePaiement.BANK_TRANSFER, libelle: "Virement", icone: Landmark, classes: "bg-muted/10 text-muted" },
+  { code: MethodePaiement.CREDIT, libelle: "À crédit", icone: Hourglass, classes: "bg-danger/10 text-danger" },
 ];
 
 const QUICK_RECU = [1000, 2000, 5000, 10000];
@@ -50,8 +52,16 @@ const QUICK_RECU = [1000, 2000, 5000, 10000];
  * la "monnaie a rendre" est affichee. Le surplus est compte comme paye.
  */
 export function ModalPaiement({ total, enCours, onPayer }: Props) {
+  const { boutiqueActive } = useAuth();
+  const methodesActives = boutiqueActive?.methodesPaiement ?? ["CASH"];
+  const METHODES = useMemo(
+    () => TOUTES_METHODES.filter((m) => methodesActives.includes(m.code as any)),
+    [methodesActives],
+  );
   const [paiements, setPaiements] = useState<PaiementSaisi[]>([]);
-  const [methodeCourante, setMethodeCourante] = useState<string>(MethodePaiement.CASH);
+  const [methodeCourante, setMethodeCourante] = useState<string>(
+    METHODES[0]?.code ?? MethodePaiement.CASH,
+  );
   const [montantCourant, setMontantCourant] = useState<number>(total);
 
   const totalPaye = useMemo(

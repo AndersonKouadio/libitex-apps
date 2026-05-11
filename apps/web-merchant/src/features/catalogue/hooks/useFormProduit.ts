@@ -29,7 +29,10 @@ export interface EtatFormProduit {
 
 const AXES_VIDES: AxeAttribut[] = [{ nom: "", valeurs: [] }];
 
-export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE", "MENU"]) {
+export function useFormProduit(
+  typesAutorises: TypeProduit[] = ["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE", "MENU"],
+  tauxTvaParDefaut: number = 0,
+) {
   const typeParDefaut = typesAutorises[0] ?? "SIMPLE";
   const [nom, setNom] = useState("");
   const [description, setDescription] = useState("");
@@ -42,7 +45,7 @@ export function useFormProduit(typesAutorises: TypeProduit[] = ["SIMPLE", "VARIA
   }, [typesAutorises, typeProduit]);
   const [marque, setMarque] = useState("");
   const [categorieId, setCategorieId] = useState("");
-  const [tauxTva, setTauxTva] = useState("0");
+  const [tauxTva, setTauxTva] = useState(String(tauxTvaParDefaut ?? 0));
   const [prefixeSku, setPrefixeSku] = useState("");
   const [axes, setAxes] = useState<AxeAttribut[]>(AXES_VIDES);
   const [varianteUnique, setVarianteUnique] = useState<CreerVarianteDTO>({ ...VARIANTE_VIDE });

@@ -21,6 +21,7 @@ export default function PageProfilBoutique() {
   const [email, setEmail] = useState("");
   const [telephone, setTelephone] = useState("");
   const [adresse, setAdresse] = useState("");
+  const [tauxTva, setTauxTva] = useState("0");
 
   useEffect(() => {
     if (!boutique) return;
@@ -30,12 +31,18 @@ export default function PageProfilBoutique() {
     setEmail(boutique.email ?? "");
     setTelephone(boutique.telephone ?? "");
     setAdresse(boutique.adresse ?? "");
+    setTauxTva(String(boutique.tauxTva ?? 0));
   }, [boutique]);
 
   async function enregistrer() {
     if (!boutique) return;
     if (!nom.trim()) {
       toast.danger("Le nom est requis");
+      return;
+    }
+    const tva = Number(tauxTva);
+    if (Number.isNaN(tva) || tva < 0 || tva > 100) {
+      toast.danger("Le taux de TVA doit être entre 0 et 100");
       return;
     }
     await mutation.mutateAsync({
@@ -47,6 +54,7 @@ export default function PageProfilBoutique() {
         email: email || undefined,
         telephone: telephone || undefined,
         adresse: adresse || undefined,
+        tauxTva: tva,
       },
     });
   }
@@ -100,6 +108,14 @@ export default function PageProfilBoutique() {
                   <Input placeholder="Plateau, Dakar" />
                 </TextField>
               </div>
+
+              <TextField type="number" value={tauxTva} onChange={setTauxTva}>
+                <Label>Taux de TVA par défaut (%)</Label>
+                <Input placeholder="18" min="0" max="100" step="0.1" />
+                <p className="text-xs text-muted mt-1">
+                  Appliqué aux nouveaux produits. En Côte d'Ivoire, le taux standard est 18%. Mettre 0 pour exonéré.
+                </p>
+              </TextField>
 
               <div className="flex justify-end pt-2">
                 <Button

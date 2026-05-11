@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Card } from "@heroui/react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { Store, Users, ChevronRight, Building2, User, MapPin } from "lucide-react";
+import { Store, Users, ChevronRight, Building2, User, MapPin, Wallet } from "lucide-react";
 
 interface SectionConfig {
   href: string;
@@ -42,6 +42,13 @@ const SECTIONS: SectionConfig[] = [
     titre: "Équipe",
     description: "Inviter des membres, attribuer rôles et accès aux points de vente.",
     classes: "bg-warning/10 text-warning",
+  },
+  {
+    href: "/parametres/paiements",
+    icone: Wallet,
+    titre: "Méthodes de paiement",
+    description: "Activer / désactiver les méthodes proposées à l'encaissement (Espèces, Mobile Money, Carte...).",
+    classes: "bg-success/10 text-success",
   },
   {
     href: "/parametres/mon-compte",

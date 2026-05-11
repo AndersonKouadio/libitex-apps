@@ -1,6 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsString, IsOptional, IsEmail, IsEnum, IsArray } from "class-validator";
+import {
+  IsString, IsOptional, IsEmail, IsEnum, IsArray, IsNumber, Min, Max,
+} from "class-validator";
+import { Type } from "class-transformer";
 import { ActivitySector, ProductType } from "@libitex/shared";
+
+const METHODES_PAIEMENT = ["CASH", "CARD", "MOBILE_MONEY", "BANK_TRANSFER", "CREDIT"] as const;
 
 export class ModifierBoutiqueDto {
   @ApiPropertyOptional()
@@ -38,6 +43,26 @@ export class ModifierBoutiqueDto {
   @IsString()
   @IsOptional()
   adresse?: string;
+
+  @ApiPropertyOptional({
+    description: "Taux de TVA par defaut (%) applique aux nouveaux produits. 0-100.",
+    example: 18,
+  })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  tauxTva?: number;
+
+  @ApiPropertyOptional({
+    description: "Methodes de paiement activees pour le POS",
+    enum: METHODES_PAIEMENT, isArray: true,
+  })
+  @IsArray()
+  @IsEnum(METHODES_PAIEMENT, { each: true })
+  @IsOptional()
+  methodesPaiement?: typeof METHODES_PAIEMENT[number][];
 }
 
 export class BoutiqueDetailDto {
@@ -67,4 +92,10 @@ export class BoutiqueDetailDto {
 
   @ApiProperty({ required: false, nullable: true })
   adresse!: string | null;
+
+  @ApiProperty({ description: "Taux de TVA par défaut (%)", example: 18 })
+  tauxTva!: number;
+
+  @ApiProperty({ enum: METHODES_PAIEMENT, isArray: true })
+  methodesPaiement!: typeof METHODES_PAIEMENT[number][];
 }

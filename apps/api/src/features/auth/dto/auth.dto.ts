@@ -180,6 +180,10 @@ export class BoutiqueResumeDto {
   devise!: string;
   role!: string;
   isOwner!: boolean;
+  /** Taux TVA par defaut applique aux nouveaux produits. */
+  tauxTva!: number;
+  /** Methodes de paiement activees au POS. */
+  methodesPaiement!: Array<"CASH" | "CARD" | "MOBILE_MONEY" | "BANK_TRANSFER" | "CREDIT">;
 }
 
 export class AuthResponseDto {
