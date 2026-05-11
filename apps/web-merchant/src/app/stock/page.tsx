@@ -27,7 +27,7 @@ import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-act
 import { Card, Button, Skeleton, Tabs } from "@heroui/react";
 import {
   MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus,
-  Settings, Wheat, Scale, History,
+  Settings, Wheat, Scale, History, ClipboardCheck,
 } from "lucide-react";
 
 type Onglet = "variantes" | "ingredients";
@@ -87,6 +87,12 @@ export default function PageStock() {
             </Tabs.List>
           </Tabs>
           <div className="flex items-center gap-2 flex-wrap">
+            <Link href="/stock/inventaire">
+              <Button variant="ghost" className="gap-1.5 text-xs">
+                <ClipboardCheck size={14} />
+                Inventaire
+              </Button>
+            </Link>
             <Link href="/stock/mouvements">
               <Button variant="ghost" className="gap-1.5 text-xs">
                 <History size={14} />

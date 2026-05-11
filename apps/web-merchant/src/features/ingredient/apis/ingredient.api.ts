@@ -46,6 +46,14 @@ export const ingredientAPI = {
   definirRecette: (token: string, varianteId: string, data: DefinirRecetteDTO) =>
     httpClient.post<void>(`${BASE}/recettes/${varianteId}`, data, { token }),
 
+  appliquerInventaire: (token: string, data: {
+    emplacementId: string; justification: string;
+    lignes: Array<{ ingredientId: string; quantiteReelle: number }>;
+  }) =>
+    httpClient.post<{ ajustements: number; inchanges: number; total: number }>(
+      `${BASE}/inventaire`, data, { token },
+    ),
+
   listerMouvements: (token: string, filtres: FiltreMouvementsIngredients) => {
     const qs = new URLSearchParams();
     qs.set("page", String(filtres.page ?? 1));

@@ -8,6 +8,7 @@ import { StockService } from "./stock.service";
 import {
   CreerEmplacementDto, ModifierEmplacementDto, EntreeStockDto,
   AjustementStockDto, TransfertStockDto, ListerMouvementsQueryDto,
+  AppliquerInventaireDto,
 } from "./dto/stock.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
@@ -89,6 +90,16 @@ export class StockController {
     @Param("emplacementId") emplacementId: string,
   ) {
     return this.stockService.obtenirStockParEmplacement(user.tenantId, emplacementId);
+  }
+
+  @Post("inventaire")
+  @ApiOperation({ summary: "Appliquer un inventaire complet (bulk d'ajustements)" })
+  @Roles("ADMIN", "MANAGER")
+  appliquerInventaire(
+    @CurrentUser() user: CurrentUserData,
+    @Body() dto: AppliquerInventaireDto,
+  ) {
+    return this.stockService.appliquerInventaire(user.tenantId, user.userId, dto);
   }
 
   @Get("mouvements")

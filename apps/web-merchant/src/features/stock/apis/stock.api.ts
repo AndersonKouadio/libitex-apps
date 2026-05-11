@@ -49,6 +49,14 @@ export const stockAPI = {
   stockParEmplacement: (token: string, emplacementId: string) =>
     httpClient.get<IStockEmplacement[]>(`${BASE}/emplacement/${emplacementId}`, { token }),
 
+  appliquerInventaire: (token: string, data: {
+    emplacementId: string; justification: string;
+    lignes: Array<{ varianteId: string; quantiteReelle: number }>;
+  }) =>
+    httpClient.post<{ ajustements: number; inchanges: number; total: number }>(
+      `${BASE}/inventaire`, data, { token },
+    ),
+
   listerMouvements: (token: string, filtres: FiltreMouvements) => {
     const qs = new URLSearchParams();
     qs.set("page", String(filtres.page ?? 1));

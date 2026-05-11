@@ -4,7 +4,7 @@ import { StockInsuffisantException } from "../../common/exceptions/metier.except
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import {
   CreerEmplacementDto, ModifierEmplacementDto, EntreeStockDto,
-  AjustementStockDto, TransfertStockDto,
+  AjustementStockDto, TransfertStockDto, AppliquerInventaireDto, InventaireResultatDto,
   EmplacementResponseDto, StockActuelResponseDto, MouvementResponseDto,
 } from "./dto/stock.dto";
 
@@ -193,6 +193,56 @@ export class StockService {
       quantite: Number(r.quantite),
       prixAchat: Number(r.prixAchat ?? 0),
     }));
+  }
+
+  /**
+   * Applique un inventaire complet sur un emplacement : pour chaque ligne
+   * comptee, calcule l'ecart vs le stock theorique et cree un mouvement
+   * ADJUSTMENT si delta != 0. Les lignes a delta=0 sont comptees comme
+   * "inchangees". La justification est partagee pour toutes les lignes.
+   */
+  async appliquerInventaire(
+    tenantId: string,
+    userId: string,
+    dto: AppliquerInventaireDto,
+  ): Promise<InventaireResultatDto> {
+    let ajustements = 0;
+    let inchanges = 0;
+
+    for (const ligne of dto.lignes) {
+      const stockActuel = await this.stockRepo.obtenirStockActuel(
+        tenantId, ligne.varianteId, dto.emplacementId,
+      );
+      const delta = ligne.quantiteReelle - stockActuel;
+      if (delta === 0) {
+        inchanges += 1;
+        continue;
+      }
+      await this.stockRepo.enregistrerMouvement({
+        tenantId,
+        variantId: ligne.varianteId,
+        locationId: dto.emplacementId,
+        movementType: "ADJUSTMENT",
+        quantity: delta.toString(),
+        userId,
+        note: dto.justification,
+      });
+      ajustements += 1;
+    }
+
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.STOCK_INVENTORY_APPLIED,
+      entityType: "STOCK", entityId: dto.emplacementId,
+      after: {
+        emplacementId: dto.emplacementId,
+        justification: dto.justification,
+        lignesComptees: dto.lignes.length,
+        ajustements,
+        inchanges,
+      },
+    });
+
+    return { ajustements, inchanges, total: dto.lignes.length };
   }
 
   async listerMouvements(

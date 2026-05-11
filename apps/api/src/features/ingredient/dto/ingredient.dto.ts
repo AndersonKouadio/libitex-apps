@@ -121,6 +121,35 @@ export class AjustementIngredientDto {
   note?: string;
 }
 
+export class LigneInventaireIngredientDto {
+  @ApiProperty()
+  @IsUUID("4")
+  ingredientId!: string;
+
+  @ApiProperty({ description: "Quantite physique constatee dans l'unite de l'ingredient" })
+  @IsNumber()
+  @Min(0)
+  quantiteReelle!: number;
+}
+
+export class AppliquerInventaireIngredientsDto {
+  @ApiProperty()
+  @IsUUID("4")
+  emplacementId!: string;
+
+  @ApiProperty({ example: "Inventaire ingredients 11/05/2026" })
+  @IsString()
+  @IsNotEmpty({ message: "La justification est obligatoire" })
+  justification!: string;
+
+  @ApiProperty({ type: [LigneInventaireIngredientDto] })
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => LigneInventaireIngredientDto)
+  lignes!: LigneInventaireIngredientDto[];
+}
+
 export class TransfertIngredientDto {
   @ApiProperty()
   @IsUUID("4")

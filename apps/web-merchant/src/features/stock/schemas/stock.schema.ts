@@ -29,6 +29,30 @@ export const ajustementStockSchema = z.object({
   note: z.string().min(1, "La justification est obligatoire"),
 });
 
+export const ligneInventaireSchema = z.object({
+  varianteId: z.string().min(1),
+  quantiteReelle: z.number().min(0, "Quantité invalide"),
+});
+
+export const appliquerInventaireSchema = z.object({
+  emplacementId: z.string().min(1, "Emplacement requis"),
+  justification: z.string().min(1, "Justification requise"),
+  lignes: z.array(ligneInventaireSchema).min(1, "Au moins une ligne doit être comptée"),
+});
+
+export const ligneInventaireIngredientSchema = z.object({
+  ingredientId: z.string().min(1),
+  quantiteReelle: z.number().min(0, "Quantité invalide"),
+});
+
+export const appliquerInventaireIngredientsSchema = z.object({
+  emplacementId: z.string().min(1, "Emplacement requis"),
+  justification: z.string().min(1, "Justification requise"),
+  lignes: z.array(ligneInventaireIngredientSchema).min(1, "Au moins une ligne doit être comptée"),
+});
+
 export type EntreeStockDTO = z.infer<typeof entreeStockSchema>;
 export type TransfertStockDTO = z.infer<typeof transfertStockSchema>;
 export type AjustementStockDTO = z.infer<typeof ajustementStockSchema>;
+export type AppliquerInventaireDTO = z.infer<typeof appliquerInventaireSchema>;
+export type AppliquerInventaireIngredientsDTO = z.infer<typeof appliquerInventaireIngredientsSchema>;

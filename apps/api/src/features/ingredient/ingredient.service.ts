@@ -4,7 +4,8 @@ import { IngredientRepository } from "./repositories/ingredient.repository";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import {
   CreerIngredientDto, ModifierIngredientDto, EntreeIngredientDto, AjustementIngredientDto,
-  TransfertIngredientDto, DefinirRecetteDto, IngredientResponseDto, StockIngredientDto,
+  TransfertIngredientDto, AppliquerInventaireIngredientsDto,
+  DefinirRecetteDto, IngredientResponseDto, StockIngredientDto,
   LigneRecetteResponseDto,
 } from "./dto/ingredient.dto";
 
@@ -199,6 +200,58 @@ export class IngredientService {
         note: dto.note,
       },
     });
+  }
+
+  /**
+   * Inventaire complet des ingredients pour un emplacement. Pour chaque
+   * ligne comptee, on calcule l'ecart vs le stock theorique et on applique
+   * un ajustement (definirStockExact). La justification est partagee.
+   */
+  async appliquerInventaire(
+    tenantId: string,
+    userId: string,
+    dto: AppliquerInventaireIngredientsDto,
+  ): Promise<{ ajustements: number; inchanges: number; total: number }> {
+    let ajustements = 0;
+    let inchanges = 0;
+
+    for (const ligne of dto.lignes ?? []) {
+      const ingredient = await this.repo.obtenir(tenantId, ligne.ingredientId);
+      if (!ingredient) {
+        throw new NotFoundException(`Ingrédient ${ligne.ingredientId} introuvable`);
+      }
+      const stockActuel = await this.repo.stockActuel(
+        tenantId, ligne.ingredientId, dto.emplacementId,
+      );
+      if (ligne.quantiteReelle === stockActuel) {
+        inchanges += 1;
+        continue;
+      }
+      await this.repo.definirStockExact({
+        tenantId,
+        ingredientId: ligne.ingredientId,
+        locationId: dto.emplacementId,
+        quantite: ligne.quantiteReelle.toString(),
+        unit: ingredient.unit as UniteMesure,
+        note: dto.justification,
+        userId,
+      });
+      ajustements += 1;
+    }
+
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.INGREDIENT_INVENTORY_APPLIED,
+      entityType: "INGREDIENT", entityId: dto.emplacementId,
+      after: {
+        emplacementId: dto.emplacementId,
+        justification: dto.justification,
+        lignesComptees: (dto.lignes ?? []).length,
+        ajustements,
+        inchanges,
+      },
+    });
+
+    return { ajustements, inchanges, total: (dto.lignes ?? []).length };
   }
 
   async listerMouvements(
