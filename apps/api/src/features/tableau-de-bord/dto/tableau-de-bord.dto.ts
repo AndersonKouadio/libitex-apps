@@ -27,3 +27,36 @@ export class PointVentesJourDto {
   @ApiProperty({ description: "Nombre de tickets", example: 12 })
   nombre!: number;
 }
+
+export class TopProduitDto {
+  variantId!: string;
+  nomProduit!: string;
+  nomVariante!: string | null;
+  sku!: string;
+  quantiteTotale!: number;
+  chiffreAffaires!: number;
+  nombreVentes!: number;
+}
+
+export class RepartitionPaiementDto {
+  methode!: string;
+  total!: number;
+  nombre!: number;
+  pourcentage!: number;
+}
+
+export class TendanceDto {
+  /** Variation en % vs periode precedente (-100 a +inf). null si pas de comparaison possible. */
+  variation!: number | null;
+  /** Valeur de la periode precedente, pour le tooltip. */
+  precedente!: number;
+}
+
+export class KpisPeriodeDto {
+  recettes!: number;
+  tickets!: number;
+  ticketMoyen!: number;
+  tendanceRecettes!: TendanceDto;
+  tendanceTickets!: TendanceDto;
+  tendanceTicketMoyen!: TendanceDto;
+}

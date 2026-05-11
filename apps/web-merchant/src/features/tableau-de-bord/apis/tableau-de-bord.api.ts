@@ -1,5 +1,7 @@
 import { httpClient } from "@/lib/http";
-import type { IKpiTableauDeBord, IPointVentesJour } from "../types/dashboard.type";
+import type {
+  IKpiTableauDeBord, IPointVentesJour, ITopProduit, IRepartitionPaiement, IKpisPeriode,
+} from "../types/dashboard.type";
 
 const BASE = "/tableau-de-bord";
 
@@ -9,4 +11,13 @@ export const tableauDeBordAPI = {
 
   ventesParJour: (token: string, jours = 7) =>
     httpClient.get<IPointVentesJour[]>(`${BASE}/ventes-par-jour?jours=${jours}`, { token }),
+
+  topProduits: (token: string, jours = 7, limit = 10) =>
+    httpClient.get<ITopProduit[]>(`${BASE}/top-produits?jours=${jours}&limit=${limit}`, { token }),
+
+  repartitionPaiements: (token: string, jours = 7) =>
+    httpClient.get<IRepartitionPaiement[]>(`${BASE}/repartition-paiements?jours=${jours}`, { token }),
+
+  kpisPeriode: (token: string, jours = 7) =>
+    httpClient.get<IKpisPeriode>(`${BASE}/kpis-periode?jours=${jours}`, { token }),
 };
