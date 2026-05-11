@@ -21,14 +21,14 @@ export function calculerKpisStock(rows: IStockEmplacement[]): KpiStock {
     valeurTotale += q * pa;
     totalUnites += q;
     if (q <= 0) nbRuptures += 1;
-    else if (q < SEUIL_ALERTE_PAR_DEFAUT) nbAlertes += 1;
+    else if (q <= SEUIL_ALERTE_PAR_DEFAUT) nbAlertes += 1;
   }
   return { valeurTotale, totalUnites, nbAlertes, nbRuptures, nbLignes: rows.length };
 }
 
 export function estEnAlerte(quantite: number): "rupture" | "faible" | "ok" {
   if (quantite <= 0) return "rupture";
-  if (quantite < SEUIL_ALERTE_PAR_DEFAUT) return "faible";
+  if (quantite <= SEUIL_ALERTE_PAR_DEFAUT) return "faible";
   return "ok";
 }
 
