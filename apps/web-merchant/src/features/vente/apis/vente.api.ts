@@ -18,6 +18,7 @@ export const venteAPI = {
       numeroSerie?: string;
       supplements?: { supplementId: string; quantite: number }[];
     }[];
+    clientId?: string;
     nomClient?: string;
     telephoneClient?: string;
     note?: string;

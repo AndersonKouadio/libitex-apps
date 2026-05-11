@@ -45,6 +45,8 @@ export interface ITicket {
   montantTva: number;
   montantRemise: number;
   total: number;
+  /** Lien optionnel vers une fiche client (CRM). Permet l'historique d'achats. */
+  clientId?: string | null;
   nomClient?: string;
   telephoneClient?: string;
   /** Note libre du ticket : "Table 3", "A emporter", "Sans piment"... */

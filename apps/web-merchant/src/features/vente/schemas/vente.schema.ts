@@ -18,6 +18,7 @@ export const creerTicketSchema = z.object({
   remiseGlobale: z.number().min(0).optional(),
   raisonRemise: z.string().optional(),
   lignes: z.array(ligneTicketSchema).min(1, "Au moins un article est requis"),
+  clientId: z.string().uuid().optional(),
   nomClient: z.string().optional(),
   telephoneClient: z.string().optional(),
   note: z.string().max(500).optional(),
