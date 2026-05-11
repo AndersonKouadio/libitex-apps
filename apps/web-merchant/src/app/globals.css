@@ -212,3 +212,44 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: oklch(0.7 0 0);
 }
+
+/* ─── Impression du rapport Z ─── */
+@media print {
+  /* Masquer toute la navigation + topbar + breadcrumbs + onglets */
+  aside, nav, header, [aria-label="Type de rapport"],
+  .no-print {
+    display: none !important;
+  }
+  /* Revele le bloc d'en-tete dedie a l'impression (titre + date) */
+  .rapport-z-print .print-header.hidden {
+    display: block !important;
+    margin-bottom: 1rem;
+  }
+  .rapport-z-print .print-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+  .rapport-z-print .print-header p {
+    font-size: 0.9rem;
+    color: #555;
+  }
+  /* Page A4 portrait, marges raisonnables */
+  @page {
+    size: A4 portrait;
+    margin: 1.5cm 1.2cm;
+  }
+  /* Reset des fonds colores et ombres pour economiser l'encre */
+  .rapport-z-print {
+    color: #000 !important;
+    background: white !important;
+  }
+  .rapport-z-print * {
+    box-shadow: none !important;
+  }
+  /* Forcer l'affichage de chaque card sans coupure */
+  .rapport-z-print > * {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

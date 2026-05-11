@@ -83,4 +83,18 @@ export class VenteController {
   rapportZ(@CurrentUser() user: CurrentUserData, @Param("sessionId") sessionId: string) {
     return this.venteService.rapportZ(user.tenantId, sessionId);
   }
+
+  @Get("rapport-z/:emplacementId")
+  @ApiOperation({
+    summary: "Rapport Z journalier par emplacement (toutes sessions confondues) — inclut top produits et ventes par heure",
+  })
+  @Roles("ADMIN", "MANAGER")
+  rapportZJour(
+    @CurrentUser() user: CurrentUserData,
+    @Param("emplacementId") emplacementId: string,
+    @Query("date") date?: string,
+  ) {
+    const dateEffective = date ?? new Date().toISOString().split("T")[0]!;
+    return this.venteService.rapportZParJour(user.tenantId, emplacementId, dateEffective);
+  }
 }

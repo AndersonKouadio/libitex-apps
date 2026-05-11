@@ -16,6 +16,7 @@ import {
 import {
   CreerTicketDto, CompleterTicketDto,
   TicketResponseDto, LigneTicketResponseDto, PaiementResponseDto, RapportZResponseDto,
+  RapportZJourResponseDto,
 } from "./dto/vente.dto";
 import { PaginatedResponseDto } from "../../common/dto/api-response.dto";
 
@@ -305,6 +306,46 @@ export class VenteService {
   }
 
   // --- Rapport Z d'une session ---
+
+  /**
+   * Rapport Z par emplacement + date. Agrege tous les tickets COMPLETED
+   * du jour, independamment des sessions caisse ouvertes ce jour-la.
+   */
+  async rapportZParJour(
+    tenantId: string,
+    emplacementId: string,
+    date: string,
+  ): Promise<RapportZJourResponseDto> {
+    const { summary, paymentBreakdown, topProduits, ventesParHeure } =
+      await this.ticketRepo.rapportZParDate(tenantId, emplacementId, date);
+
+    return {
+      emplacementId,
+      date,
+      resume: {
+        totalTickets: Number(summary.totalTickets ?? 0),
+        chiffreAffaires: Number(summary.totalRevenue ?? 0),
+        totalTva: Number(summary.totalTax ?? 0),
+        totalRemise: Number(summary.totalDiscount ?? 0),
+      },
+      ventilationPaiements: paymentBreakdown.map((p) => ({
+        methode: p.method, total: Number(p.total), nombre: Number(p.count),
+      })),
+      topProduits: topProduits.map((p) => ({
+        variantId: p.variantId,
+        nomProduit: p.nomProduit,
+        nomVariante: p.nomVariante,
+        sku: p.sku,
+        quantite: Number(p.quantite),
+        chiffreAffaires: Math.round(Number(p.chiffreAffaires)),
+      })),
+      ventesParHeure: ventesParHeure.map((v) => ({
+        heure: Number(v.heure),
+        recettes: Math.round(Number(v.recettes)),
+        nombre: Number(v.nombre),
+      })),
+    };
+  }
 
   async rapportZ(tenantId: string, sessionId: string): Promise<RapportZResponseDto> {
     const session = await this.sessionRepo.obtenirParId(tenantId, sessionId);

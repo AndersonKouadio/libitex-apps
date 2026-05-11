@@ -69,6 +69,19 @@ export interface IRapportZ {
     total: number;
     nombre: number;
   }[];
+  topProduits: {
+    variantId: string;
+    nomProduit: string;
+    nomVariante: string | null;
+    sku: string;
+    quantite: number;
+    chiffreAffaires: number;
+  }[];
+  ventesParHeure: {
+    heure: number;
+    recettes: number;
+    nombre: number;
+  }[];
 }
 
 export enum MethodePaiement {

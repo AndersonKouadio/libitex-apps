@@ -199,6 +199,76 @@ export class TicketRepository {
     return { data, total: Number(countResult?.count ?? 0) };
   }
 
+  /**
+   * Rapport Z par emplacement + date (independant des sessions caisse).
+   * Plus pratique sur le terrain : un Z = un jour, peu importe combien
+   * de sessions ont ete ouvertes/fermees ce jour-la pour cet emplacement.
+   *
+   * Inclut : resume (CA, tickets, TVA, remise), ventilation paiements,
+   * top 5 produits du jour, ventes par tranche horaire (24 buckets).
+   */
+  async rapportZParDate(tenantId: string, locationId: string, date: string) {
+    const filtreDate = sql`DATE(${tickets.completedAt}) = ${date}`;
+    const conditions = and(
+      eq(tickets.tenantId, tenantId),
+      eq(tickets.locationId, locationId),
+      eq(tickets.status, "COMPLETED"),
+      filtreDate,
+    );
+
+    const [summary] = await this.db
+      .select({
+        totalTickets: sql<number>`COUNT(*)`,
+        totalRevenue: sql<number>`COALESCE(SUM(CAST(${tickets.total} AS NUMERIC)), 0)`,
+        totalTax: sql<number>`COALESCE(SUM(CAST(${tickets.taxAmount} AS NUMERIC)), 0)`,
+        totalDiscount: sql<number>`COALESCE(SUM(CAST(${tickets.discountAmount} AS NUMERIC)), 0)`,
+      })
+      .from(tickets)
+      .where(conditions);
+
+    const paymentBreakdown = await this.db
+      .select({
+        method: ticketPayments.method,
+        total: sql<number>`COALESCE(SUM(CAST(${ticketPayments.amount} AS NUMERIC)), 0)`,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(ticketPayments)
+      .innerJoin(tickets, eq(ticketPayments.ticketId, tickets.id))
+      .where(conditions)
+      .groupBy(ticketPayments.method);
+
+    const topProduits = await this.db
+      .select({
+        variantId: ticketLines.variantId,
+        nomProduit: products.name,
+        nomVariante: variants.name,
+        sku: ticketLines.sku,
+        quantite: sql<number>`SUM(CAST(${ticketLines.quantity} AS NUMERIC))`,
+        chiffreAffaires: sql<number>`SUM(CAST(${ticketLines.lineTotal} AS NUMERIC))`,
+      })
+      .from(ticketLines)
+      .innerJoin(tickets, eq(ticketLines.ticketId, tickets.id))
+      .innerJoin(variants, eq(ticketLines.variantId, variants.id))
+      .innerJoin(products, eq(variants.productId, products.id))
+      .where(conditions)
+      .groupBy(ticketLines.variantId, products.name, variants.name, ticketLines.sku)
+      .orderBy(desc(sql`SUM(CAST(${ticketLines.lineTotal} AS NUMERIC))`))
+      .limit(5);
+
+    const ventesParHeure = await this.db
+      .select({
+        heure: sql<number>`EXTRACT(HOUR FROM ${tickets.completedAt})::int`,
+        recettes: sql<number>`COALESCE(SUM(CAST(${tickets.total} AS NUMERIC)), 0)`,
+        nombre: sql<number>`COUNT(*)`,
+      })
+      .from(tickets)
+      .where(conditions)
+      .groupBy(sql`EXTRACT(HOUR FROM ${tickets.completedAt})`)
+      .orderBy(sql`EXTRACT(HOUR FROM ${tickets.completedAt})`);
+
+    return { summary, paymentBreakdown, topProduits, ventesParHeure };
+  }
+
   // --- Rapport Z par session ---
 
   async rapportZParSession(tenantId: string, sessionId: string) {
