@@ -39,6 +39,8 @@ export class BoutiqueService {
       email: dto.email,
       phone: dto.telephone,
       address: dto.adresse,
+      taxRate: dto.tauxTva !== undefined ? String(dto.tauxTva) : undefined,
+      paymentMethods: dto.methodesPaiement,
     });
     return this.toDetail(updated);
   }
@@ -75,6 +77,8 @@ export class BoutiqueService {
       email: tenant.email,
       telephone: tenant.phone,
       adresse: tenant.address,
+      tauxTva: Number(tenant.taxRate ?? 0),
+      methodesPaiement: (tenant.paymentMethods ?? ["CASH", "CARD", "MOBILE_MONEY", "BANK_TRANSFER"]) as any,
     };
   }
 }

@@ -143,6 +143,8 @@ export class UtilisateurRepository {
     email: string;
     phone: string;
     address: string;
+    taxRate: string;
+    paymentMethods: Array<"CASH" | "CARD" | "MOBILE_MONEY" | "BANK_TRANSFER" | "CREDIT">;
   }>) {
     const cleaned = Object.fromEntries(
       Object.entries(data).filter(([, v]) => v !== undefined),

@@ -371,6 +371,8 @@ export class AuthService {
       devise: tenant.currency ?? "XOF",
       role: membership.role,
       isOwner: membership.isOwner ?? false,
+      tauxTva: Number(tenant.taxRate ?? 0),
+      methodesPaiement: (tenant.paymentMethods ?? ["CASH", "CARD", "MOBILE_MONEY", "BANK_TRANSFER"]) as any,
     };
   }
 }

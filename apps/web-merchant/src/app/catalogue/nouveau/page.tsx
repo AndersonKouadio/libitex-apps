@@ -46,7 +46,7 @@ export default function PageNouveauProduit() {
   const { data: boutique } = useBoutiqueActiveQuery();
   const invalidateIngredients = useInvalidateIngredientQuery();
   const typesAutorises = (boutique?.typesProduitsAutorises ?? TYPES_PAR_DEFAUT) as TypeProduit[];
-  const form = useFormProduit(typesAutorises);
+  const form = useFormProduit(typesAutorises, boutique?.tauxTva ?? 0);
 
   // Duplication : si ?dupliquer=<id>, on charge le produit source et on
   // pre-remplit le formulaire. Le suffixe " (copie)" est ajoute au nom.

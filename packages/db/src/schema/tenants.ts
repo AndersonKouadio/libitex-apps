@@ -25,6 +25,11 @@ export const tenants = pgTable("tenants", {
   logoUrl: text("logo_url"),
   activitySector: activitySectorEnum("activity_sector").notNull().default("AUTRE"),
   productTypesAllowed: jsonb("product_types_allowed").$type<string[]>().notNull().default(["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE"]),
+  /** Methodes de paiement activees au POS. Par defaut, toutes sauf CREDIT. */
+  paymentMethods: jsonb("payment_methods")
+    .$type<Array<"CASH" | "CARD" | "MOBILE_MONEY" | "BANK_TRANSFER" | "CREDIT">>()
+    .notNull()
+    .default(["CASH", "CARD", "MOBILE_MONEY", "BANK_TRANSFER"]),
   isActive: boolean("is_active").notNull().default(true),
   customDomain: varchar("custom_domain", { length: 255 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

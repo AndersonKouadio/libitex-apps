@@ -22,6 +22,8 @@ export interface IUtilisateurSession {
   mustChangePassword: boolean;
 }
 
+export type MethodePaiement = "CASH" | "CARD" | "MOBILE_MONEY" | "BANK_TRANSFER" | "CREDIT";
+
 export interface IBoutiqueResume {
   id: string;
   nom: string;
@@ -30,6 +32,8 @@ export interface IBoutiqueResume {
   devise: string;
   role: string;
   isOwner: boolean;
+  tauxTva: number;
+  methodesPaiement: MethodePaiement[];
 }
 
 export interface IBoutiqueDetail {
@@ -42,6 +46,8 @@ export interface IBoutiqueDetail {
   email: string | null;
   telephone: string | null;
   adresse: string | null;
+  tauxTva: number;
+  methodesPaiement: MethodePaiement[];
 }
 
 export interface IAuthResponse {

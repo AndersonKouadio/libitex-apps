@@ -13,6 +13,8 @@ export interface ModifierBoutiqueDTO {
   email?: string;
   telephone?: string;
   adresse?: string;
+  tauxTva?: number;
+  methodesPaiement?: Array<"CASH" | "CARD" | "MOBILE_MONEY" | "BANK_TRANSFER" | "CREDIT">;
 }
 
 export const boutiqueAPI = {
