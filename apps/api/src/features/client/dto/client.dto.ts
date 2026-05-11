@@ -65,6 +65,8 @@ export class ModifierClientDto {
   notes?: string;
 }
 
+export type SegmentClient = "VIP" | "REGULIER" | "OCCASIONNEL" | "INACTIF" | "NOUVEAU";
+
 export class ClientResponseDto {
   id!: string;
   prenom!: string;
@@ -74,6 +76,11 @@ export class ClientResponseDto {
   adresse!: string | null;
   notes!: string | null;
   creeLe!: string;
+  /** Agreges (presents quand le client provient de la liste avec joins). */
+  segment?: SegmentClient;
+  caTotal?: number;
+  nbTickets?: number;
+  dernierAchat?: string | null;
 }
 
 export class KpisClientDto {
@@ -82,6 +89,7 @@ export class KpisClientDto {
   ticketMoyen!: number;
   premierAchat!: string | null;
   dernierAchat!: string | null;
+  segment!: SegmentClient;
 }
 
 export class LigneHistoriqueClientDto {

@@ -1,3 +1,5 @@
+export type SegmentClient = "VIP" | "REGULIER" | "OCCASIONNEL" | "INACTIF" | "NOUVEAU";
+
 export interface IClient {
   id: string;
   prenom: string;
@@ -7,12 +9,18 @@ export interface IClient {
   adresse: string | null;
   notes: string | null;
   creeLe: string;
+  /** Calcule cote backend, present quand la source est la liste. */
+  segment?: SegmentClient;
+  caTotal?: number;
+  nbTickets?: number;
+  dernierAchat?: string | null;
 }
 
 export interface IKpisClient {
   caTotal: number;
   nbTickets: number;
   ticketMoyen: number;
+  segment: SegmentClient;
   premierAchat: string | null;
   dernierAchat: string | null;
 }

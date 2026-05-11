@@ -6,10 +6,14 @@ import type { CreerClientDTO } from "../schemas/client.schema";
 const BASE = "/clients";
 
 export const clientAPI = {
-  lister: (token: string, params: { page?: number; recherche?: string } = {}) => {
+  lister: (
+    token: string,
+    params: { page?: number; recherche?: string; segment?: string } = {},
+  ) => {
     const qs = new URLSearchParams();
     if (params.page) qs.set("page", String(params.page));
     if (params.recherche) qs.set("recherche", params.recherche);
+    if (params.segment) qs.set("segment", params.segment);
     return httpClient.get<PaginatedResponse<IClient>>(`${BASE}?${qs}`, { token });
   },
 

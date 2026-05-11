@@ -4,18 +4,26 @@ import { useState } from "react";
 import Link from "next/link";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { Button, TextField, Label, Input, FieldError, Table, Skeleton } from "@heroui/react";
+import {
+  Button, TextField, Label, Input, FieldError, Table, Skeleton,
+  Select, ListBox,
+} from "@heroui/react";
 import { Users, UserPlus, Phone, Mail, MapPin, Trash2, Pencil } from "lucide-react";
 import { useClientListQuery, useSupprimerClientMutation } from "@/features/client/queries/client.query";
 import { ModalClient } from "@/features/client/components/modal-client";
-import type { IClient } from "@/features/client/types/client.type";
+import { ChipSegment, SEGMENT_OPTIONS } from "@/features/client/components/chip-segment";
+import type { IClient, SegmentClient } from "@/features/client/types/client.type";
 import { useConfirmation } from "@/providers/confirmation-provider";
+import { formatMontant } from "@/features/vente/utils/format";
 
 export default function PageClients() {
   const [recherche, setRecherche] = useState("");
+  const [segment, setSegment] = useState<string>("");
   const [modalOuvert, setModalOuvert] = useState(false);
   const [enEdition, setEnEdition] = useState<IClient | null>(null);
-  const { data, isLoading } = useClientListQuery(1, recherche || undefined);
+  const { data, isLoading } = useClientListQuery(
+    1, recherche || undefined, segment || undefined,
+  );
   const supprimer = useSupprimerClientMutation();
   const confirmer = useConfirmation();
   const clients = data?.data ?? [];
@@ -53,12 +61,29 @@ export default function PageClients() {
         }
       />
 
-        <div className="mb-4 max-w-md">
-          <TextField value={recherche} onChange={setRecherche}>
+        <div className="mb-4 flex flex-wrap gap-3 items-end">
+          <TextField value={recherche} onChange={setRecherche} className="flex-1 min-w-[260px]">
             <Label className="sr-only">Rechercher</Label>
             <Input placeholder="Rechercher par nom, téléphone ou email" />
             <FieldError />
           </TextField>
+          <Select
+            selectedKey={segment || "all"}
+            onSelectionChange={(k) => setSegment(k === "all" ? "" : String(k))}
+            aria-label="Filtrer par segment"
+            className="min-w-[180px]"
+          >
+            <Label>Segment</Label>
+            <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+            <Select.Popover>
+              <ListBox>
+                <ListBox.Item id="all" textValue="Tous les segments">Tous</ListBox.Item>
+                {SEGMENT_OPTIONS.map((o) => (
+                  <ListBox.Item key={o.id} id={o.id} textValue={o.label}>{o.label}</ListBox.Item>
+                ))}
+              </ListBox>
+            </Select.Popover>
+          </Select>
         </div>
 
         {isLoading ? (
@@ -87,9 +112,10 @@ export default function PageClients() {
               <Table.Content aria-label="Liste des clients">
                 <Table.Header className="table-header-libitex">
                   <Table.Column isRowHeader>Nom</Table.Column>
+                  <Table.Column>Segment</Table.Column>
+                  <Table.Column>CA cumulé</Table.Column>
                   <Table.Column>Contact</Table.Column>
                   <Table.Column>Adresse</Table.Column>
-                  <Table.Column>Notes</Table.Column>
                   <Table.Column className="w-12"> </Table.Column>
                 </Table.Header>
                 <Table.Body>
@@ -102,6 +128,19 @@ export default function PageClients() {
                         >
                           {c.prenom} {c.nomFamille ?? ""}
                         </Link>
+                        {(c.nbTickets ?? 0) > 0 && (
+                          <p className="text-[10px] text-muted mt-0.5">
+                            {c.nbTickets} ticket{(c.nbTickets ?? 0) > 1 ? "s" : ""}
+                          </p>
+                        )}
+                      </Table.Cell>
+                      <Table.Cell>
+                        {c.segment ? <ChipSegment segment={c.segment as SegmentClient} /> : "—"}
+                      </Table.Cell>
+                      <Table.Cell>
+                        <span className="text-sm font-semibold text-foreground tabular-nums">
+                          {(c.caTotal ?? 0) > 0 ? `${formatMontant(c.caTotal!)} F` : <span className="font-normal text-muted">—</span>}
+                        </span>
                       </Table.Cell>
                       <Table.Cell>
                         <div className="space-y-0.5">
@@ -131,9 +170,6 @@ export default function PageClients() {
                         ) : (
                           <span className="text-xs text-muted/60">—</span>
                         )}
-                      </Table.Cell>
-                      <Table.Cell>
-                        <span className="text-xs text-muted line-clamp-2">{c.notes ?? "—"}</span>
                       </Table.Cell>
                       <Table.Cell>
                         <div className="flex items-center gap-0.5 justify-end">

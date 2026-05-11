@@ -2,9 +2,34 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { ClientRepository } from "./repositories/client.repository";
 import {
   CreerClientDto, ModifierClientDto, ClientResponseDto,
-  KpisClientDto, HistoriqueClientDto,
+  KpisClientDto, HistoriqueClientDto, SegmentClient,
 } from "./dto/client.dto";
 import { PaginatedResponseDto } from "../../common/dto/api-response.dto";
+
+const SEUIL_CA_VIP = 100_000; // F CFA
+const SEUIL_TICKETS_REGULIER_30J = 3;
+const SEUIL_INACTIF_JOURS = 60;
+
+/**
+ * Calcule le segment d'un client a partir de ses agregats. Ordre de priorite :
+ * NOUVEAU (0 achat) > VIP (CA >= seuil) > REGULIER (>= 3 tickets / 30j)
+ * > INACTIF (dernier achat > 60j) > OCCASIONNEL.
+ */
+function calculerSegment(
+  nbTickets: number,
+  caTotal: number,
+  nbTickets30j: number,
+  dernierAchat: Date | null,
+): SegmentClient {
+  if (nbTickets === 0) return "NOUVEAU";
+  if (caTotal >= SEUIL_CA_VIP) return "VIP";
+  if (nbTickets30j >= SEUIL_TICKETS_REGULIER_30J) return "REGULIER";
+  if (dernierAchat) {
+    const jours = (Date.now() - dernierAchat.getTime()) / 86_400_000;
+    if (jours > SEUIL_INACTIF_JOURS) return "INACTIF";
+  }
+  return "OCCASIONNEL";
+}
 
 @Injectable()
 export class ClientService {
@@ -28,9 +53,29 @@ export class ClientService {
     page = 1,
     limit = 50,
     recherche?: string,
+    segment?: SegmentClient,
   ): Promise<PaginatedResponseDto<ClientResponseDto>> {
     const { data, total } = await this.clientRepo.lister(tenantId, page, limit, recherche);
-    return PaginatedResponseDto.create(data.map((c) => this.toResponse(c)), total, page, limit);
+    let enrichis = data.map((c) => {
+      const nbTickets = Number(c.nbTickets ?? 0);
+      const caTotal = Number(c.caTotal ?? 0);
+      const nbTickets30j = Number(c.nbTickets30j ?? 0);
+      const dernierAchat = c.dernierAchat ?? null;
+      return {
+        ...this.toResponse(c),
+        segment: calculerSegment(nbTickets, caTotal, nbTickets30j, dernierAchat),
+        caTotal: Math.round(caTotal),
+        nbTickets,
+        dernierAchat: dernierAchat?.toISOString?.() ?? null,
+      };
+    });
+    if (segment) {
+      enrichis = enrichis.filter((c) => c.segment === segment);
+    }
+    // Si filtre segment, on recalcule le total post-filtre. Sinon le total
+    // DB est juste (segments calcules cote API mais pas filtres cote SQL).
+    const totalEffectif = segment ? enrichis.length : total;
+    return PaginatedResponseDto.create(enrichis, totalEffectif, page, limit);
   }
 
   async obtenir(tenantId: string, id: string): Promise<ClientResponseDto> {
@@ -72,6 +117,7 @@ export class ClientService {
       ticketMoyen: k.nbTickets > 0 ? Math.round(k.caTotal / k.nbTickets) : 0,
       premierAchat: k.premierAchat?.toISOString?.() ?? null,
       dernierAchat: k.dernierAchat?.toISOString?.() ?? null,
+      segment: calculerSegment(k.nbTickets, k.caTotal, k.nbTickets30j, k.dernierAchat),
     };
   }
 

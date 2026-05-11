@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 interface Props {
   /** Titre principal de la page (h1). Optionnel si on veut juste un sous-titre. */
-  titre?: string;
+  titre?: ReactNode;
   /** Description courte sous le titre. */
   description?: ReactNode;
   /** Actions a droite (boutons, filtres...). */
