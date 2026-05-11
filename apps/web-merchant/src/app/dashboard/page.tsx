@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Banknote, Receipt, Package, MapPin, Coins,
   ShoppingCart, Warehouse, BarChart3,
@@ -11,15 +12,19 @@ import { useKpisQuery, useVentesParJourQuery } from "@/features/tableau-de-bord/
 import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
 import { CarteKpi } from "@/features/tableau-de-bord/components/carte-kpi";
 import { LienRapide } from "@/features/tableau-de-bord/components/lien-rapide";
-import { CourbeVentes } from "@/features/tableau-de-bord/components/courbe-ventes";
+import { ChartVentesAire } from "@/features/tableau-de-bord/components/chart-ventes-aire";
+import {
+  SelecteurPeriode, type PeriodeJours,
+} from "@/features/tableau-de-bord/components/selecteur-periode";
 import { CarteOnboarding } from "@/features/tableau-de-bord/components/carte-onboarding";
 import { HistoriqueTickets } from "@/features/vente/components/historique-tickets";
 import { formatMontant } from "@/features/vente/utils/format";
 
 export default function TableauDeBordPage() {
   const { boutiqueActive } = useAuth();
+  const [periode, setPeriode] = useState<PeriodeJours>(7);
   const { data: kpis, isLoading: kpisChargement } = useKpisQuery();
-  const { data: ventes, isLoading: ventesChargement } = useVentesParJourQuery(7);
+  const { data: ventes, isLoading: ventesChargement } = useVentesParJourQuery(periode);
   const { data: ticketsData } = useTicketListQuery({ page: 1 });
 
   const tickets = (ticketsData?.data ?? []).slice(0, 5);
@@ -83,9 +88,16 @@ export default function TableauDeBordPage() {
           </div>
         </section>
 
+        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
+            Activité
+          </h2>
+          <SelecteurPeriode valeur={periode} onChange={setPeriode} />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
-            <CourbeVentes donnees={ventes} enChargement={ventesChargement} />
+            <ChartVentesAire donnees={ventes} enChargement={ventesChargement} jours={periode} />
           </div>
 
           <Card>
