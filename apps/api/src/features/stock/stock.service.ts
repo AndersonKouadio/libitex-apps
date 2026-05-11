@@ -191,6 +191,7 @@ export class StockService {
       nomVariante: r.nomVariante,
       typeProduit: r.typeProduit,
       quantite: Number(r.quantite),
+      prixAchat: Number(r.prixAchat ?? 0),
     }));
   }
 

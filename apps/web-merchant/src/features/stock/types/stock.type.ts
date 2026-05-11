@@ -18,4 +18,5 @@ export interface IStockEmplacement {
   nomVariante: string | null;
   typeProduit: string;
   quantite: number;
+  prixAchat: number;
 }

@@ -104,6 +104,7 @@ export class StockRepository {
         nomVariante: variants.name,
         nomProduit: products.name,
         typeProduit: products.productType,
+        prixAchat: variants.pricePurchase,
       })
       .from(stockMovements)
       .innerJoin(variants, eq(stockMovements.variantId, variants.id))
@@ -118,6 +119,7 @@ export class StockRepository {
         variants.name,
         products.name,
         products.productType,
+        variants.pricePurchase,
       );
   }
 
