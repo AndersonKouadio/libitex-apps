@@ -241,6 +241,28 @@ export class RapportVentesPeriodeDto {
   };
 }
 
+export class LigneTvaDto {
+  /** Taux de TVA en %, ex: 0, 9, 18. */
+  taux!: number;
+  baseHt!: number;
+  tva!: number;
+  totalTtc!: number;
+  nombreLignes!: number;
+}
+
+export class RapportTvaDto {
+  debut!: string;
+  fin!: string;
+  emplacementId!: string | null;
+  taux!: LigneTvaDto[];
+  totaux!: {
+    baseHt: number;
+    tva: number;
+    totalTtc: number;
+    nombreLignes: number;
+  };
+}
+
 export class LigneMargeDto {
   variantId!: string;
   nomProduit!: string;

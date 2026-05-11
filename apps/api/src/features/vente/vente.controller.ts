@@ -112,6 +112,20 @@ export class VenteController {
     return this.venteService.rapportVentesPeriode(user.tenantId, debut, fin, emplacementId);
   }
 
+  @Get("rapports/tva")
+  @ApiOperation({
+    summary: "Repartition de la TVA collectee par taux sur une periode (pour declaration fiscale)",
+  })
+  @Roles("ADMIN", "MANAGER")
+  rapportTva(
+    @CurrentUser() user: CurrentUserData,
+    @Query("debut") debut: string,
+    @Query("fin") fin: string,
+    @Query("emplacementId") emplacementId?: string,
+  ) {
+    return this.venteService.rapportTva(user.tenantId, debut, fin, emplacementId);
+  }
+
   @Get("rapports/marges")
   @ApiOperation({
     summary: "Marges brutes par produit sur une periode (CA - cout d'achat * quantite vendue)",

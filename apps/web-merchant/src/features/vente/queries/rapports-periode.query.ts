@@ -26,3 +26,14 @@ export function useRapportMargesQuery(
     enabled: !!token && actif && !!debut && !!fin,
   });
 }
+
+export function useRapportTvaQuery(
+  debut: string, fin: string, emplacementId?: string, actif = true,
+) {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: venteKeyQuery("rapport-tva", debut, fin, emplacementId),
+    queryFn: () => venteAPI.rapportTva(token!, debut, fin, emplacementId),
+    enabled: !!token && actif && !!debut && !!fin,
+  });
+}

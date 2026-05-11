@@ -16,7 +16,7 @@ import {
 import {
   CreerTicketDto, CompleterTicketDto,
   TicketResponseDto, LigneTicketResponseDto, PaiementResponseDto, RapportZResponseDto,
-  RapportZJourResponseDto, RapportVentesPeriodeDto, RapportMargesDto,
+  RapportZJourResponseDto, RapportVentesPeriodeDto, RapportMargesDto, RapportTvaDto,
 } from "./dto/vente.dto";
 import { PaginatedResponseDto } from "../../common/dto/api-response.dto";
 
@@ -379,6 +379,29 @@ export class VenteService {
         ticketMoyen: totaux.tickets > 0 ? Math.round(totaux.recettes / totaux.tickets) : 0,
       },
     };
+  }
+
+  async rapportTva(
+    tenantId: string, debut: string, fin: string, emplacementId?: string,
+  ): Promise<RapportTvaDto> {
+    const rows = await this.ticketRepo.tvaParTaux(tenantId, debut, fin, emplacementId);
+    const taux = rows.map((r) => ({
+      taux: Number(r.taux),
+      baseHt: Math.round(Number(r.baseHt)),
+      tva: Math.round(Number(r.tva)),
+      totalTtc: Math.round(Number(r.totalTtc)),
+      nombreLignes: Number(r.nombreLignes),
+    }));
+    const totaux = taux.reduce(
+      (acc, t) => ({
+        baseHt: acc.baseHt + t.baseHt,
+        tva: acc.tva + t.tva,
+        totalTtc: acc.totalTtc + t.totalTtc,
+        nombreLignes: acc.nombreLignes + t.nombreLignes,
+      }),
+      { baseHt: 0, tva: 0, totalTtc: 0, nombreLignes: 0 },
+    );
+    return { debut, fin, emplacementId: emplacementId ?? null, taux, totaux };
   }
 
   async rapportMarges(

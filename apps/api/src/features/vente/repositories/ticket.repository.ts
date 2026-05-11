@@ -302,6 +302,42 @@ export class TicketRepository {
   }
 
   /**
+   * Repartition TVA par taux sur une periode. Une ligne par taux distinct
+   * trouve dans ticket_lines (incluant 0% pour les exoneres). Calculs :
+   *   Base HT = SUM(lineTotal - taxAmount)
+   *   TVA collectee = SUM(taxAmount)
+   *   Total TTC = SUM(lineTotal)
+   */
+  async tvaParTaux(
+    tenantId: string,
+    debut: string,
+    fin: string,
+    locationId?: string,
+  ) {
+    const conditions = [
+      eq(tickets.tenantId, tenantId),
+      eq(tickets.status, "COMPLETED"),
+      sql`DATE(${tickets.completedAt}) >= ${debut}`,
+      sql`DATE(${tickets.completedAt}) <= ${fin}`,
+    ];
+    if (locationId) conditions.push(eq(tickets.locationId, locationId));
+
+    return this.db
+      .select({
+        taux: sql<string>`COALESCE(${ticketLines.taxRate}, '0')`,
+        baseHt: sql<number>`COALESCE(SUM(CAST(${ticketLines.lineTotal} AS NUMERIC) - COALESCE(CAST(${ticketLines.taxAmount} AS NUMERIC), 0)), 0)`,
+        tva: sql<number>`COALESCE(SUM(COALESCE(CAST(${ticketLines.taxAmount} AS NUMERIC), 0)), 0)`,
+        totalTtc: sql<number>`COALESCE(SUM(CAST(${ticketLines.lineTotal} AS NUMERIC)), 0)`,
+        nombreLignes: sql<number>`COUNT(*)`,
+      })
+      .from(ticketLines)
+      .innerJoin(tickets, eq(ticketLines.ticketId, tickets.id))
+      .where(and(...conditions))
+      .groupBy(ticketLines.taxRate)
+      .orderBy(sql`COALESCE(${ticketLines.taxRate}, '0') DESC`);
+  }
+
+  /**
    * Marges par produit sur une periode. CA = SUM(lineTotal),
    * Cout = SUM(quantity * variants.pricePurchase), Marge brute = CA - Cout.
    * Les variantes sans prix d'achat (=0) sortent avec marge = CA et un
