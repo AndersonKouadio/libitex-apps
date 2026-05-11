@@ -52,13 +52,13 @@ export function RapportZTopProduits({ rapport }: Props) {
       <Card.Header>
         <Card.Title className="text-sm flex items-center gap-1.5">
           <Trophy size={14} className="text-warning" />
-          Top {top.length} produits du jour
+          Top {top.length} produit{top.length > 1 ? "s" : ""} du jour
         </Card.Title>
       </Card.Header>
       <Card.Content>
         <div style={{ height: hauteur }}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={top} layout="vertical" margin={{ top: 4, right: 8, bottom: 4, left: 0 }} barCategoryGap={6}>
+            <BarChart data={top} layout="vertical" margin={{ top: 4, right: 80, bottom: 4, left: 0 }} barCategoryGap={6}>
               <XAxis type="number" hide />
               <YAxis
                 type="category"
@@ -69,7 +69,7 @@ export function RapportZTopProduits({ rapport }: Props) {
                 tick={{ fontSize: 11, fill: "var(--foreground)" }}
               />
               <Tooltip content={<TooltipTop />} cursor={{ fill: "var(--accent)", fillOpacity: 0.08 }} />
-              <Bar dataKey="chiffreAffaires" radius={[4, 4, 4, 4]}>
+              <Bar dataKey="chiffreAffaires" radius={[4, 4, 4, 4]} minPointSize={8}>
                 {top.map((entry, index) => (
                   <Cell key={entry.variantId} fill={index === 0 ? "var(--accent)" : "color-mix(in oklch, var(--accent), transparent 50%)"} />
                 ))}
