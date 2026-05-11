@@ -4,7 +4,8 @@ import { IngredientRepository } from "./repositories/ingredient.repository";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import {
   CreerIngredientDto, ModifierIngredientDto, EntreeIngredientDto, AjustementIngredientDto,
-  DefinirRecetteDto, IngredientResponseDto, StockIngredientDto, LigneRecetteResponseDto,
+  TransfertIngredientDto, DefinirRecetteDto, IngredientResponseDto, StockIngredientDto,
+  LigneRecetteResponseDto,
 } from "./dto/ingredient.dto";
 
 /**
@@ -126,6 +127,47 @@ export class IngredientService {
         quantiteEnUniteIngredient: quantiteCible,
         coutTotal: dto.coutTotal,
         reference: dto.reference,
+      },
+    });
+  }
+
+  async transferer(tenantId: string, userId: string, dto: TransfertIngredientDto): Promise<void> {
+    if (dto.depuisEmplacementId === dto.versEmplacementId) {
+      throw new BadRequestException("Les emplacements source et destination doivent être différents.");
+    }
+    const ingredient = await this.repo.obtenir(tenantId, dto.ingredientId);
+    if (!ingredient) throw new NotFoundException("Ingrédient introuvable");
+
+    const stockSource = await this.repo.stockActuel(
+      tenantId, dto.ingredientId, dto.depuisEmplacementId,
+    );
+    if (stockSource < dto.quantite) {
+      throw new BadRequestException(
+        `Stock insuffisant à la source (${stockSource} ${ingredient.unit}). Demandé : ${dto.quantite}.`,
+      );
+    }
+
+    const unit = ingredient.unit as UniteMesure;
+    await this.repo.appliquerMouvement({
+      tenantId, ingredientId: dto.ingredientId, locationId: dto.depuisEmplacementId,
+      type: "TRANSFER_OUT", quantityDelta: (-dto.quantite).toString(),
+      unit, note: dto.note, userId,
+    });
+    await this.repo.appliquerMouvement({
+      tenantId, ingredientId: dto.ingredientId, locationId: dto.versEmplacementId,
+      type: "TRANSFER_IN", quantityDelta: dto.quantite.toString(),
+      unit, note: dto.note, userId,
+    });
+
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.STOCK_TRANSFERRED,
+      entityType: "INGREDIENT", entityId: dto.ingredientId,
+      after: {
+        depuisEmplacementId: dto.depuisEmplacementId,
+        versEmplacementId: dto.versEmplacementId,
+        quantite: dto.quantite,
+        unite: ingredient.unit,
+        note: dto.note,
       },
     });
   }

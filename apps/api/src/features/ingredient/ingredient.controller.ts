@@ -6,7 +6,7 @@ import { ApiBearerAuth, ApiTags, ApiOperation } from "@nestjs/swagger";
 import { IngredientService } from "./ingredient.service";
 import {
   CreerIngredientDto, ModifierIngredientDto, EntreeIngredientDto,
-  AjustementIngredientDto, DefinirRecetteDto,
+  AjustementIngredientDto, TransfertIngredientDto, DefinirRecetteDto,
 } from "./dto/ingredient.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
@@ -61,6 +61,13 @@ export class IngredientController {
   @Roles("ADMIN", "MANAGER")
   ajuster(@CurrentUser() user: CurrentUserData, @Body() dto: AjustementIngredientDto) {
     return this.service.ajuster(user.tenantId, user.userId, dto);
+  }
+
+  @Post("transfert")
+  @ApiOperation({ summary: "Transférer du stock d'ingrédient entre emplacements" })
+  @Roles("ADMIN", "MANAGER", "WAREHOUSE")
+  transferer(@CurrentUser() user: CurrentUserData, @Body() dto: TransfertIngredientDto) {
+    return this.service.transferer(user.tenantId, user.userId, dto);
   }
 
   @Get("emplacement/:emplacementId/stock")
