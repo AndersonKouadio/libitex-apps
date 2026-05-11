@@ -46,6 +46,7 @@ export class VenteService {
       tenantId, locationId: dto.emplacementId, userId,
       sessionId: session.id,
       ticketNumber: numeroTicket,
+      customerId: dto.clientId,
       customerName: dto.nomClient, customerPhone: dto.telephoneClient, note: dto.note,
     });
 
@@ -490,6 +491,7 @@ export class VenteService {
       montantTva: Number(raw.taxAmount ?? 0),
       montantRemise: Number(raw.discountAmount ?? 0),
       total: Number(raw.total ?? 0),
+      clientId: raw.customerId ?? null,
       nomClient: raw.customerName,
       telephoneClient: raw.customerPhone,
       note: raw.note,

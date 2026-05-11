@@ -25,7 +25,8 @@ export class TicketRepository {
 
   async creerTicket(data: {
     tenantId: string; locationId: string; userId: string; sessionId: string;
-    ticketNumber: string; customerName?: string; customerPhone?: string; note?: string;
+    ticketNumber: string; customerId?: string;
+    customerName?: string; customerPhone?: string; note?: string;
   }) {
     const [ticket] = await this.db
       .insert(tickets)

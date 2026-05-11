@@ -101,6 +101,14 @@ export class CreerTicketDto {
   @IsOptional()
   raisonRemise?: string;
 
+  @ApiPropertyOptional({
+    example: "uuid-client",
+    description: "Lien vers une fiche client (CRM). Si fourni, le nom/telephone du ticket sont rattaches a ce client pour l'historique d'achats.",
+  })
+  @IsString()
+  @IsOptional()
+  clientId?: string;
+
   @ApiPropertyOptional({ example: "Amadou Diallo" })
   @IsString()
   @IsOptional()
@@ -189,6 +197,7 @@ export class TicketResponseDto {
   montantTva!: number;
   montantRemise!: number;
   total!: number;
+  clientId!: string | null;
   nomClient!: string | null;
   telephoneClient!: string | null;
   note!: string | null;

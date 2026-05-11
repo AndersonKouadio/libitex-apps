@@ -79,6 +79,11 @@ export const tickets = pgTable("tickets", {
   taxAmount: numeric("tax_amount", { precision: 15, scale: 2 }).notNull().default("0"),
   discountAmount: numeric("discount_amount", { precision: 15, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 15, scale: 2 }).notNull().default("0"),
+  // Lien optionnel vers le repertoire CRM (customers). Si rempli, permet
+  // l'historique d'achats. customerName/customerPhone restent en snapshot
+  // au moment de la vente (les coordonnees client peuvent changer apres,
+  // mais le ticket doit garder l'etat de la transaction).
+  customerId: uuid("customer_id"),
   customerName: varchar("customer_name", { length: 255 }),
   customerPhone: varchar("customer_phone", { length: 50 }),
   note: text("note"),
@@ -93,6 +98,7 @@ export const tickets = pgTable("tickets", {
   index("idx_tickets_status").on(table.status),
   index("idx_tickets_number").on(table.ticketNumber),
   index("idx_tickets_created").on(table.createdAt),
+  index("idx_tickets_customer").on(table.customerId),
 ]);
 
 // ─── Ticket Lines ───
