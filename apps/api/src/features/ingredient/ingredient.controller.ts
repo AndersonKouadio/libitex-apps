@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch, Delete, Body, Param, UseGuards,
+  Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards,
 } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags, ApiOperation } from "@nestjs/swagger";
@@ -7,6 +7,7 @@ import { IngredientService } from "./ingredient.service";
 import {
   CreerIngredientDto, ModifierIngredientDto, EntreeIngredientDto,
   AjustementIngredientDto, TransfertIngredientDto, DefinirRecetteDto,
+  ListerMouvementsIngredientsQueryDto,
 } from "./dto/ingredient.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
@@ -77,6 +78,15 @@ export class IngredientController {
     @Param("emplacementId") emplacementId: string,
   ) {
     return this.service.stockParEmplacement(user.tenantId, emplacementId);
+  }
+
+  @Get("mouvements")
+  @ApiOperation({ summary: "Historique paginé des mouvements d'ingrédients" })
+  listerMouvements(
+    @CurrentUser() user: CurrentUserData,
+    @Query() query: ListerMouvementsIngredientsQueryDto,
+  ) {
+    return this.service.listerMouvements(user.tenantId, query);
   }
 
   // --- Recettes ---

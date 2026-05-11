@@ -1,8 +1,9 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { eq, and, isNull, sql } from "drizzle-orm";
+import { eq, and, isNull, sql, desc, gte, lte, SQL } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
   type Database, ingredients, ingredientInventory, ingredientMovements, recipeLines,
+  locations, users,
 } from "@libitex/db";
 import type { UniteMesure } from "@libitex/shared";
 
@@ -180,6 +181,61 @@ export class IngredientRepository {
         quantity: data.quantite,
       });
     }
+  }
+
+  /**
+   * Liste paginee des mouvements d'ingredients avec filtres optionnels.
+   * Joint la fiche ingredient, l'emplacement et l'auteur (utilisateur).
+   */
+  async listerMouvements(
+    tenantId: string,
+    filtres: {
+      page: number; pageSize: number;
+      type?: string; ingredientId?: string; emplacementId?: string;
+      dateDebut?: Date; dateFin?: Date;
+    },
+  ) {
+    const conditions: SQL[] = [eq(ingredientMovements.tenantId, tenantId)];
+    if (filtres.type) conditions.push(eq(ingredientMovements.type, filtres.type as any));
+    if (filtres.ingredientId) conditions.push(eq(ingredientMovements.ingredientId, filtres.ingredientId));
+    if (filtres.emplacementId) conditions.push(eq(ingredientMovements.locationId, filtres.emplacementId));
+    if (filtres.dateDebut) conditions.push(gte(ingredientMovements.createdAt, filtres.dateDebut));
+    if (filtres.dateFin) conditions.push(lte(ingredientMovements.createdAt, filtres.dateFin));
+    const where = and(...conditions);
+
+    const [countRow] = await this.db
+      .select({ total: sql<number>`COUNT(*)::int` })
+      .from(ingredientMovements)
+      .where(where);
+
+    const offset = (filtres.page - 1) * filtres.pageSize;
+    const rows = await this.db
+      .select({
+        id: ingredientMovements.id,
+        type: ingredientMovements.type,
+        quantity: ingredientMovements.quantity,
+        unit: ingredientMovements.unit,
+        note: ingredientMovements.note,
+        reference: ingredientMovements.reference,
+        createdAt: ingredientMovements.createdAt,
+        ingredientId: ingredientMovements.ingredientId,
+        nomIngredient: ingredients.name,
+        locationId: ingredientMovements.locationId,
+        nomEmplacement: locations.name,
+        userId: ingredientMovements.userId,
+        prenomAuteur: users.firstName,
+        nomAuteur: users.lastName,
+      })
+      .from(ingredientMovements)
+      .innerJoin(ingredients, eq(ingredientMovements.ingredientId, ingredients.id))
+      .innerJoin(locations, eq(ingredientMovements.locationId, locations.id))
+      .leftJoin(users, eq(ingredientMovements.userId, users.id))
+      .where(where)
+      .orderBy(desc(ingredientMovements.createdAt))
+      .limit(filtres.pageSize)
+      .offset(offset);
+
+    return { rows, total: Number(countRow?.total ?? 0) };
   }
 
   // --- Recettes (BOM) ---

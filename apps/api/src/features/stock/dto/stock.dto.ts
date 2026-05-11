@@ -1,4 +1,7 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, Min, IsDateString } from "class-validator";
+import {
+  IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, IsInt, Min, IsDateString, IsEnum,
+} from "class-validator";
+import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreerEmplacementDto {
@@ -140,4 +143,65 @@ export class MouvementResponseDto {
   quantite!: number;
   note!: string | null;
   creeLe!: string;
+}
+
+const TYPES_MOUVEMENT_STOCK = [
+  "STOCK_IN", "STOCK_OUT", "TRANSFER_OUT", "TRANSFER_IN",
+  "ADJUSTMENT", "RETURN_IN", "DEFECTIVE_OUT", "WRITE_OFF",
+] as const;
+
+export class ListerMouvementsQueryDto {
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: 50 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  pageSize?: number;
+
+  @ApiPropertyOptional({ enum: TYPES_MOUVEMENT_STOCK })
+  @IsOptional()
+  @IsEnum(TYPES_MOUVEMENT_STOCK)
+  type?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID("4")
+  varianteId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID("4")
+  emplacementId?: string;
+
+  @ApiPropertyOptional({ description: "ISO date (YYYY-MM-DD)" })
+  @IsOptional()
+  @IsDateString()
+  dateDebut?: string;
+
+  @ApiPropertyOptional({ description: "ISO date (YYYY-MM-DD)" })
+  @IsOptional()
+  @IsDateString()
+  dateFin?: string;
+}
+
+export class MouvementStockLigneDto {
+  id!: string;
+  type!: string;
+  quantite!: number;
+  note!: string | null;
+  creeLe!: string;
+  varianteId!: string;
+  sku!: string;
+  nomProduit!: string;
+  nomVariante!: string | null;
+  emplacementId!: string;
+  nomEmplacement!: string;
+  auteur!: string | null;
 }

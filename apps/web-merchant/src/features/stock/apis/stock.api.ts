@@ -1,5 +1,12 @@
 import { httpClient } from "@/lib/http";
-import type { IEmplacement, IStockActuel, IStockEmplacement } from "../types/stock.type";
+import type {
+  IEmplacement, IStockActuel, IStockEmplacement, IMouvementStock, FiltreMouvements,
+} from "../types/stock.type";
+
+export interface MouvementsResponse<T> {
+  data: T[];
+  meta: { page: number; pageSize: number; total: number; totalPages: number };
+}
 
 const BASE = "/stock";
 
@@ -41,4 +48,19 @@ export const stockAPI = {
 
   stockParEmplacement: (token: string, emplacementId: string) =>
     httpClient.get<IStockEmplacement[]>(`${BASE}/emplacement/${emplacementId}`, { token }),
+
+  listerMouvements: (token: string, filtres: FiltreMouvements) => {
+    const qs = new URLSearchParams();
+    qs.set("page", String(filtres.page ?? 1));
+    qs.set("pageSize", String(filtres.pageSize ?? 50));
+    if (filtres.type) qs.set("type", filtres.type);
+    if (filtres.varianteId) qs.set("varianteId", filtres.varianteId);
+    if (filtres.emplacementId) qs.set("emplacementId", filtres.emplacementId);
+    if (filtres.dateDebut) qs.set("dateDebut", filtres.dateDebut);
+    if (filtres.dateFin) qs.set("dateFin", filtres.dateFin);
+    return httpClient.get<MouvementsResponse<IMouvementStock>>(
+      `${BASE}/mouvements?${qs.toString()}`,
+      { token },
+    );
+  },
 };

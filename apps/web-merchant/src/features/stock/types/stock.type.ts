@@ -20,3 +20,32 @@ export interface IStockEmplacement {
   quantite: number;
   prixAchat: number;
 }
+
+export type TypeMouvementStock =
+  | "STOCK_IN" | "STOCK_OUT" | "TRANSFER_OUT" | "TRANSFER_IN"
+  | "ADJUSTMENT" | "RETURN_IN" | "DEFECTIVE_OUT" | "WRITE_OFF";
+
+export interface IMouvementStock {
+  id: string;
+  type: TypeMouvementStock;
+  quantite: number;
+  note: string | null;
+  creeLe: string;
+  varianteId: string;
+  sku: string;
+  nomProduit: string;
+  nomVariante: string | null;
+  emplacementId: string;
+  nomEmplacement: string;
+  auteur: string | null;
+}
+
+export interface FiltreMouvements {
+  page?: number;
+  pageSize?: number;
+  type?: string;
+  varianteId?: string;
+  emplacementId?: string;
+  dateDebut?: string;
+  dateFin?: string;
+}

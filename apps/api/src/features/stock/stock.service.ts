@@ -195,6 +195,54 @@ export class StockService {
     }));
   }
 
+  async listerMouvements(
+    tenantId: string,
+    query: {
+      page?: number; pageSize?: number; type?: string;
+      varianteId?: string; emplacementId?: string;
+      dateDebut?: string; dateFin?: string;
+    },
+  ) {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 50;
+    const dateDebut = query.dateDebut ? new Date(query.dateDebut) : undefined;
+    // Inclure toute la journee de fin : passer a 23:59:59.999.
+    let dateFin: Date | undefined;
+    if (query.dateFin) {
+      dateFin = new Date(query.dateFin);
+      dateFin.setHours(23, 59, 59, 999);
+    }
+
+    const { rows, total } = await this.stockRepo.listerMouvements(tenantId, {
+      page, pageSize, type: query.type,
+      varianteId: query.varianteId, emplacementId: query.emplacementId,
+      dateDebut, dateFin,
+    });
+
+    return {
+      data: rows.map((r) => ({
+        id: r.id,
+        type: r.movementType,
+        quantite: Number(r.quantity),
+        note: r.note,
+        creeLe: r.createdAt?.toISOString?.() ?? r.createdAt,
+        varianteId: r.variantId,
+        sku: r.sku,
+        nomProduit: r.nomProduit,
+        nomVariante: r.nomVariante,
+        emplacementId: r.locationId,
+        nomEmplacement: r.nomEmplacement,
+        auteur: r.prenomAuteur || r.nomAuteur
+          ? `${r.prenomAuteur ?? ""} ${r.nomAuteur ?? ""}`.trim()
+          : null,
+      })),
+      meta: {
+        page, pageSize, total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
+  }
+
   private mapMouvement(raw: any): MouvementResponseDto {
     return {
       id: raw.id,

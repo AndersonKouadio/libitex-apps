@@ -34,3 +34,31 @@ export interface ILigneRecette {
   unite: UniteMesure;
   ordre: number;
 }
+
+export type TypeMouvementIngredient =
+  | "STOCK_IN" | "CONSUMPTION" | "ADJUSTMENT" | "WASTE" | "TRANSFER_IN" | "TRANSFER_OUT";
+
+export interface IMouvementIngredient {
+  id: string;
+  type: TypeMouvementIngredient;
+  quantite: number;
+  unite: UniteMesure;
+  note: string | null;
+  reference: string | null;
+  creeLe: string;
+  ingredientId: string;
+  nomIngredient: string;
+  emplacementId: string;
+  nomEmplacement: string;
+  auteur: string | null;
+}
+
+export interface FiltreMouvementsIngredients {
+  page?: number;
+  pageSize?: number;
+  type?: string;
+  ingredientId?: string;
+  emplacementId?: string;
+  dateDebut?: string;
+  dateFin?: string;
+}

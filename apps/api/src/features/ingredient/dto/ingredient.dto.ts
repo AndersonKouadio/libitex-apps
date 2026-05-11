@@ -1,6 +1,6 @@
 import {
   IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsArray,
-  ValidateNested, Min, IsUUID,
+  ValidateNested, Min, IsUUID, IsInt, IsDateString,
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
@@ -190,6 +190,51 @@ export class StockIngredientDto {
   emplacementId!: string;
   quantite!: number;
   enAlerte!: boolean;
+}
+
+const TYPES_MOUVEMENT_INGREDIENT = [
+  "STOCK_IN", "CONSUMPTION", "ADJUSTMENT", "WASTE", "TRANSFER_IN", "TRANSFER_OUT",
+] as const;
+
+export class ListerMouvementsIngredientsQueryDto {
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: 50 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  pageSize?: number;
+
+  @ApiPropertyOptional({ enum: TYPES_MOUVEMENT_INGREDIENT })
+  @IsOptional()
+  @IsEnum(TYPES_MOUVEMENT_INGREDIENT)
+  type?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID("4")
+  ingredientId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID("4")
+  emplacementId?: string;
+
+  @ApiPropertyOptional({ description: "ISO date (YYYY-MM-DD)" })
+  @IsOptional()
+  @IsDateString()
+  dateDebut?: string;
+
+  @ApiPropertyOptional({ description: "ISO date (YYYY-MM-DD)" })
+  @IsOptional()
+  @IsDateString()
+  dateFin?: string;
 }
 
 export class LigneRecetteResponseDto {
