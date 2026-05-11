@@ -67,4 +67,11 @@ export const catalogueAPI = {
 
   supprimerCategorie: (token: string, id: string) =>
     httpClient.delete<void>(`${BASE}/categories/${id}`, { token }),
+
+  disponibilites: (token: string, emplacementId: string) =>
+    httpClient.get<{
+      indisponibles: string[];
+      indisponiblesProduits: string[];
+      portionsMenu: Record<string, number>;
+    }>(`${BASE}/disponibilites?emplacementId=${emplacementId}`, { token }),
 };

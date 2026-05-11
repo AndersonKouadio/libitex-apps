@@ -15,6 +15,11 @@ import { CarteArticle } from "./carte-article";
 interface Props {
   produits: IProduit[];
   stocks: IStockEmplacement[] | undefined;
+  disponibilites?: {
+    indisponibles: string[];
+    indisponiblesProduits: string[];
+    portionsMenu: Record<string, number>;
+  };
   onAjouter: (produit: IProduit, variante: IVariante) => void;
 }
 
@@ -29,7 +34,7 @@ interface OngletDef {
   icone: LucideIcon;
 }
 
-export function GrilleProduits({ produits, stocks, onAjouter }: Props) {
+export function GrilleProduits({ produits, stocks, disponibilites, onAjouter }: Props) {
   const [recherche, setRecherche] = useState("");
   const [categorieActive, setCategorieActive] = useState<string>(TOUTES);
   const { data: categories } = useCategorieListQuery();
@@ -38,6 +43,12 @@ export function GrilleProduits({ produits, stocks, onAjouter }: Props) {
     if (!stocks) return null;
     return new Map(stocks.map((s) => [s.varianteId, s.quantite]));
   }, [stocks]);
+
+  const setIndispo = useMemo(
+    () => new Set(disponibilites?.indisponibles ?? []),
+    [disponibilites],
+  );
+  const portionsMap = disponibilites?.portionsMenu ?? {};
 
   // Categories presentes dans le catalogue actif (au moins 1 produit non-supp).
   const categoriesPresentes = useMemo(() => {
@@ -183,15 +194,23 @@ export function GrilleProduits({ produits, stocks, onAjouter }: Props) {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-2.5">
             {filtresOrdonnes.flatMap((produit) =>
-              produit.variantes.map((variante) => (
-                <CarteArticle
-                  key={variante.id}
-                  produit={produit}
-                  variante={variante}
-                  stock={stockMap?.get(variante.id) ?? null}
-                  onAjouter={() => onAjouter(produit, variante)}
-                />
-              )),
+              produit.variantes.map((variante) => {
+                // Pour les non-MENU : si listee comme indisponible, override stock a 0
+                const stockBrut = stockMap?.get(variante.id) ?? null;
+                const stockFinal = produit.typeProduit !== "MENU" && setIndispo.has(variante.id)
+                  ? 0
+                  : stockBrut;
+                return (
+                  <CarteArticle
+                    key={variante.id}
+                    produit={produit}
+                    variante={variante}
+                    stock={stockFinal}
+                    portionsMenu={produit.typeProduit === "MENU" ? portionsMap[variante.id] : undefined}
+                    onAjouter={() => onAjouter(produit, variante)}
+                  />
+                );
+              }),
             )}
           </div>
         )}

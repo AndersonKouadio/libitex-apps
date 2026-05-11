@@ -10,17 +10,24 @@ interface Props {
   produit: IProduit;
   variante: IVariante;
   stock: number | null;
+  /** Nb portions servables si MENU (calcule depuis stock ingredients). */
+  portionsMenu?: number;
   onAjouter: () => void;
 }
 
-export function CarteArticle({ produit, variante, stock, onAjouter }: Props) {
-  // MENU : stock gere via les ingredients de la recette, pas au niveau variant
-  // → on n'affiche jamais de quantite ni de rupture sur la carte.
-  const stockGeré = produit.typeProduit !== "MENU";
-  // Pour les autres types, null (jamais aucun mouvement) = 0 = rupture.
+export function CarteArticle({ produit, variante, stock, portionsMenu, onAjouter }: Props) {
+  // MENU : stock gere via les ingredients de la recette. On affiche le nb
+  // de portions servables (calcule cote backend) si fourni.
+  const estMenu = produit.typeProduit === "MENU";
+  const stockGeré = !estMenu;
+  // Pour les non-MENU : null (jamais aucun mouvement) = 0 = rupture.
   const stockEffectif = stockGeré ? (stock ?? 0) : null;
-  const enRupture = stockEffectif !== null && stockEffectif <= 0;
-  const stockBas = stockEffectif !== null && stockEffectif > 0 && stockEffectif < 5;
+  const enRupture = estMenu
+    ? portionsMenu === 0
+    : (stockEffectif !== null && stockEffectif <= 0);
+  const stockBas = estMenu
+    ? (portionsMenu !== undefined && portionsMenu > 0 && portionsMenu < 5)
+    : (stockEffectif !== null && stockEffectif > 0 && stockEffectif < 5);
   const image = produit.images?.[0];
   const unite = variante.uniteVente ?? UniteMesure.PIECE;
   const peseur = uniteAccepteDecimal(unite);
@@ -57,7 +64,7 @@ export function CarteArticle({ produit, variante, stock, onAjouter }: Props) {
           <div className="absolute inset-0 bg-foreground/40 flex items-center justify-center">
             <Chip className="bg-danger text-white text-xs font-semibold gap-1">
               <AlertTriangle size={12} strokeWidth={2} />
-              Rupture
+              {estMenu ? "Ingrédients épuisés" : "Rupture"}
             </Chip>
           </div>
         )}
@@ -70,6 +77,18 @@ export function CarteArticle({ produit, variante, stock, onAjouter }: Props) {
               }`}
             >
               {stockEffectif} {peseur ? UNITE_LABELS[unite] : "en stock"}
+            </Chip>
+          </div>
+        )}
+
+        {!enRupture && estMenu && portionsMenu !== undefined && portionsMenu > 0 && (
+          <div className="absolute top-2 right-2">
+            <Chip
+              className={`text-[10px] font-semibold ${
+                stockBas ? "bg-warning/90 text-warning-foreground" : "bg-foreground/70 text-white"
+              }`}
+            >
+              {portionsMenu} portion{portionsMenu > 1 ? "s" : ""}
             </Chip>
           </div>
         )}

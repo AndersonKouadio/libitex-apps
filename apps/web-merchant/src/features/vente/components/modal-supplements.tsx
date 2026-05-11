@@ -15,13 +15,16 @@ interface Props {
   prixBase: number;
   /** Suppléments deja sur la ligne (mode edition) — pre-remplit la modale. */
   supplementsCourants?: SupplementChoisi[];
+  /** Suppléments en rupture pour l'emplacement courant (par product.id). */
+  indisponibles?: string[];
   onConfirmer: (supplements: SupplementChoisi[]) => void;
   onFermer: () => void;
 }
 
 export function ModalSupplements({
-  ouvert, nomProduit, prixBase, supplementsCourants, onConfirmer, onFermer,
+  ouvert, nomProduit, prixBase, supplementsCourants, indisponibles, onConfirmer, onFermer,
 }: Props) {
+  const setIndispo = useMemo(() => new Set(indisponibles ?? []), [indisponibles]);
   const { data: tous } = useSupplementListQuery();
   // Map supplementId -> quantite choisie (0 = non selectionne)
   const [quantites, setQuantites] = useState<Record<string, number>>({});
@@ -108,17 +111,27 @@ export function ModalSupplements({
                     <ul className="space-y-1.5">
                       {items.map((s) => {
                         const qte = quantites[s.id] ?? 0;
+                        const rupture = setIndispo.has(s.id);
                         return (
                           <li
                             key={s.id}
                             className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors ${
-                              qte > 0
+                              rupture
+                                ? "border-border/40 bg-surface-secondary/40 opacity-60"
+                                : qte > 0
                                 ? "border-accent/40 bg-accent/5"
                                 : "border-border bg-surface"
                             }`}
                           >
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-foreground truncate">{s.nom}</p>
+                              <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
+                                {s.nom}
+                                {rupture && (
+                                  <span className="text-[10px] font-semibold text-danger bg-danger/10 px-1.5 py-0.5 rounded">
+                                    Rupture
+                                  </span>
+                                )}
+                              </p>
                               <p className="text-xs text-muted">
                                 +{formatMontant(s.prix)} F par unité
                               </p>
@@ -128,7 +141,7 @@ export function ModalSupplements({
                                 variant="ghost"
                                 className="w-8 h-8 min-w-0 p-0 text-muted hover:text-foreground rounded-none"
                                 onPress={() => setQte(s.id, Math.max(0, qte - 1))}
-                                isDisabled={qte === 0}
+                                isDisabled={qte === 0 || rupture}
                                 aria-label={`Diminuer ${s.nom}`}
                               >
                                 <Minus size={14} />
@@ -140,6 +153,7 @@ export function ModalSupplements({
                                 variant="ghost"
                                 className="w-8 h-8 min-w-0 p-0 text-muted hover:text-foreground rounded-none"
                                 onPress={() => setQte(s.id, qte + 1)}
+                                isDisabled={rupture}
                                 aria-label={`Augmenter ${s.nom}`}
                               >
                                 <Plus size={14} />

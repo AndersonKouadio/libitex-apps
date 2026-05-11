@@ -239,6 +239,69 @@ export class CatalogueService {
     return { id: cat.id, nom: cat.name, slug: cat.slug, parentId: cat.parentId, nombreProduits: 0 };
   }
 
+  /**
+   * Carte des indisponibilites par variante pour un emplacement donne.
+   * Retourne seulement les variantes bloquantes :
+   *  - portions = 0 pour les MENU (ingredient(s) manquant(s))
+   *  - rupture pour les suppléments (stock <= 0)
+   *  - rupture pour les autres variantes (stock <= 0)
+   *
+   * Le frontend POS utilise cette map pour :
+   *  - desactiver les cards des produits indisponibles
+   *  - afficher le nb de portions restantes pour les MENU
+   */
+  async disponibilitesEmplacement(tenantId: string, locationId: string): Promise<{
+    indisponibles: string[];
+    indisponiblesProduits: string[];
+    portionsMenu: Record<string, number>;
+  }> {
+    const { stocksVariantes, recettes, menusToutes } =
+      await this.produitRepo.disponibilitesEmplacement(tenantId, locationId);
+
+    const indisponibles: string[] = [];
+    const indisponiblesProduits: string[] = [];
+
+    // Variantes non-MENU avec stock <= 0 (les suppléments aussi : leur
+    // productId est ajoute pour permettre la verification cote modale
+    // suppléments qui utilise productId comme identifiant).
+    for (const s of stocksVariantes) {
+      if (s.productType === "MENU") continue;
+      if (Number(s.quantite) <= 0) {
+        indisponibles.push(s.variantId);
+        if (s.isSupplement) indisponiblesProduits.push(s.productId);
+      }
+    }
+
+    // Pour chaque variante MENU : calcul des portions servables
+    const portionsMenu: Record<string, number> = {};
+    const recettesParVariante = new Map<string, Array<{ qtyRecette: number; stockIng: number }>>();
+    for (const r of recettes) {
+      const lignes = recettesParVariante.get(r.variantId) ?? [];
+      lignes.push({
+        qtyRecette: Number(r.qtyRecette),
+        stockIng: Number(r.stockIng ?? 0),
+      });
+      recettesParVariante.set(r.variantId, lignes);
+    }
+
+    for (const m of menusToutes) {
+      const lignes = recettesParVariante.get(m.variantId);
+      if (!lignes || lignes.length === 0) {
+        // Pas de recette declaree → indisponible par defaut
+        portionsMenu[m.variantId] = 0;
+        indisponibles.push(m.variantId);
+        continue;
+      }
+      const portions = Math.floor(
+        Math.min(...lignes.map((l) => l.qtyRecette > 0 ? l.stockIng / l.qtyRecette : 0)),
+      );
+      portionsMenu[m.variantId] = portions;
+      if (portions <= 0) indisponibles.push(m.variantId);
+    }
+
+    return { indisponibles, indisponiblesProduits, portionsMenu };
+  }
+
   async listerCategories(tenantId: string): Promise<CategorieResponseDto[]> {
     const [cats, compteurs] = await Promise.all([
       this.produitRepo.listerCategories(tenantId),

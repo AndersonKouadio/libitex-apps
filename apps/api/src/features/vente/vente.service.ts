@@ -1,8 +1,10 @@
 import { Injectable, Inject, forwardRef } from "@nestjs/common";
+import { BadRequestException } from "@nestjs/common";
 import { TicketRepository } from "./repositories/ticket.repository";
 import { StockService } from "../stock/stock.service";
 import { IngredientService } from "../ingredient/ingredient.service";
 import { ProduitRepository } from "../catalogue/repositories/produit.repository";
+import { CatalogueService } from "../catalogue/catalogue.service";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import { CashSessionRepository } from "../session-caisse/repositories/cash-session.repository";
 import {
@@ -27,6 +29,7 @@ export class VenteService {
     private readonly stockService: StockService,
     private readonly ingredientService: IngredientService,
     private readonly produitRepo: ProduitRepository,
+    private readonly catalogueService: CatalogueService,
     private readonly audit: AuditService,
     @Inject(forwardRef(() => CashSessionRepository))
     private readonly sessionRepo: CashSessionRepository,
@@ -39,6 +42,43 @@ export class VenteService {
     // sur l'emplacement concerne. Toute vente est rattachee.
     const session = await this.sessionRepo.trouverActive(tenantId, userId, dto.emplacementId);
     if (!session) throw new SessionCaisseRequiseException();
+
+    // Garde disponibilite : refuser la vente si une variante (MENU ou
+    // supplement) est indisponible. Pour les variantes MENU, on verifie
+    // aussi que les portions demandees ne depassent pas le stock servable.
+    const dispo = await this.catalogueService.disponibilitesEmplacement(
+      tenantId, dto.emplacementId,
+    );
+    const setIndispo = new Set(dispo.indisponibles);
+    const setIndispoProduits = new Set(dispo.indisponiblesProduits);
+    // Cumul quantites par variante MENU pour comparer aux portions servables
+    const qtyMenuParVariante = new Map<string, number>();
+    for (const l of dto.lignes) {
+      qtyMenuParVariante.set(
+        l.varianteId,
+        (qtyMenuParVariante.get(l.varianteId) ?? 0) + l.quantite,
+      );
+      // Supplements : supplementId = productId du supplément.
+      for (const s of (l.supplements ?? [])) {
+        if (setIndispoProduits.has(s.supplementId)) {
+          throw new BadRequestException(
+            `Un supplément choisi est en rupture. Retirez-le ou réessayez plus tard.`,
+          );
+        }
+      }
+    }
+    for (const [varianteId, qtyDemandee] of qtyMenuParVariante.entries()) {
+      if (dispo.portionsMenu[varianteId] !== undefined) {
+        const portionsDispo = dispo.portionsMenu[varianteId];
+        if (portionsDispo < qtyDemandee) {
+          throw new BadRequestException(
+            `Ingrédients insuffisants pour servir ${qtyDemandee} portion${qtyDemandee > 1 ? "s" : ""} de ce menu (${portionsDispo} disponible${portionsDispo > 1 ? "s" : ""}).`,
+          );
+        }
+      } else if (setIndispo.has(varianteId)) {
+        throw new BadRequestException("Un produit du panier est en rupture de stock.");
+      }
+    }
 
     const numeroTicket = await this.genererNumeroTicket(tenantId);
 
