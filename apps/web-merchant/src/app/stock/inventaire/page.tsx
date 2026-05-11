@@ -249,7 +249,9 @@ function BarreValidation({
     <div className="mt-6 sticky bottom-4 bg-surface border border-border rounded-xl p-4 shadow-md flex items-center justify-between gap-3 flex-wrap">
       <div className="text-xs text-muted flex items-start gap-2 max-w-md">
         <AlertCircle size={14} className="shrink-0 mt-0.5" />
-        Lignes vides ignorées. Pour mettre une référence à 0, saisis explicitement <strong>0</strong>.
+        <span>
+          Lignes vides ignorées. Pour mettre une référence à 0, saisis explicitement <strong>0</strong>.
+        </span>
       </div>
       <Button
         variant="primary"
