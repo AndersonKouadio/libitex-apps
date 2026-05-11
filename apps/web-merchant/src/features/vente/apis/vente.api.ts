@@ -1,6 +1,6 @@
 import { httpClient } from "@/lib/http";
 import type { PaginatedResponse } from "@/types/api.type";
-import type { ITicket, IRapportZ } from "../types/vente.type";
+import type { ITicket, IRapportZ, IRapportVentesPeriode, IRapportMarges } from "../types/vente.type";
 
 const BASE = "/vente";
 
@@ -46,4 +46,20 @@ export const venteAPI = {
 
   rapportZ: (token: string, emplacementId: string, date?: string) =>
     httpClient.get<IRapportZ>(`${BASE}/rapport-z/${emplacementId}${date ? `?date=${date}` : ""}`, { token }),
+
+  rapportVentesPeriode: (
+    token: string, debut: string, fin: string, emplacementId?: string,
+  ) => {
+    const qs = new URLSearchParams({ debut, fin });
+    if (emplacementId) qs.set("emplacementId", emplacementId);
+    return httpClient.get<IRapportVentesPeriode>(`${BASE}/rapports/ventes-periode?${qs}`, { token });
+  },
+
+  rapportMarges: (
+    token: string, debut: string, fin: string, emplacementId?: string,
+  ) => {
+    const qs = new URLSearchParams({ debut, fin });
+    if (emplacementId) qs.set("emplacementId", emplacementId);
+    return httpClient.get<IRapportMarges>(`${BASE}/rapports/marges?${qs}`, { token });
+  },
 };

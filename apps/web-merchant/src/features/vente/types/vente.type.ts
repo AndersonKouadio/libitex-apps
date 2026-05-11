@@ -84,6 +84,56 @@ export interface IRapportZ {
   }[];
 }
 
+export interface ILigneVentePeriode {
+  date: string;
+  recettes: number;
+  nombre: number;
+  tva: number;
+  remises: number;
+  ticketMoyen: number;
+}
+
+export interface IRapportVentesPeriode {
+  debut: string;
+  fin: string;
+  emplacementId: string | null;
+  jours: ILigneVentePeriode[];
+  totaux: {
+    recettes: number;
+    tickets: number;
+    tva: number;
+    remises: number;
+    ticketMoyen: number;
+  };
+}
+
+export interface ILigneMarge {
+  variantId: string;
+  nomProduit: string;
+  nomVariante: string | null;
+  sku: string;
+  quantiteTotale: number;
+  chiffreAffaires: number;
+  coutTotal: number;
+  margeBrute: number;
+  margePourcent: number;
+  prixAchatManquant: boolean;
+}
+
+export interface IRapportMarges {
+  debut: string;
+  fin: string;
+  emplacementId: string | null;
+  lignes: ILigneMarge[];
+  totaux: {
+    chiffreAffaires: number;
+    coutTotal: number;
+    margeBrute: number;
+    margePourcent: number;
+    quantiteTotale: number;
+  };
+}
+
 export enum MethodePaiement {
   CASH = "CASH",
   CARD = "CARD",

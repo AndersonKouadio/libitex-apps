@@ -269,6 +269,77 @@ export class TicketRepository {
     return { summary, paymentBreakdown, topProduits, ventesParHeure };
   }
 
+  /**
+   * Ventes agregees par jour sur une periode (date debut/fin incluses).
+   * Filtrable par emplacement. Inclut CA, nombre tickets, TVA, remise.
+   */
+  async ventesParPeriode(
+    tenantId: string,
+    debut: string,
+    fin: string,
+    locationId?: string,
+  ) {
+    const conditions = [
+      eq(tickets.tenantId, tenantId),
+      eq(tickets.status, "COMPLETED"),
+      sql`DATE(${tickets.completedAt}) >= ${debut}`,
+      sql`DATE(${tickets.completedAt}) <= ${fin}`,
+    ];
+    if (locationId) conditions.push(eq(tickets.locationId, locationId));
+
+    return this.db
+      .select({
+        date: sql<string>`TO_CHAR(DATE(${tickets.completedAt}), 'YYYY-MM-DD')`,
+        recettes: sql<number>`COALESCE(SUM(CAST(${tickets.total} AS NUMERIC)), 0)`,
+        nombre: sql<number>`COUNT(*)`,
+        tva: sql<number>`COALESCE(SUM(CAST(${tickets.taxAmount} AS NUMERIC)), 0)`,
+        remises: sql<number>`COALESCE(SUM(CAST(${tickets.discountAmount} AS NUMERIC)), 0)`,
+      })
+      .from(tickets)
+      .where(and(...conditions))
+      .groupBy(sql`DATE(${tickets.completedAt})`)
+      .orderBy(sql`DATE(${tickets.completedAt})`);
+  }
+
+  /**
+   * Marges par produit sur une periode. CA = SUM(lineTotal),
+   * Cout = SUM(quantity * variants.pricePurchase), Marge brute = CA - Cout.
+   * Les variantes sans prix d'achat (=0) sortent avec marge = CA et un
+   * marqueur prixAchatManquant=true pour signaler.
+   */
+  async margesParProduit(
+    tenantId: string,
+    debut: string,
+    fin: string,
+    locationId?: string,
+  ) {
+    const conditions = [
+      eq(tickets.tenantId, tenantId),
+      eq(tickets.status, "COMPLETED"),
+      sql`DATE(${tickets.completedAt}) >= ${debut}`,
+      sql`DATE(${tickets.completedAt}) <= ${fin}`,
+    ];
+    if (locationId) conditions.push(eq(tickets.locationId, locationId));
+
+    return this.db
+      .select({
+        variantId: ticketLines.variantId,
+        nomProduit: products.name,
+        nomVariante: variants.name,
+        sku: ticketLines.sku,
+        prixAchat: variants.pricePurchase,
+        quantiteTotale: sql<number>`SUM(CAST(${ticketLines.quantity} AS NUMERIC))`,
+        chiffreAffaires: sql<number>`SUM(CAST(${ticketLines.lineTotal} AS NUMERIC))`,
+      })
+      .from(ticketLines)
+      .innerJoin(tickets, eq(ticketLines.ticketId, tickets.id))
+      .innerJoin(variants, eq(ticketLines.variantId, variants.id))
+      .innerJoin(products, eq(variants.productId, products.id))
+      .where(and(...conditions))
+      .groupBy(ticketLines.variantId, products.name, variants.name, ticketLines.sku, variants.pricePurchase)
+      .orderBy(desc(sql`SUM(CAST(${ticketLines.lineTotal} AS NUMERIC))`));
+  }
+
   // --- Rapport Z par session ---
 
   async rapportZParSession(tenantId: string, sessionId: string) {
