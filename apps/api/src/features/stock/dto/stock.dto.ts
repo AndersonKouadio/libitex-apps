@@ -1,5 +1,6 @@
 import {
-  IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, IsInt, Min, IsDateString, IsEnum,
+  IsString, IsNotEmpty, IsOptional, IsNumber, IsUUID, IsInt, Min, IsDateString,
+  IsEnum, IsArray, ValidateNested, ArrayMinSize,
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
@@ -87,6 +88,41 @@ export class AjustementStockDto {
   @IsString()
   @IsNotEmpty({ message: "La justification est obligatoire" })
   note!: string;
+}
+
+export class LigneInventaireDto {
+  @ApiProperty()
+  @IsUUID("4")
+  varianteId!: string;
+
+  @ApiProperty({ description: "Quantite physique constatee", example: 12 })
+  @IsNumber()
+  @Min(0)
+  quantiteReelle!: number;
+}
+
+export class AppliquerInventaireDto {
+  @ApiProperty()
+  @IsUUID("4")
+  emplacementId!: string;
+
+  @ApiProperty({ example: "Inventaire 11/05/2026" })
+  @IsString()
+  @IsNotEmpty({ message: "La justification est obligatoire" })
+  justification!: string;
+
+  @ApiProperty({ type: [LigneInventaireDto], description: "Lignes comptees (les non-comptees sont exclues cote frontend)" })
+  @IsArray()
+  @ArrayMinSize(1, { message: "Au moins une ligne doit etre comptee" })
+  @ValidateNested({ each: true })
+  @Type(() => LigneInventaireDto)
+  lignes!: LigneInventaireDto[];
+}
+
+export class InventaireResultatDto {
+  ajustements!: number;
+  inchanges!: number;
+  total!: number;
 }
 
 export class TransfertStockDto {

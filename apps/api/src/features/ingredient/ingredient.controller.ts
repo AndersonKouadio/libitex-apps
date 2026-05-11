@@ -7,7 +7,7 @@ import { IngredientService } from "./ingredient.service";
 import {
   CreerIngredientDto, ModifierIngredientDto, EntreeIngredientDto,
   AjustementIngredientDto, TransfertIngredientDto, DefinirRecetteDto,
-  ListerMouvementsIngredientsQueryDto,
+  ListerMouvementsIngredientsQueryDto, AppliquerInventaireIngredientsDto,
 } from "./dto/ingredient.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
@@ -78,6 +78,16 @@ export class IngredientController {
     @Param("emplacementId") emplacementId: string,
   ) {
     return this.service.stockParEmplacement(user.tenantId, emplacementId);
+  }
+
+  @Post("inventaire")
+  @ApiOperation({ summary: "Appliquer un inventaire complet d'ingrédients (bulk)" })
+  @Roles("ADMIN", "MANAGER")
+  appliquerInventaire(
+    @CurrentUser() user: CurrentUserData,
+    @Body() dto: AppliquerInventaireIngredientsDto,
+  ) {
+    return this.service.appliquerInventaire(user.tenantId, user.userId, dto);
   }
 
   @Get("mouvements")
