@@ -26,4 +26,36 @@ export class TableauDeBordController {
   ) {
     return this.service.ventesParJour(user.tenantId, jours);
   }
+
+  @Get("top-produits")
+  @ApiOperation({ summary: "Top N produits par chiffre d'affaires sur la période" })
+  @ApiQuery({ name: "jours", required: false })
+  @ApiQuery({ name: "limit", required: false })
+  topProduits(
+    @CurrentUser() user: CurrentUserData,
+    @Query("jours", new DefaultValuePipe(7), ParseIntPipe) jours: number,
+    @Query("limit", new DefaultValuePipe(10), ParseIntPipe) limit: number,
+  ) {
+    return this.service.topProduits(user.tenantId, jours, limit);
+  }
+
+  @Get("repartition-paiements")
+  @ApiOperation({ summary: "Repartition du CA par methode de paiement sur la période" })
+  @ApiQuery({ name: "jours", required: false })
+  repartitionPaiements(
+    @CurrentUser() user: CurrentUserData,
+    @Query("jours", new DefaultValuePipe(7), ParseIntPipe) jours: number,
+  ) {
+    return this.service.repartitionPaiements(user.tenantId, jours);
+  }
+
+  @Get("kpis-periode")
+  @ApiOperation({ summary: "KPIs sur N jours avec tendance vs période précédente" })
+  @ApiQuery({ name: "jours", required: false })
+  kpisPeriode(
+    @CurrentUser() user: CurrentUserData,
+    @Query("jours", new DefaultValuePipe(7), ParseIntPipe) jours: number,
+  ) {
+    return this.service.kpisPeriode(user.tenantId, jours);
+  }
 }
