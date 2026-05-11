@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { ClientRepository } from "./repositories/client.repository";
-import { CreerClientDto, ModifierClientDto, ClientResponseDto } from "./dto/client.dto";
+import {
+  CreerClientDto, ModifierClientDto, ClientResponseDto,
+  KpisClientDto, HistoriqueClientDto,
+} from "./dto/client.dto";
 import { PaginatedResponseDto } from "../../common/dto/api-response.dto";
 
 @Injectable()
@@ -56,6 +59,39 @@ export class ClientService {
     const existant = await this.clientRepo.trouverParId(tenantId, id);
     if (!existant) throw new NotFoundException("Client introuvable");
     await this.clientRepo.supprimer(tenantId, id);
+  }
+
+  async kpis(tenantId: string, clientId: string): Promise<KpisClientDto> {
+    const client = await this.clientRepo.trouverParId(tenantId, clientId);
+    if (!client) throw new NotFoundException("Client introuvable");
+
+    const k = await this.clientRepo.kpisClient(tenantId, clientId);
+    return {
+      caTotal: Math.round(k.caTotal),
+      nbTickets: k.nbTickets,
+      ticketMoyen: k.nbTickets > 0 ? Math.round(k.caTotal / k.nbTickets) : 0,
+      premierAchat: k.premierAchat?.toISOString?.() ?? null,
+      dernierAchat: k.dernierAchat?.toISOString?.() ?? null,
+    };
+  }
+
+  async historique(
+    tenantId: string, clientId: string, page = 1, pageSize = 25,
+  ): Promise<HistoriqueClientDto> {
+    const client = await this.clientRepo.trouverParId(tenantId, clientId);
+    if (!client) throw new NotFoundException("Client introuvable");
+
+    const { rows, total } = await this.clientRepo.historiqueTickets(tenantId, clientId, page, pageSize);
+    return {
+      data: rows.map((r) => ({
+        id: r.id,
+        numeroTicket: r.ticketNumber,
+        total: Number(r.total),
+        completeLe: r.completedAt?.toISOString?.() ?? null,
+        emplacementId: r.locationId,
+      })),
+      meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+    };
   }
 
   private toResponse(c: any): ClientResponseDto {

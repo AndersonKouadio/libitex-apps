@@ -16,6 +16,33 @@ export function useClientListQuery(page = 1, recherche?: string) {
   });
 }
 
+export function useClientDetailQuery(id: string | undefined) {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: clientKeyQuery("detail", id),
+    queryFn: () => clientAPI.obtenir(token!, id!),
+    enabled: !!token && !!id,
+  });
+}
+
+export function useKpisClientQuery(id: string | undefined) {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: clientKeyQuery("kpis", id),
+    queryFn: () => clientAPI.kpis(token!, id!),
+    enabled: !!token && !!id,
+  });
+}
+
+export function useHistoriqueClientQuery(id: string | undefined, page = 1, pageSize = 25) {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: clientKeyQuery("historique", id, page, pageSize),
+    queryFn: () => clientAPI.historique(token!, id!, page, pageSize),
+    enabled: !!token && !!id,
+  });
+}
+
 export function useCreerClientMutation() {
   const { token } = useAuth();
   const invalidate = useInvalidateClientQuery();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button, TextField, Label, Input, FieldError, Table, Skeleton } from "@heroui/react";
@@ -95,11 +96,12 @@ export default function PageClients() {
                   {clients.map((c) => (
                     <Table.Row key={c.id}>
                       <Table.Cell>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">
-                            {c.prenom} {c.nomFamille ?? ""}
-                          </p>
-                        </div>
+                        <Link
+                          href={`/clients/${c.id}`}
+                          className="text-sm font-medium text-foreground hover:text-accent transition-colors"
+                        >
+                          {c.prenom} {c.nomFamille ?? ""}
+                        </Link>
                       </Table.Cell>
                       <Table.Cell>
                         <div className="space-y-0.5">
