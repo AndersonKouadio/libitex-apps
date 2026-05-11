@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button, Card, toast } from "@heroui/react";
 import { ArrowLeft, Upload, ChevronRight, CheckCircle2 } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
@@ -25,7 +24,6 @@ const TITRES_ETAPE: Record<Etape, { num: number; titre: string; description: str
 };
 
 export default function PageImportProduits() {
-  const router = useRouter();
   const [etape, setEtape] = useState<Etape>("upload");
   const [csv, setCsv] = useState<CsvParsed | null>(null);
   const [nomFichier, setNomFichier] = useState("");
@@ -64,7 +62,7 @@ export default function PageImportProduits() {
       } else {
         toast.warning(`${res.succes}/${res.total} importés — ${res.erreurs.length} en erreur`);
       }
-      router.push("/catalogue");
+      window.location.href = "/catalogue";
     } catch (err) {
       toast.danger(err instanceof Error ? err.message : "Erreur lors de l'import");
     }
@@ -78,7 +76,7 @@ export default function PageImportProduits() {
         titre="Importer des produits depuis un CSV"
         description={meta.description}
         actions={
-          <Button variant="ghost" className="gap-1.5" onPress={() => router.push("/catalogue")}>
+          <Button variant="ghost" className="gap-1.5" onPress={() => { window.location.href = "/catalogue"; }}>
             <ArrowLeft size={16} />
             Retour au catalogue
           </Button>
