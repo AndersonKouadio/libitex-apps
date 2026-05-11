@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { PageContainer } from "@/components/layout/page-container";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
@@ -9,6 +9,10 @@ import { ModalEntreeStock } from "@/features/stock/components/modal-entree-stock
 import { ModalTransfertStock } from "@/features/stock/components/modal-transfert-stock";
 import { ModalAjustementStock } from "@/features/stock/components/modal-ajustement-stock";
 import { ModalReceptionIngredient } from "@/features/ingredient/components/modal-reception-ingredient";
+import { KpisStock } from "@/features/stock/components/kpis-stock";
+import { BandeauAlertesStock } from "@/features/stock/components/bandeau-alertes-stock";
+import { TableStockVariantes } from "@/features/stock/components/table-stock-variantes";
+import { calculerKpisStock } from "@/features/stock/utils/calcul-kpi";
 import {
   useIngredientListQuery, useStockIngredientsQuery,
 } from "@/features/ingredient/queries/ingredient-list.query";
@@ -19,10 +23,6 @@ import {
   MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus,
   Settings, Wheat, AlertTriangle, Scale,
 } from "lucide-react";
-
-const LABELS_TYPE: Record<string, string> = {
-  SIMPLE: "Standard", VARIANT: "Variantes", SERIALIZED: "Sérialisé", PERISHABLE: "Périssable",
-};
 
 type Onglet = "variantes" | "ingredients";
 
@@ -35,6 +35,7 @@ export default function PageStock() {
   const [modalTransfertOuvert, setModalTransfertOuvert] = useState(false);
   const [modalAjustementOuvert, setModalAjustementOuvert] = useState(false);
   const [modalReceptionOuvert, setModalReceptionOuvert] = useState(false);
+  const [filtreAlerte, setFiltreAlerte] = useState(false);
 
   const { data: stockDetail, isLoading: chargementStock } =
     useStockEmplacementQuery(empSelectionne || undefined);
@@ -47,6 +48,9 @@ export default function PageStock() {
 
   // Index stock ingredient par ingredientId pour lookup rapide.
   const stockIngMap = new Map((stockIng ?? []).map((s) => [s.ingredientId, s]));
+
+  // KPIs calcules au vol sur les lignes chargees pour l'emplacement courant.
+  const kpis = useMemo(() => calculerKpisStock(stockDetail ?? []), [stockDetail]);
 
   return (
     <PageContainer>
@@ -183,43 +187,16 @@ export default function PageStock() {
                   </Card.Content>
                 </Card>
               ) : (
-                <Table>
-                  <Table.ScrollContainer>
-                    <Table.Content aria-label="Stock par emplacement">
-                      <Table.Header className="table-header-libitex">
-                        <Table.Column isRowHeader>Produit</Table.Column>
-                        <Table.Column>SKU</Table.Column>
-                        <Table.Column>Type</Table.Column>
-                        <Table.Column>Quantité</Table.Column>
-                      </Table.Header>
-                      <Table.Body>
-                        {(stockDetail ?? []).map((s) => (
-                          <Table.Row key={s.varianteId}>
-                            <Table.Cell>
-                              <div>
-                                <p className="text-sm font-medium text-foreground">{s.nomProduit}</p>
-                                {s.nomVariante && <p className="text-xs text-muted">{s.nomVariante}</p>}
-                              </div>
-                            </Table.Cell>
-                            <Table.Cell>
-                              <span className="text-xs font-mono text-muted">{s.sku}</span>
-                            </Table.Cell>
-                            <Table.Cell>
-                              <Chip className="text-xs">{LABELS_TYPE[s.typeProduit] || s.typeProduit}</Chip>
-                            </Table.Cell>
-                            <Table.Cell>
-                              <span className={`text-sm font-semibold tabular-nums ${
-                                s.quantite <= 0 ? "text-danger" : s.quantite < 10 ? "text-warning" : "text-foreground"
-                              }`}>
-                                {s.quantite}
-                              </span>
-                            </Table.Cell>
-                          </Table.Row>
-                        ))}
-                      </Table.Body>
-                    </Table.Content>
-                  </Table.ScrollContainer>
-                </Table>
+                <div>
+                  <KpisStock kpis={kpis} />
+                  <BandeauAlertesStock
+                    nbAlertes={kpis.nbAlertes}
+                    nbRuptures={kpis.nbRuptures}
+                    filtreActif={filtreAlerte}
+                    onBasculerFiltre={() => setFiltreAlerte((v) => !v)}
+                  />
+                  <TableStockVariantes rows={stockDetail ?? []} filtreAlerte={filtreAlerte} />
+                </div>
               )
             ) : (
               // Onglet Ingredients : stock + seuil + alerte
