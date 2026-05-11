@@ -13,6 +13,8 @@ export function useProduitListQuery(
     typeProduit?: string;
     categorieId?: string;
     actif?: boolean;
+    /** Active un refetchInterval (utile sur POS pour voir les modifs cross-postes). */
+    refetchAuto?: boolean;
   },
 ) {
   const { token } = useAuth();
@@ -33,6 +35,9 @@ export function useProduitListQuery(
       actif: options?.actif,
     }),
     enabled: !!token,
+    staleTime: 15_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: options?.refetchAuto ? 30_000 : false,
   });
 }
 

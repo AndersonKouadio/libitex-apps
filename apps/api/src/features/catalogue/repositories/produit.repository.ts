@@ -3,6 +3,7 @@ import { eq, and, isNull, sql, ilike, or, inArray } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
   type Database, products, variants, categories, productLocations,
+  stockMovements, recipeLines, ingredientInventory,
 } from "@libitex/db";
 import type { UniteMesure } from "@libitex/shared";
 
@@ -328,5 +329,73 @@ export class ProduitRepository {
         isNull(products.deletedAt),
       ));
     return Number(r?.n ?? 0);
+  }
+
+  /**
+   * Calcule la disponibilite de toutes les variantes pour un emplacement.
+   * 3 cas :
+   *  - Variantes MENU : portions = min sur chaque ingredient de
+   *    floor(stock_ingredient / qty_recette). 0 si recette incomplete.
+   *  - Variantes de supplement (products.isSupplement) : disponible si
+   *    stock > 0, indisponible sinon.
+   *  - Autres variantes : disponible si stock > 0.
+   *
+   * Retourne uniquement les variantes pour lesquelles il y a un blocage
+   * (stock <= 0 ou portions = 0) — plus efficace que tout retourner.
+   */
+  async disponibilitesEmplacement(tenantId: string, locationId: string) {
+    // Stock par variante (toutes non-MENU). productId inclus pour
+    // pouvoir mapper supplementId (= product.id) vers rupture.
+    const stocksVariantes = await this.db
+      .select({
+        variantId: stockMovements.variantId,
+        productId: products.id,
+        quantite: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+        isSupplement: products.isSupplement,
+        productType: products.productType,
+      })
+      .from(stockMovements)
+      .innerJoin(variants, eq(stockMovements.variantId, variants.id))
+      .innerJoin(products, eq(variants.productId, products.id))
+      .where(and(
+        eq(stockMovements.tenantId, tenantId),
+        eq(stockMovements.locationId, locationId),
+      ))
+      .groupBy(stockMovements.variantId, products.id, products.isSupplement, products.productType);
+
+    // Recettes des MENU + stock ingredient correspondant
+    const recettes = await this.db
+      .select({
+        variantId: recipeLines.variantId,
+        ingredientId: recipeLines.ingredientId,
+        qtyRecette: recipeLines.quantity,
+        stockIng: ingredientInventory.quantity,
+      })
+      .from(recipeLines)
+      .innerJoin(variants, eq(recipeLines.variantId, variants.id))
+      .innerJoin(products, eq(variants.productId, products.id))
+      .leftJoin(ingredientInventory, and(
+        eq(ingredientInventory.ingredientId, recipeLines.ingredientId),
+        eq(ingredientInventory.locationId, locationId),
+        eq(ingredientInventory.tenantId, tenantId),
+      ))
+      .where(and(
+        eq(products.tenantId, tenantId),
+        eq(products.productType, "MENU"),
+        isNull(products.deletedAt),
+      ));
+
+    // Toutes les variantes MENU declarees (meme sans recette)
+    const menusToutes = await this.db
+      .select({ variantId: variants.id })
+      .from(variants)
+      .innerJoin(products, eq(variants.productId, products.id))
+      .where(and(
+        eq(products.tenantId, tenantId),
+        eq(products.productType, "MENU"),
+        isNull(products.deletedAt),
+      ));
+
+    return { stocksVariantes, recettes, menusToutes };
   }
 }

@@ -106,6 +106,17 @@ export class CatalogueController {
     );
   }
 
+  @Get("disponibilites")
+  @ApiOperation({
+    summary: "Map des variantes indisponibles pour un emplacement (rupture, ingredient manquant) + nb portions servables pour les MENU",
+  })
+  disponibilites(
+    @CurrentUser() user: CurrentUserData,
+    @Query("emplacementId") emplacementId: string,
+  ) {
+    return this.catalogueService.disponibilitesEmplacement(user.tenantId, emplacementId);
+  }
+
   // --- Categories ---
 
   @Post("categories")

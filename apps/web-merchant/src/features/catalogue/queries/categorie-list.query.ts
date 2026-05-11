@@ -11,6 +11,9 @@ export function useCategorieListQuery() {
     queryKey: catalogueKeyQuery("catégories"),
     queryFn: () => catalogueAPI.listerCategories(token!),
     enabled: !!token,
-    staleTime: 5 * 60_000,
+    // Reduit (5min -> 60s) pour que la creation/maj d'une categorie soit
+    // visible sur les autres onglets/postes sous une minute sans WS.
+    staleTime: 60_000,
+    refetchOnWindowFocus: true,
   });
 }

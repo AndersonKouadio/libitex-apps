@@ -11,6 +11,10 @@ export function useStockEmplacementQuery(emplacementId: string | undefined) {
     queryKey: stockKeyQuery("emplacement", emplacementId),
     queryFn: () => stockAPI.stockParEmplacement(token!, emplacementId!),
     enabled: !!token && !!emplacementId,
-    staleTime: 30_000,
+    // Stock change a chaque vente : refetch frequent pour que les
+    // caissiers d'un meme emplacement voient les maj quasi en direct.
+    staleTime: 10_000,
+    refetchInterval: 20_000,
+    refetchOnWindowFocus: true,
   });
 }

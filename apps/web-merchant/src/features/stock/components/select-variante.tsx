@@ -16,7 +16,11 @@ function libelleVariante(produit: IProduit, variante: IProduit["variantes"][numb
 }
 
 export function SelectVariante({ produits, varianteId, onChange }: Props) {
-  const options = produits.flatMap((p) => p.variantes.map((v) => ({ id: v.id, label: libelleVariante(p, v) })));
+  // Exclure les produits MENU : leur stock se calcule a partir des ingredients
+  // (recette), ils n'ont pas de stock propre a recevoir/ajuster/transferer.
+  const options = produits
+    .filter((p) => p.typeProduit !== "MENU")
+    .flatMap((p) => p.variantes.map((v) => ({ id: v.id, label: libelleVariante(p, v) })));
 
   return (
     <Select

@@ -11,6 +11,7 @@ import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.q
 import { estDisponibleMaintenant } from "@/features/catalogue/utils/disponibilite";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import { useStockEmplacementQuery } from "@/features/stock/queries/stock-emplacement.query";
+import { useDisponibilitesQuery } from "@/features/catalogue/queries/disponibilites.query";
 import { ModalEmplacement } from "@/features/stock/components/modal-emplacement";
 import { AucunEmplacement } from "@/components/empty-states/aucun-emplacement";
 import { usePanier } from "@/features/vente/hooks/usePanier";
@@ -40,7 +41,9 @@ export default function PagePOS() {
   // n'importe quel article a la commande. Filtrage par categorie cote front.
   // actif=true : un produit desactive depuis le catalogue ne doit plus
   // apparaitre au POS — invalidation TanStack provoque un refetch immediat.
-  const { data: produitsData } = useProduitListQuery(1, undefined, { isSupplement: null, actif: true });
+  const { data: produitsData } = useProduitListQuery(
+    1, undefined, { isSupplement: null, actif: true, refetchAuto: true },
+  );
   const { data: emplacements } = useEmplacementListQuery();
   const panier = usePanier();
 
@@ -80,6 +83,7 @@ export default function PagePOS() {
   const empId = emplacementId || emplacementsCaisse[0]?.id || "";
   const empCourant = emplacementsCaisse.find((e) => e.id === empId);
   const { data: stocks } = useStockEmplacementQuery(empId || undefined);
+  const { data: dispos } = useDisponibilitesQuery(empId || undefined);
   const { data: sessionActive, isLoading: chargementSession } = useSessionActiveQuery(empId || null);
   const tousLesProduits = produitsData?.data ?? [];
   // Filtre actif : produit actif + en stock + plage horaire valide + emplacement autorise.
@@ -237,7 +241,12 @@ export default function PagePOS() {
         </header>
 
         <div className="flex-1 overflow-hidden flex flex-col pb-20 lg:pb-0">
-          <GrilleProduits produits={produits} stocks={stocks} onAjouter={saisieQuantite.ajouterDepuisGrille} />
+          <GrilleProduits
+            produits={produits}
+            stocks={stocks}
+            disponibilites={dispos}
+            onAjouter={saisieQuantite.ajouterDepuisGrille}
+          />
         </div>
       </div>
 
@@ -399,6 +408,7 @@ export default function PagePOS() {
           nomProduit={articleEnCours.nomProduit}
           prixBase={articleEnCours.prixUnitaire * articleEnCours.quantite}
           supplementsCourants={articleEnCours.supplements}
+          indisponibles={dispos?.indisponiblesProduits}
           onConfirmer={confirmerSupplements}
           onFermer={() => setLigneSupplements(null)}
         />
