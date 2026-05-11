@@ -24,7 +24,9 @@ export function RapportZVentilation({ rapport }: Props) {
           <div className="space-y-3">
             {rapport.ventilationPaiements.map((p) => {
               const Icone = iconeMethode(p.methode);
-              const pct = totalRevenu > 0 ? Math.round((p.total / totalRevenu) * 100) : 0;
+              const pctExact = totalRevenu > 0 ? (p.total / totalRevenu) * 100 : 0;
+              const pct = Math.round(pctExact);
+              const labelPct = pctExact > 0 && pctExact < 1 ? "<1%" : `${pct}%`;
               return (
                 <div key={p.methode} className="flex items-center gap-4 py-2">
                   <span className="w-9 h-9 rounded-lg bg-surface-secondary flex items-center justify-center text-muted shrink-0">
@@ -40,8 +42,8 @@ export function RapportZVentilation({ rapport }: Props) {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <ProgressBar value={pct} aria-label={`Part ${libelleMethode(p.methode)}`} className="flex-1" />
-                      <span className="text-xs text-muted tabular-nums w-10 text-right">{pct}%</span>
+                      <ProgressBar value={Math.max(pct, pctExact > 0 ? 1 : 0)} aria-label={`Part ${libelleMethode(p.methode)}`} className="flex-1" />
+                      <span className="text-xs text-muted tabular-nums w-12 text-right">{labelPct}</span>
                     </div>
                   </div>
                   <span className="text-xs text-muted tabular-nums shrink-0">
