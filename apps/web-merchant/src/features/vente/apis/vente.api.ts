@@ -1,6 +1,8 @@
 import { httpClient } from "@/lib/http";
 import type { PaginatedResponse } from "@/types/api.type";
-import type { ITicket, IRapportZ, IRapportVentesPeriode, IRapportMarges } from "../types/vente.type";
+import type {
+  ITicket, IRapportZ, IRapportVentesPeriode, IRapportMarges, IRapportTva,
+} from "../types/vente.type";
 
 const BASE = "/vente";
 
@@ -61,5 +63,13 @@ export const venteAPI = {
     const qs = new URLSearchParams({ debut, fin });
     if (emplacementId) qs.set("emplacementId", emplacementId);
     return httpClient.get<IRapportMarges>(`${BASE}/rapports/marges?${qs}`, { token });
+  },
+
+  rapportTva: (
+    token: string, debut: string, fin: string, emplacementId?: string,
+  ) => {
+    const qs = new URLSearchParams({ debut, fin });
+    if (emplacementId) qs.set("emplacementId", emplacementId);
+    return httpClient.get<IRapportTva>(`${BASE}/rapports/tva?${qs}`, { token });
   },
 };

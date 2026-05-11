@@ -15,7 +15,7 @@ import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-li
 import { ModalEmplacement } from "@/features/stock/components/modal-emplacement";
 import { useRapportZQuery } from "@/features/vente/queries/rapport-z.query";
 import {
-  useRapportVentesPeriodeQuery, useRapportMargesQuery,
+  useRapportVentesPeriodeQuery, useRapportMargesQuery, useRapportTvaQuery,
 } from "@/features/vente/queries/rapports-periode.query";
 import { RapportZResume } from "@/features/vente/components/rapport-z-resume";
 import { RapportZVentilation } from "@/features/vente/components/rapport-z-ventilation";
@@ -23,8 +23,9 @@ import { RapportZTopProduits } from "@/features/vente/components/rapport-z-top-p
 import { RapportZVentesHeure } from "@/features/vente/components/rapport-z-ventes-heure";
 import { RapportVentesPeriode } from "@/features/vente/components/rapport-ventes-periode";
 import { RapportMarges } from "@/features/vente/components/rapport-marges";
+import { RapportTva } from "@/features/vente/components/rapport-tva";
 import {
-  exporterRapportZCsv, exporterVentesPeriodeCsv, exporterMargesCsv,
+  exporterRapportZCsv, exporterVentesPeriodeCsv, exporterMargesCsv, exporterTvaCsv,
 } from "@/features/vente/utils/export-rapport";
 
 type Onglet = "z-jour" | "ventes-periode" | "marges" | "tva";
@@ -59,6 +60,9 @@ export default function PageRapports() {
   );
   const { data: rapportMarges, isFetching: margesChargement } = useRapportMargesQuery(
     debut, fin, empPeriode || undefined, onglet === "marges",
+  );
+  const { data: rapportTva, isFetching: tvaChargement } = useRapportTvaQuery(
+    debut, fin, empPeriode || undefined, onglet === "tva",
   );
 
   const empParDefaut = empId || emplacements?.[0]?.id || "";
@@ -114,7 +118,7 @@ export default function PageRapports() {
               Marges
             </span>
           </Tabs.Tab>
-          <Tabs.Tab id="tva" isDisabled className="px-4 whitespace-nowrap">
+          <Tabs.Tab id="tva" className="px-4 whitespace-nowrap">
             <span className="inline-flex items-center gap-1.5">
               <ClipboardList size={14} />
               TVA
@@ -195,7 +199,7 @@ export default function PageRapports() {
         </div>
       )}
 
-      {(onglet === "ventes-periode" || onglet === "marges") && (
+      {(onglet === "ventes-periode" || onglet === "marges" || onglet === "tva") && (
         <div className="mt-4 space-y-4">
           <Card>
             <Card.Content className="flex flex-wrap items-end gap-3 p-4">
@@ -236,6 +240,15 @@ export default function PageRapports() {
                   <Download size={14} /> Export CSV
                 </Button>
               )}
+              {onglet === "tva" && rapportTva && rapportTva.taux.length > 0 && (
+                <Button
+                  variant="secondary"
+                  onPress={() => exporterTvaCsv(rapportTva, nomEmpPeriode)}
+                  className="gap-1.5"
+                >
+                  <Download size={14} /> Export CSV
+                </Button>
+              )}
             </Card.Content>
           </Card>
 
@@ -254,18 +267,15 @@ export default function PageRapports() {
               <RapportMarges rapport={rapportMarges} />
             ) : null
           )}
-        </div>
-      )}
 
-      {onglet === "tva" && (
-        <Card className="mt-4">
-          <Card.Content className="py-16 text-center">
-            <p className="text-sm text-foreground">Bientôt disponible</p>
-            <p className="text-xs text-muted mt-1">
-              Le rapport TVA détaillé sera ajouté dans le prochain commit.
-            </p>
-          </Card.Content>
-        </Card>
+          {onglet === "tva" && (
+            tvaChargement ? (
+              <Card><Card.Content className="py-10 text-center"><Spinner size="sm" /></Card.Content></Card>
+            ) : rapportTva ? (
+              <RapportTva rapport={rapportTva} />
+            ) : null
+          )}
+        </div>
       )}
     </PageContainer>
   );

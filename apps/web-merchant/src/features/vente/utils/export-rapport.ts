@@ -1,4 +1,6 @@
-import type { IRapportZ, IRapportVentesPeriode, IRapportMarges } from "../types/vente.type";
+import type {
+  IRapportZ, IRapportVentesPeriode, IRapportMarges, IRapportTva,
+} from "../types/vente.type";
 import { libelleMethode } from "./methode-paiement";
 
 /**
@@ -73,6 +75,19 @@ export function exporterVentesPeriodeCsv(rapport: IRapportVentesPeriode, nomEmpl
   lignes.push("");
   lignes.push(`Total,${rapport.totaux.tickets},${rapport.totaux.recettes},${rapport.totaux.ticketMoyen},${rapport.totaux.tva},${rapport.totaux.remises}`);
   telechargerFichier(`ventes-${rapport.debut}_${rapport.fin}.csv`, lignes.join("\n"));
+}
+
+export function exporterTvaCsv(rapport: IRapportTva, nomEmplacement?: string) {
+  const lignes: string[] = [];
+  lignes.push(`Rapport TVA,${csvEscape(nomEmplacement || "Tous emplacements")},${csvEscape(rapport.debut)} -> ${csvEscape(rapport.fin)}`);
+  lignes.push("");
+  lignes.push("Taux,Base HT (F),TVA collectee (F),Total TTC (F),Nb lignes");
+  for (const t of rapport.taux) {
+    lignes.push(`${t.taux}%,${t.baseHt},${t.tva},${t.totalTtc},${t.nombreLignes}`);
+  }
+  lignes.push("");
+  lignes.push(`Total,${rapport.totaux.baseHt},${rapport.totaux.tva},${rapport.totaux.totalTtc},${rapport.totaux.nombreLignes}`);
+  telechargerFichier(`tva-${rapport.debut}_${rapport.fin}.csv`, lignes.join("\n"));
 }
 
 export function exporterMargesCsv(rapport: IRapportMarges, nomEmplacement?: string) {

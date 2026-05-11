@@ -120,6 +120,27 @@ export interface ILigneMarge {
   prixAchatManquant: boolean;
 }
 
+export interface ILigneTva {
+  taux: number;
+  baseHt: number;
+  tva: number;
+  totalTtc: number;
+  nombreLignes: number;
+}
+
+export interface IRapportTva {
+  debut: string;
+  fin: string;
+  emplacementId: string | null;
+  taux: ILigneTva[];
+  totaux: {
+    baseHt: number;
+    tva: number;
+    totalTtc: number;
+    nombreLignes: number;
+  };
+}
+
 export interface IRapportMarges {
   debut: string;
   fin: string;
