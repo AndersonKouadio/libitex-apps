@@ -130,45 +130,47 @@ export default function PageRapports() {
       {onglet === "z-jour" && (
         <div className="mt-4 space-y-4 rapport-z-print">
           <Card className="no-print">
-            <Card.Content className="flex flex-wrap items-end gap-3 p-4">
-              <Select
-                selectedKey={empParDefaut}
-                onSelectionChange={(key) => setEmpId(String(key))}
-                aria-label="Emplacement"
-                className="min-w-[200px]"
-              >
-                <Label>Emplacement</Label>
-                <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
-                <Select.Popover>
-                  <ListBox>
-                    {(emplacements ?? []).map((e) => (
-                      <ListBox.Item key={e.id} id={e.id} textValue={e.nom}>{e.nom}</ListBox.Item>
-                    ))}
-                  </ListBox>
-                </Select.Popover>
-              </Select>
-              <ChampDate label="Date" value={date} onChange={setDate} />
-              <Button variant="primary" onPress={generer} isDisabled={isFetching || !empParDefaut}>
-                {isFetching ? <Spinner size="sm" /> : <><BarChart3 size={14} className="mr-1.5" />Générer le Z</>}
-              </Button>
-              {rapport && (
-                <>
-                  <Button
-                    variant="secondary"
-                    onPress={() => exporterRapportZCsv(rapport, nomEmplacement)}
-                    className="gap-1.5"
-                  >
-                    <Download size={14} /> Export CSV
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onPress={() => window.print()}
-                    className="gap-1.5"
-                  >
-                    <Printer size={14} /> Imprimer / PDF
-                  </Button>
-                </>
-              )}
+            <Card.Content className="p-4">
+              <div className="flex flex-wrap items-end gap-3">
+                <Select
+                  selectedKey={empParDefaut}
+                  onSelectionChange={(key) => setEmpId(String(key))}
+                  aria-label="Emplacement"
+                  className="min-w-[200px]"
+                >
+                  <Label>Emplacement</Label>
+                  <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      {(emplacements ?? []).map((e) => (
+                        <ListBox.Item key={e.id} id={e.id} textValue={e.nom}>{e.nom}</ListBox.Item>
+                      ))}
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
+                <ChampDate label="Date" value={date} onChange={setDate} />
+                <Button variant="primary" onPress={generer} isDisabled={isFetching || !empParDefaut}>
+                  {isFetching ? <Spinner size="sm" /> : <><BarChart3 size={14} className="mr-1.5" />Générer le Z</>}
+                </Button>
+                {rapport && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      onPress={() => exporterRapportZCsv(rapport, nomEmplacement)}
+                      className="gap-1.5"
+                    >
+                      <Download size={14} /> Export CSV
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onPress={() => window.print()}
+                      className="gap-1.5"
+                    >
+                      <Printer size={14} /> Imprimer / PDF
+                    </Button>
+                  </>
+                )}
+              </div>
             </Card.Content>
           </Card>
 
@@ -202,53 +204,55 @@ export default function PageRapports() {
       {(onglet === "ventes-periode" || onglet === "marges" || onglet === "tva") && (
         <div className="mt-4 space-y-4">
           <Card>
-            <Card.Content className="flex flex-wrap items-end gap-3 p-4">
-              <ChampDate label="Du" value={debut} onChange={setDebut} />
-              <ChampDate label="Au" value={fin} onChange={setFin} />
-              <Select
-                selectedKey={empPeriode || "all"}
-                onSelectionChange={(k) => setEmpPeriode(k === "all" ? "" : String(k))}
-                aria-label="Emplacement"
-                className="min-w-[200px]"
-              >
-                <Label>Emplacement</Label>
-                <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
-                <Select.Popover>
-                  <ListBox>
-                    <ListBox.Item id="all" textValue="Tous les emplacements">Tous</ListBox.Item>
-                    {(emplacements ?? []).map((e) => (
-                      <ListBox.Item key={e.id} id={e.id} textValue={e.nom}>{e.nom}</ListBox.Item>
-                    ))}
-                  </ListBox>
-                </Select.Popover>
-              </Select>
-              {onglet === "ventes-periode" && rapportVentes && rapportVentes.jours.length > 0 && (
-                <Button
-                  variant="secondary"
-                  onPress={() => exporterVentesPeriodeCsv(rapportVentes, nomEmpPeriode)}
-                  className="gap-1.5"
+            <Card.Content className="p-4">
+              <div className="flex flex-wrap items-end gap-3">
+                <ChampDate label="Du" value={debut} onChange={setDebut} />
+                <ChampDate label="Au" value={fin} onChange={setFin} />
+                <Select
+                  selectedKey={empPeriode || "all"}
+                  onSelectionChange={(k) => setEmpPeriode(k === "all" ? "" : String(k))}
+                  aria-label="Emplacement"
+                  className="min-w-[200px]"
                 >
-                  <Download size={14} /> Export CSV
-                </Button>
-              )}
-              {onglet === "marges" && rapportMarges && rapportMarges.lignes.length > 0 && (
-                <Button
-                  variant="secondary"
-                  onPress={() => exporterMargesCsv(rapportMarges, nomEmpPeriode)}
-                  className="gap-1.5"
-                >
-                  <Download size={14} /> Export CSV
-                </Button>
-              )}
-              {onglet === "tva" && rapportTva && rapportTva.taux.length > 0 && (
-                <Button
-                  variant="secondary"
-                  onPress={() => exporterTvaCsv(rapportTva, nomEmpPeriode)}
-                  className="gap-1.5"
-                >
-                  <Download size={14} /> Export CSV
-                </Button>
-              )}
+                  <Label>Emplacement</Label>
+                  <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      <ListBox.Item id="all" textValue="Tous les emplacements">Tous</ListBox.Item>
+                      {(emplacements ?? []).map((e) => (
+                        <ListBox.Item key={e.id} id={e.id} textValue={e.nom}>{e.nom}</ListBox.Item>
+                      ))}
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
+                {onglet === "ventes-periode" && rapportVentes && rapportVentes.jours.length > 0 && (
+                  <Button
+                    variant="secondary"
+                    onPress={() => exporterVentesPeriodeCsv(rapportVentes, nomEmpPeriode)}
+                    className="gap-1.5"
+                  >
+                    <Download size={14} /> Export CSV
+                  </Button>
+                )}
+                {onglet === "marges" && rapportMarges && rapportMarges.lignes.length > 0 && (
+                  <Button
+                    variant="secondary"
+                    onPress={() => exporterMargesCsv(rapportMarges, nomEmpPeriode)}
+                    className="gap-1.5"
+                  >
+                    <Download size={14} /> Export CSV
+                  </Button>
+                )}
+                {onglet === "tva" && rapportTva && rapportTva.taux.length > 0 && (
+                  <Button
+                    variant="secondary"
+                    onPress={() => exporterTvaCsv(rapportTva, nomEmpPeriode)}
+                    className="gap-1.5"
+                  >
+                    <Download size={14} /> Export CSV
+                  </Button>
+                )}
+              </div>
             </Card.Content>
           </Card>
 
