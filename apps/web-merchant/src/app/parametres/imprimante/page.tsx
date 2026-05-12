@@ -12,7 +12,7 @@ import {
 } from "@/lib/imprimante-thermique";
 import { preferencesPOS, usePreferencesPOS } from "@/lib/preferences-pos";
 import { genererTicketEscPos } from "@/lib/imprimante-thermique";
-import type { ITicket } from "@/features/vente/types/vente.type";
+import { construireTicketTest } from "@/lib/ticket-test";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
 export default function PageImprimante() {
@@ -60,37 +60,9 @@ export default function PageImprimante() {
     if (!device || !boutiqueActive) return;
     setEnCours(true);
     try {
-      const ticketTest: ITicket = {
-        id: "test",
-        numeroTicket: "TEST",
-        statut: "COMPLETED",
-        sousTotal: 1500,
-        montantTva: 0,
-        montantRemise: 0,
-        total: 1500,
-        nomClient: "Test client",
-        lignes: [
-          {
-            id: "tl1",
-            varianteId: "v1",
-            nomProduit: "Article de test",
-            nomVariante: "Standard",
-            sku: "TEST-001",
-            quantite: 1,
-            prixUnitaire: 1500,
-            remise: 0,
-            tauxTva: 0,
-            montantTva: 0,
-            totalLigne: 1500,
-            supplements: [],
-          },
-        ],
-        paiements: [{ id: "p1", methode: "CASH", montant: 2000 }],
-        creeLe: new Date().toISOString(),
-      };
       const caissier = `${utilisateur?.prenom ?? ""} ${utilisateur?.nomFamille ?? ""}`.trim();
       const data = genererTicketEscPos(
-        ticketTest,
+        construireTicketTest(),
         { nom: boutiqueActive.nom, devise: boutiqueActive.devise },
         500,
         { caissier: caissier || undefined },

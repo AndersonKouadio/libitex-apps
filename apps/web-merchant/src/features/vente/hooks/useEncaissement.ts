@@ -26,6 +26,10 @@ interface DerniereVente {
   total: number;
   monnaie: number;
   ticket: ITicket;
+  /** Vrai si la vente vient d'etre enregistree en mode hors-ligne (pas
+   *  encore synchronisee). Permet a l'UI de marquer "[OFFLINE]" sur le
+   *  ticket imprime pour tracabilite comptable (fix D2). */
+  origineOffline: boolean;
 }
 
 /**
@@ -170,6 +174,7 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
           total: panier.total,
           monnaie,
           ticket: syntheseTicketOffline(numeroLocal, panier, paiementsSaisis),
+          origineOffline: true,
         });
         panier.vider();
         toast.warning(`Vente ${numeroLocal} enregistree hors-ligne — sera synchronisee au retour reseau`);
@@ -196,6 +201,7 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
         total: resultat.total,
         monnaie: resultat.monnaie ?? 0,
         ticket: resultat,
+        origineOffline: false,
       });
       panier.vider();
       invalidateVente();

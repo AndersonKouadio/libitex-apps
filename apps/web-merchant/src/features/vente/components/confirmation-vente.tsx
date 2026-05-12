@@ -17,11 +17,14 @@ interface Props {
   ticket?: ITicket;
   /** Numero de session caisse pour l'impression (tracabilite). */
   numeroSession?: string;
+  /** Vrai si le ticket vient d'etre synchronise depuis la file offline.
+   *  Marque le ticket imprime "[OFFLINE]" pour traçabilité comptable. */
+  origineOffline?: boolean;
   onNouvelle: () => void;
 }
 
 export function ConfirmationVente({
-  numeroTicket, total, monnaie, ticket, numeroSession, onNouvelle,
+  numeroTicket, total, monnaie, ticket, numeroSession, origineOffline, onNouvelle,
 }: Props) {
   const { boutiqueActive, utilisateur } = useAuth();
   const prefs = usePreferencesPOS();
@@ -32,12 +35,18 @@ export function ConfirmationVente({
     if (!ticket || !boutiqueActive) return;
     const caissier = `${utilisateur?.prenom ?? ""} ${utilisateur?.nomFamille ?? ""}`.trim();
     try {
-      await imprimerTicket(
+      const res = await imprimerTicket(
         ticket,
         { nom: boutiqueActive.nom, devise: boutiqueActive.devise },
         monnaie,
-        { caissier: caissier || undefined, numeroSession },
+        { caissier: caissier || undefined, numeroSession, origineOffline },
       );
+      // Toast informatif si on est passe en fallback HTML suite a une
+      // erreur USB. Permet au caissier de comprendre pourquoi la popup
+      // s'est ouverte alors que l'imprimante etait censee marcher.
+      if (res.mode === "HTML" && res.fallback) {
+        toast.warning("Imprimante non detectee, ticket ouvert dans le navigateur");
+      }
     } catch (err) {
       toast.danger(err instanceof Error ? err.message : "Erreur a l'impression");
     }

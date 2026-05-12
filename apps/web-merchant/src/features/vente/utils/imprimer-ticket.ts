@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/browser";
 import type { ITicket } from "../types/vente.type";
 import { formatMontant } from "./format";
 import { LABELS_METHODE_PAIEMENT } from "./methode-paiement";
@@ -17,6 +18,27 @@ interface InfosContexte {
   caissier?: string;
   /** Numero de session caisse pour la tracabilite (SC-20260509-001). */
   numeroSession?: string;
+  /** Vrai si le ticket vient de la file hors-ligne (synchronise apres
+   *  retour reseau). Imprime "[OFFLINE]" en entete du ticket pour
+   *  tracabilite comptable. */
+  origineOffline?: boolean;
+}
+
+/**
+ * Mode d'impression utilise par `imprimerTicket`. Permet aux callers
+ * d'afficher un toast contextuel ("Imprimante non detectee, ticket
+ * ouvert dans le navigateur") ou de signaler une erreur.
+ */
+export type ModeImpression = "USB" | "HTML" | "ERREUR";
+
+export interface ResultatImpression {
+  mode: ModeImpression;
+  /** Vrai si on a bascule USB -> HTML suite a une erreur device.
+   *  Permet de prevenir le caissier que la prochaine impression risque
+   *  de re-echouer (cable, papier, capot). */
+  fallback: boolean;
+  /** Message court a afficher (null si tout s'est bien passe). */
+  message?: string;
 }
 
 /** Fix I4 : reutilise la table centralisee pour eviter la divergence
@@ -26,32 +48,48 @@ const LIBELLE_PAIEMENT = LABELS_METHODE_PAIEMENT;
 /**
  * Imprime un ticket. Strategie :
  * 1) Si WebUSB supporte ET imprimante thermique appairee : envoi direct
- *    ESC/POS, sans dialog, ~0.5s. Renvoie true.
- * 2) Sinon : fallback popup HTML 80mm + window.print(). Renvoie true.
- * 3) Erreur USB (cable debranche, papier...) : on bascule sur le fallback
- *    HTML pour ne pas perdre l'impression.
+ *    ESC/POS, sans dialog, ~0.5s. Renvoie {mode: "USB"}.
+ * 2) Pas d'imprimante appairee : fallback popup HTML 80mm + window.print().
+ *    Renvoie {mode: "HTML", fallback: false}.
+ * 3) Erreur USB (cable debranche, papier, timeout...) : capture Sentry +
+ *    bascule popup HTML. Renvoie {mode: "HTML", fallback: true, message}.
+ * 4) Echec total (popup bloquee ET pas de fallback) : {mode: "ERREUR"}.
+ *
+ * Le caller peut afficher un toast contextuel selon `mode` + `fallback`.
  */
 export async function imprimerTicket(
   ticket: ITicket,
   boutique: InfosBoutique,
   monnaie = 0,
   contexte: InfosContexte = {},
-): Promise<void> {
+): Promise<ResultatImpression> {
   if (supporteWebUsb()) {
     try {
       const device = await retrouverImprimante();
       if (device) {
         const data = genererTicketEscPos(ticket, boutique, monnaie, contexte);
         await envoyerCommandes(device, data);
-        return;
+        return { mode: "USB", fallback: false };
       }
     } catch (err) {
       // L'erreur USB n'est pas bloquante : on retombe sur la popup HTML
-      // pour que le caissier ait quand meme son ticket.
-      console.warn("Impression USB echouee, fallback HTML :", err);
+      // pour que le caissier ait quand meme son ticket. On capture sur
+      // Sentry pour suivre le taux d'echec en prod.
+      const message = err instanceof Error ? err.message : String(err);
+      Sentry.captureException(err instanceof Error ? err : new Error(message), {
+        tags: { module: "impression", mode: "usb-fallback" },
+        extra: {
+          ticketId: ticket.id,
+          numeroTicket: ticket.numeroTicket,
+          origineOffline: contexte.origineOffline ?? false,
+        },
+      });
+      imprimerViaPopup(ticket, boutique, monnaie, contexte);
+      return { mode: "HTML", fallback: true, message };
     }
   }
   imprimerViaPopup(ticket, boutique, monnaie, contexte);
+  return { mode: "HTML", fallback: false };
 }
 
 function imprimerViaPopup(
@@ -154,6 +192,7 @@ function construireHtml(
     .header { text-align: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed #000; }
     .header h1 { font-size: 16px; margin: 0 0 2px; }
     .meta { font-size: 11px; color: #333; }
+    .badge-offline { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 6px; border: 1px solid #000; border-radius: 2px; margin-top: 3px; }
     .bloc-meta { font-size: 11px; color: #000; margin: 6px 0; }
     .bloc-meta div { margin: 1px 0; }
     table { width: 100%; border-collapse: collapse; margin: 8px 0; }
@@ -179,6 +218,7 @@ function construireHtml(
     <div class="meta">Ticket n° ${echapperHtml(ticket.numeroTicket)}</div>
     ${contexte.caissier ? `<div class="meta">Caissier : ${echapperHtml(contexte.caissier)}</div>` : ""}
     ${contexte.numeroSession ? `<div class="meta">Session : ${echapperHtml(contexte.numeroSession)}</div>` : ""}
+    ${contexte.origineOffline ? `<div class="badge-offline">[OFFLINE]</div>` : ""}
   </div>
 
   ${blocClientNote}

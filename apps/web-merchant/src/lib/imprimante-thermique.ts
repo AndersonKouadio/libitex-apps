@@ -350,7 +350,13 @@ export async function envoyerCommandes(device: DeviceUSB, data: Uint8Array): Pro
 // ===== Rendu d'un ticket en ESC/POS =====================================
 
 interface InfosBoutique { nom: string; devise?: string }
-interface InfosContexte { caissier?: string; numeroSession?: string }
+interface InfosContexte {
+  caissier?: string;
+  numeroSession?: string;
+  /** Imprime "[OFFLINE]" en entete pour tracer les ventes synchronisees
+   *  depuis la file hors-ligne (utile pour la rapprochement comptable). */
+  origineOffline?: boolean;
+}
 
 /**
  * Fix I4 + I8 : reutilise les libelles centralises pour eviter la
@@ -395,6 +401,11 @@ export function genererTicketEscPos(
 
   if (contexte.caissier) b.ligne(`Caissier : ${contexte.caissier}`);
   if (contexte.numeroSession) b.ligne(`Session : ${contexte.numeroSession}`);
+  if (contexte.origineOffline) {
+    // Badge encadre + gras pour ressortir au scan visuel : le caissier
+    // doit reperer en 1s qu'un ticket etait offline lors de l'encaissement.
+    b.gras(true).ligne("[OFFLINE]").gras(false);
+  }
 
   b.aligner("gauche").ligne(sep);
 
