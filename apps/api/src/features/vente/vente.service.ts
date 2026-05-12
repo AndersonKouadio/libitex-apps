@@ -9,6 +9,7 @@ import { RealtimeGateway } from "../realtime/realtime.gateway";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import { CashSessionRepository } from "../session-caisse/repositories/cash-session.repository";
 import { FideliteService } from "../fidelite/fidelite.service";
+import { PromotionService } from "../promotion/promotion.service";
 import {
   RessourceIntrouvableException,
   PaiementInsuffisantException,
@@ -37,6 +38,7 @@ export class VenteService {
     @Inject(forwardRef(() => CashSessionRepository))
     private readonly sessionRepo: CashSessionRepository,
     private readonly fidelite: FideliteService,
+    private readonly promotion: PromotionService,
   ) {}
 
   // --- Creer un ticket (ouvert) ---
@@ -184,6 +186,18 @@ export class VenteService {
         ...(remiseGlobale > 0 ? { remiseGlobale, raisonRemise: dto.raisonRemise } : {}),
       },
     });
+
+    // Code promo : si raisonRemise commence par "PROMO:CODE", enregistre
+    // l'usage et incremente le compteur. Best-effort — un echec n'interrompt
+    // pas la creation du ticket.
+    if (dto.raisonRemise && dto.raisonRemise.startsWith("PROMO:") && remiseGlobale > 0) {
+      const code = dto.raisonRemise.slice("PROMO:".length).trim();
+      if (code) {
+        this.promotion
+          .appliquerAuTicket(tenantId, code, ticket.id, dto.clientId, sousTotal + totalTva)
+          .catch(() => { /* silencieux */ });
+      }
+    }
 
     return this.mapTicket(ticketMaj, lignesCrees.map(this.mapLigne), []);
   }

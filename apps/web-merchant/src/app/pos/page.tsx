@@ -306,6 +306,9 @@ export default function PagePOS() {
           onAppliquerRemiseLigne={(i) => setCibleRemise(i)}
           onAppliquerRemiseGlobale={() => setCibleRemise("ticket")}
           onRetirerRemiseGlobale={() => panier.definirRemiseGlobale(null)}
+          onAppliquerCodePromo={(montant, code) => panier.definirRemiseGlobale({
+            type: "MONTANT", valeur: montant, raison: `PROMO:${code}`,
+          })}
           onModifierNote={panier.definirNote}
           onChoisirClient={() => setModalClientOuvert(true)}
           onApercu={() => setApercuOuvert(true)}

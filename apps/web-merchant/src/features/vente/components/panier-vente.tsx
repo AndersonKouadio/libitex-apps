@@ -8,6 +8,7 @@ import type { ArticlePanier, Remise, ClientPanier } from "../hooks/usePanier";
 import { formatMontant } from "../utils/format";
 import { LignePanier } from "./ligne-panier";
 import { BoutonPOS } from "./bouton-pos";
+import { BarreCodePromo } from "@/features/promotion/components/barre-code-promo";
 
 interface Props {
   articles: ArticlePanier[];
@@ -40,6 +41,8 @@ interface Props {
   onAppliquerRemiseGlobale?: () => void;
   /** Optionnel : retire la remise globale sans ouvrir la modale. */
   onRetirerRemiseGlobale?: () => void;
+  /** Optionnel : applique un code promo valide (remise + raison "PROMO:CODE"). */
+  onAppliquerCodePromo?: (montant: number, code: string) => void;
   /** Optionnel : edit/effacer la note. */
   onModifierNote?: (note: string) => void;
   /** Optionnel : ouvre la modale de selection client. */
@@ -52,7 +55,7 @@ export function PanierVente({
   articles, sousTotal, total, nombreArticles, remiseGlobale, note, client,
   onModifierQuantite, onDefinirQuantite, onRetirer, onVider, onEncaisser, onAttente,
   onSaisirQuantite, onPersonnaliser, onAppliquerRemiseLigne,
-  onAppliquerRemiseGlobale, onRetirerRemiseGlobale,
+  onAppliquerRemiseGlobale, onRetirerRemiseGlobale, onAppliquerCodePromo,
   onModifierNote, onChoisirClient, onApercu, mode = "lateral",
 }: Props) {
   const vide = articles.length === 0;
@@ -178,6 +181,20 @@ export function PanierVente({
 
       {/* Footer : actions + total compact */}
       <footer className="border-t border-border p-3 space-y-2.5 bg-surface safe-bottom">
+        {/* Code promo : input rapide pour appliquer un code de reduction.
+            Reutilise le systeme remise globale via la raison "PROMO:CODE"
+            que le backend reconnait pour incrementer le compteur d'usage
+            au moment de la cloture. */}
+        {!vide && onAppliquerCodePromo && (
+          <BarreCodePromo
+            sousTotal={sousTotal}
+            clientId={client?.id}
+            remiseCourante={remiseGlobale ? { montant: remiseGlobale.montant, raison: remiseGlobale.raison } : null}
+            onAppliquer={onAppliquerCodePromo}
+            onRetirer={() => onRetirerRemiseGlobale?.()}
+          />
+        )}
+
         {/* Actions secondaires regroupees : Remise ticket + Apercu */}
         {!vide && (onAppliquerRemiseGlobale || onApercu) && (
           <div className="flex gap-1.5">
