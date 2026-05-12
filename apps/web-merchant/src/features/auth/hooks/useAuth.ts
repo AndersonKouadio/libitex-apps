@@ -6,6 +6,7 @@ import { authAPI } from "../apis/auth.api";
 import type { ConnexionDTO } from "../schemas/auth.schema";
 
 const STORAGE_TOKEN = "libitex_token";
+const STORAGE_REFRESH = "libitex_refresh";
 const STORAGE_USER = "libitex_user";
 const STORAGE_BOUTIQUES = "libitex_boutiques";
 const STORAGE_BOUTIQUE_ACTIVE = "libitex_boutique_active";
@@ -18,7 +19,19 @@ interface AuthContextValue {
   enChargement: boolean;
   connecter: (data: ConnexionDTO) => Promise<void>;
   deconnecter: () => void;
-  appliquerSession: (token: string, utilisateur: IUtilisateurSession, boutiques: IBoutiqueResume[], active: IBoutiqueResume) => void;
+  appliquerSession: (
+    token: string,
+    refreshToken: string,
+    utilisateur: IUtilisateurSession,
+    boutiques: IBoutiqueResume[],
+    active: IBoutiqueResume,
+  ) => void;
+  /**
+   * Met a jour le token sans toucher au reste du state. Appele par le
+   * httpClient quand un refresh transparent est effectue (voir
+   * onTokenRefreshed dans lib/http).
+   */
+  rafraichirTokenLocal: (accessToken: string, refreshToken: string) => void;
   mettreAJourUtilisateur: (patch: Partial<IUtilisateurSession>) => void;
 }
 
@@ -53,6 +66,7 @@ export function useAuthState() {
 
   const persister = useCallback((
     t: string,
+    rt: string,
     u: IUtilisateurSession,
     b: IBoutiqueResume[],
     a: IBoutiqueResume,
@@ -62,6 +76,7 @@ export function useAuthState() {
     setBoutiques(b);
     setBoutiqueActive(a);
     localStorage.setItem(STORAGE_TOKEN, t);
+    localStorage.setItem(STORAGE_REFRESH, rt);
     localStorage.setItem(STORAGE_USER, JSON.stringify(u));
     localStorage.setItem(STORAGE_BOUTIQUES, JSON.stringify(b));
     localStorage.setItem(STORAGE_BOUTIQUE_ACTIVE, JSON.stringify(a));
@@ -69,7 +84,7 @@ export function useAuthState() {
 
   const connecter = useCallback(async (data: ConnexionDTO) => {
     const res = await authAPI.connecter(data);
-    persister(res.accessToken, res.utilisateur, res.boutiques, res.boutiqueActive);
+    persister(res.accessToken, res.refreshToken, res.utilisateur, res.boutiques, res.boutiqueActive);
   }, [persister]);
 
   const deconnecter = useCallback(() => {
@@ -78,9 +93,18 @@ export function useAuthState() {
     setBoutiques([]);
     setBoutiqueActive(null);
     localStorage.removeItem(STORAGE_TOKEN);
+    localStorage.removeItem(STORAGE_REFRESH);
     localStorage.removeItem(STORAGE_USER);
     localStorage.removeItem(STORAGE_BOUTIQUES);
     localStorage.removeItem(STORAGE_BOUTIQUE_ACTIVE);
+  }, []);
+
+  const rafraichirTokenLocal = useCallback((accessToken: string, refreshToken: string) => {
+    setToken(accessToken);
+    // Le httpClient a deja ecrit dans localStorage avant de notifier, mais
+    // on re-ecrit ici pour rester defensifs si l'ordre change.
+    localStorage.setItem(STORAGE_TOKEN, accessToken);
+    localStorage.setItem(STORAGE_REFRESH, refreshToken);
   }, []);
 
   const mettreAJourUtilisateur = useCallback((patch: Partial<IUtilisateurSession>) => {
@@ -94,6 +118,6 @@ export function useAuthState() {
 
   return {
     token, utilisateur, boutiques, boutiqueActive, enChargement,
-    connecter, deconnecter, appliquerSession: persister, mettreAJourUtilisateur,
+    connecter, deconnecter, appliquerSession: persister, rafraichirTokenLocal, mettreAJourUtilisateur,
   };
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { io, Socket } from "socket.io-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { forcerRafraichissementToken } from "@/lib/http";
 
 /**
  * Provider Socket.io : connecte un seul socket par session utilisateur,
@@ -16,6 +17,10 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
  *
  * Fallback : meme sans WS (connexion impossible), les queries TanStack
  * gardent leur refetchInterval et refetchOnWindowFocus.
+ *
+ * Resilience auth : sur connect_error d'auth, on declenche un refresh
+ * token via httpClient. Le nouveau token mettra a jour useAuth().token,
+ * ce qui re-trigger ce useEffect et reconnecte le socket.
  */
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const { token } = useAuth();
@@ -38,6 +43,19 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       reconnectionDelayMax: 5000,
     });
     socketRef.current = socket;
+
+    socket.on("connect_error", (err) => {
+      // Token expire ou invalide cote handshake : tenter un refresh. Le
+      // listener onTokenRefreshed dans AuthProvider mettra a jour useAuth,
+      // ce qui re-trigger l'effet et recree un socket avec le nouveau token.
+      const message = err?.message?.toLowerCase() ?? "";
+      if (message.includes("token") || message.includes("auth") || message.includes("unauthorized")) {
+        // Stopper les tentatives auto avec le token expire pour eviter de
+        // gaspiller des reconnexions echouees.
+        socket.disconnect();
+        forcerRafraichissementToken();
+      }
+    });
 
     socket.on("stock.updated", () => {
       queryClient.invalidateQueries({ queryKey: ["stock"] });

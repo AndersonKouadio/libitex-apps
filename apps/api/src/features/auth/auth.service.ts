@@ -230,6 +230,53 @@ export class AuthService {
   }
 
   /**
+   * Echange un refreshToken (longue duree) contre un nouveau access+refresh
+   * pair. Rotate le refresh (un refresh ne peut servir qu'une seule fois)
+   * et invalide l'ancien. Le frontend appelle cet endpoint sur 401 ou
+   * juste avant expiration de l'access token, evite la deconnexion.
+   */
+  async rafraichirToken(refreshToken: string): Promise<{
+    accessToken: string;
+    refreshToken: string;
+  }> {
+    let payload: TokenPayload;
+    try {
+      payload = this.jwtService.verify<TokenPayload>(refreshToken, {
+        secret: this.config.getOrThrow<string>("JWT_REFRESH_SECRET"),
+      });
+    } catch {
+      throw new ForbiddenException("Refresh token invalide ou expiré");
+    }
+
+    const user = await this.utilisateurRepo.trouverParId(payload.sub);
+    if (!user || !user.refreshToken) {
+      throw new ForbiddenException("Session invalide");
+    }
+    const matchHash = await bcrypt.compare(refreshToken, user.refreshToken);
+    if (!matchHash) {
+      // Token non reconnu : possible vol/reutilisation. On annule la session.
+      await this.utilisateurRepo.sauvegarderRefreshToken(user.id, "");
+      throw new ForbiddenException("Refresh token non reconnu");
+    }
+
+    // Rotate : nouveau access + nouveau refresh, l'ancien hash est ecrase.
+    const nouveauPayload: TokenPayload = {
+      sub: user.id,
+      tenantId: payload.tenantId,
+      role: payload.role,
+    };
+    const accessToken = this.jwtService.sign(nouveauPayload);
+    const nouveauRefresh = this.jwtService.sign(nouveauPayload, {
+      secret: this.config.getOrThrow<string>("JWT_REFRESH_SECRET"),
+      expiresIn: this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "7d") as any,
+    });
+    const nouveauHash = await bcrypt.hash(nouveauRefresh, 10);
+    await this.utilisateurRepo.sauvegarderRefreshToken(user.id, nouveauHash);
+
+    return { accessToken, refreshToken: nouveauRefresh };
+  }
+
+  /**
    * Genere un token de reinitialisation et l'envoie par email.
    * Repond toujours OK (meme si email inconnu) pour eviter l'enumeration de comptes.
    */

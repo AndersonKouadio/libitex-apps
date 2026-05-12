@@ -14,8 +14,12 @@ export function useChangerMotDePasseMutation() {
     onSuccess: () => {
       // Mettre a jour la session pour lever le drapeau mustChangePassword
       if (token && utilisateur && boutiqueActive) {
+        const refreshToken = typeof window !== "undefined"
+          ? localStorage.getItem("libitex_refresh") ?? ""
+          : "";
         appliquerSession(
           token,
+          refreshToken,
           { ...utilisateur, mustChangePassword: false },
           boutiques,
           boutiqueActive,

@@ -33,6 +33,13 @@ export class AuthController {
     return this.authService.connecter(dto);
   }
 
+  @Post("refresh")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Rafraichit l'access token a partir d'un refresh token valide (rotate)" })
+  rafraichirToken(@Body() body: { refreshToken: string }) {
+    return this.authService.rafraichirToken(body.refreshToken);
+  }
+
   @Post("changer-mot-de-passe")
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard("jwt"))
