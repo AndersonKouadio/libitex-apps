@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Select, ListBox, Label, Button, Chip, Drawer, Modal, Spinner, toast,
@@ -29,7 +29,7 @@ import { ModalApercuTicket } from "@/features/vente/components/modal-apercu-tick
 import { useSaisieQuantite } from "@/features/vente/hooks/useSaisieQuantite";
 import { useEncaissement } from "@/features/vente/hooks/useEncaissement";
 import { useScanProduit } from "@/features/vente/hooks/useScanProduit";
-import { BarreScan } from "@/features/vente/components/barre-scan";
+import { BarreScan, type BarreScanHandle } from "@/features/vente/components/barre-scan";
 import { ModalScannerCamera } from "@/features/vente/components/modal-scanner-camera";
 import { formatMontant } from "@/features/vente/utils/format";
 import { useSessionActiveQuery } from "@/features/session-caisse/queries/session-active.query";
@@ -116,13 +116,20 @@ export default function PagePOS() {
   );
 
   const [cameraOuverte, setCameraOuverte] = useState(false);
-  const { scanner } = useScanProduit({
+  const scanRef = useRef<BarreScanHandle>(null);
+  const { scanner, scanEnCours } = useScanProduit({
     produits,
     indisponiblesVariantes: indispoVariantesSet,
     indisponiblesProduits: indispoProduitsSet,
     onProduitTrouve: (p, v) => {
+      // Fix m6 : montre la quantite resultante apres scan repete. Le caissier
+      // sait visuellement combien d'exemplaires il a deja saisis sans avoir
+      // a chercher dans le panier (utile pour ventes par lot).
+      const existant = panier.articles.find((a) => a.varianteId === v.id);
+      const qApres = (existant?.quantite ?? 0) + 1;
       panier.ajouter(p, v);
-      toast.success(`${p.nom}${v.nom ? ` · ${v.nom}` : ""} ajoute`);
+      const suffixe = qApres > 1 ? ` · ×${qApres}` : "";
+      toast.success(`${p.nom}${v.nom ? ` · ${v.nom}` : ""} ajoute${suffixe}`);
     },
   });
   // Index de la ligne en cours de personnalisation (suppléments). null = ferme.
@@ -268,7 +275,9 @@ export default function PagePOS() {
 
         <div className="px-3 sm:px-4 py-2 border-b border-border bg-surface">
           <BarreScan
+            scanRef={scanRef}
             onScan={scanner}
+            scanEnCours={scanEnCours}
             onOuvrirCamera={() => setCameraOuverte(true)}
             className="max-w-md"
           />
@@ -461,7 +470,12 @@ export default function PagePOS() {
 
       <ModalScannerCamera
         ouvert={cameraOuverte}
-        onFermer={() => setCameraOuverte(false)}
+        onFermer={() => {
+          setCameraOuverte(false);
+          // Fix I9 : ramener le focus sur la barre de scan apres fermeture
+          // de la modale camera pour que la douchette ne tape pas dans le vide.
+          setTimeout(() => scanRef.current?.focus(), 100);
+        }}
         onScan={(code) => { setCameraOuverte(false); scanner(code); }}
       />
 

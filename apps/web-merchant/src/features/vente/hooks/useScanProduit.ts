@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { toast } from "@heroui/react";
 import type { IProduit, IVariante } from "@/features/catalogue/types/produit.type";
 import { catalogueAPI } from "@/features/catalogue/apis/catalogue.api";
@@ -24,10 +24,7 @@ interface Options {
  * - Multiplier les 12 premiers chiffres alternativement par 1 et 3
  * - Somme + chiffre de controle (13e) doit etre multiple de 10
  *
- * Fix I1 : warning non-bloquant si le checksum est mauvais. Permet de
- * detecter une douchette mal calibree (chiffre manque) sans bloquer les
- * SKU internes qui ne respectent pas EAN-13.
- *
+ * Fix I1 : warning non-bloquant si le checksum est mauvais.
  * Retourne null si le code ne ressemble pas a un EAN-13 (longueur != 13
  * ou contient des lettres) — on ne valide alors pas.
  */
@@ -51,14 +48,18 @@ export function validerEan13(code: string): boolean | null {
  * dans certaines configurations. On ignore les codes identiques recus a
  * moins de 300ms d'intervalle.
  *
- * Fix C3 : distingue HttpError 404 (produit absent) vs erreur reseau
- * (offline, timeout). Un toast different + suggestion d'action.
+ * Expose :
+ * - `scanner(code)` : declenche la recherche
+ * - `scanEnCours` : vrai pendant l'appel API fallback (>0ms perceptible)
  */
 export function useScanProduit({
   produits, indisponiblesVariantes, indisponiblesProduits, onProduitTrouve,
 }: Options) {
   const { token } = useAuth();
   const dernierScan = useRef<{ code: string; ts: number } | null>(null);
+  // Fix m4 : expose un etat de chargement pour que BarreScan affiche un
+  // spinner pendant l'appel API fallback (3G lente = 500ms+).
+  const [scanEnCours, setScanEnCours] = useState(false);
 
   const scanner = useCallback(async (codeBrut: string) => {
     const code = codeBrut.trim();
@@ -72,9 +73,7 @@ export function useScanProduit({
     }
     dernierScan.current = { code, ts: maintenant };
 
-    // Fix I1 : warning si le code ressemble a un EAN-13 mais le checksum est
-    // KO. Non-bloquant : on tente quand meme la recherche, certaines
-    // douchettes mal configurees envoient des chiffres en trop ou inverses.
+    // Fix I1 : warning si EAN-13 invalide. Non-bloquant.
     const ean = validerEan13(code);
     if (ean === false) {
       toast.warning(`Code ${code} : checksum EAN-13 invalide (douchette mal calibree ?)`);
@@ -86,12 +85,14 @@ export function useScanProduit({
         (variante) => variante.codeBarres === code || variante.sku === code,
       );
       if (v) {
+        // Fix I10 : toasts distincts pour rupture (transitoire, sur cet
+        // emplacement) vs indisponibilite globale (produit/ingredients KO).
         if (indisponiblesVariantes?.has(v.id)) {
-          toast.warning(`${p.nom} en rupture sur cet emplacement`);
+          toast.warning(`${p.nom} en rupture sur cet emplacement — re-essayez apres reapprovisionnement`);
           return;
         }
         if (indisponiblesProduits?.has(p.id)) {
-          toast.warning(`${p.nom} indisponible`);
+          toast.warning(`${p.nom} indisponible — un ou plusieurs ingredients sont epuises`);
           return;
         }
         onProduitTrouve(p, v);
@@ -99,18 +100,16 @@ export function useScanProduit({
       }
     }
 
-    // 2) Fallback API (utile si le cache POS est paginate ou si le produit
-    // a ete ajoute depuis un autre poste sans qu'on ait encore refetch).
-    //
-    // Fix C3 : si on est offline, ne pas tenter l'API — afficher un toast
-    // explicite. Si l'API renvoie un 404, c'est "produit absent". Si autre
-    // erreur (timeout, 5xx, fetch failed), c'est un probleme reseau a
-    // signaler differemment du "introuvable" pour ne pas perdre la vente.
+    // 2) Fallback API. Fix C3 : si offline, ne pas tenter. Si 404, produit
+    // absent. Si erreur reseau/5xx, distinct du "introuvable" pour ne pas
+    // perdre la vente.
     if (!token) return;
     if (!estEnLigne()) {
       toast.warning(`Code ${code} introuvable hors-ligne — re-essayez au retour reseau`);
       return;
     }
+
+    setScanEnCours(true);
     try {
       const p = await catalogueAPI.trouverProduitParCode(token, code);
       const v = (p.variantes ?? []).find(
@@ -126,12 +125,12 @@ export function useScanProduit({
         toast.warning(`Code ${code} introuvable`);
         return;
       }
-      // Reseau / timeout / 5xx : distinct du "introuvable" pour que le
-      // caissier sache qu'il peut re-essayer sans changer le code.
       const msg = err instanceof Error ? err.message : "Erreur reseau";
       toast.danger(`Recherche echouee (${msg}) — re-essayez`);
+    } finally {
+      setScanEnCours(false);
     }
   }, [produits, indisponiblesVariantes, indisponiblesProduits, onProduitTrouve, token]);
 
-  return { scanner };
+  return { scanner, scanEnCours };
 }

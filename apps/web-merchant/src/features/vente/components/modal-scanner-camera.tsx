@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Modal, Button } from "@heroui/react";
-import { ScanLine, X, AlertCircle } from "lucide-react";
+import { ScanLine, X, AlertCircle, Zap, ZapOff, RotateCcw } from "lucide-react";
 
 interface Props {
   ouvert: boolean;
@@ -25,21 +25,30 @@ declare global {
   interface Window { BarcodeDetector?: BarcodeDetectorCtor }
 }
 
+// Capabilities/constraints etendues pour torch (pas dans lib.dom.d.ts).
+type CapsTorch = MediaTrackCapabilities & { torch?: boolean };
+type ConstraintsTorch = MediaTrackConstraints & { advanced?: Array<{ torch?: boolean }> };
+
 const FORMATS = [
   "ean_13", "ean_8", "upc_a", "upc_e",
   "code_128", "code_39", "code_93",
   "itf", "qr_code",
 ];
 
+type FacingMode = "environment" | "user";
+
 /**
  * Modale qui ouvre la camera et detecte les codes-barres en continu avec
  * l'API native BarcodeDetector (Chrome desktop+Android, Edge). Au premier
  * scan reussi, declenche onScan() et ferme.
  *
+ * Fonctionnalites :
+ * - Torch (flash) si le device le supporte (Android Chrome principalement)
+ * - Switch camera front/back si plusieurs disponibles
+ * - Beep court au scan via Web Audio
+ *
  * Fallback : si BarcodeDetector n'est pas supporte (Safari, Firefox), on
  * affiche un message et le caissier doit utiliser la douchette ou saisir.
- *
- * Beep court au scan via Web Audio (pas de fichier audio, pas de network).
  */
 export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -49,11 +58,17 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
   const dejaTrouveRef = useRef(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [supporte, setSupporte] = useState<boolean | null>(null);
+  // Fix I6 : camera selectionnee. Default "environment" (camera arriere)
+  // pour scan. Switchable si plusieurs cameras detectees.
+  const [facingMode, setFacingMode] = useState<FacingMode>("environment");
+  const [plusieursCameras, setPlusieursCameras] = useState(false);
+  // Fix I4 : torch (flash) si le device le supporte.
+  const [torchSupporte, setTorchSupporte] = useState(false);
+  const [torchActif, setTorchActif] = useState(false);
 
   useEffect(() => {
     if (!ouvert) return;
 
-    // Reset erreur si on rouvre apres une fermeture sur erreur
     setErreur(null);
 
     const Ctor = typeof window !== "undefined" ? window.BarcodeDetector : undefined;
@@ -61,8 +76,7 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
       setSupporte(false);
       return;
     }
-    // Fix I3 : verifier mediaDevices avant de tenter getUserMedia. Chrome < 53,
-    // contexte HTTP non-secure et certains WebViews n'ont pas mediaDevices.
+    // Fix I3 : verifier mediaDevices avant de tenter getUserMedia.
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       setSupporte(false);
       return;
@@ -70,13 +84,26 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
     setSupporte(true);
     detectorRef.current = new Ctor({ formats: FORMATS });
     dejaTrouveRef.current = false;
+    setTorchSupporte(false);
+    setTorchActif(false);
 
     let arrete = false;
 
     (async () => {
+      // Fix I6 : detecte si plusieurs cameras sont disponibles pour activer
+      // le bouton de switch. Silencieux si enumerateDevices echoue (Safari
+      // sans permission etc.) — on garde juste un seul bouton sans toggle.
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cams = devices.filter((d) => d.kind === "videoinput");
+        setPlusieursCameras(cams.length >= 2);
+      } catch {
+        setPlusieursCameras(false);
+      }
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+          video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
         });
         if (arrete) {
@@ -89,14 +116,17 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
           await videoRef.current.play();
         }
 
-        // Boucle de detection : on lit une frame toutes les 200ms (pas de
-        // requestAnimationFrame pour ne pas griller le CPU sur du Xiaomi
-        // d'entree de gamme).
-        //
-        // Fix C1 : verifier `arrete` ET `dejaTrouveRef.current` AVANT ET APRES
-        // l'await detect(). Sans le check apres, une frame en cours pendant
-        // la fermeture peut declencher onScan() apres unmount (memory leak +
-        // UI inconsistante).
+        // Fix I4 : detecte le support torch APRES que le stream soit acquis.
+        // `getCapabilities()` n'est pas dispo sur tous les browsers, on
+        // degrade silencieusement.
+        const track = stream.getVideoTracks()[0];
+        if (track && typeof track.getCapabilities === "function") {
+          const caps = track.getCapabilities() as CapsTorch;
+          setTorchSupporte(Boolean(caps.torch));
+        }
+
+        // Boucle de detection : 1 frame toutes les 200ms (CPU friendly).
+        // Fix C1 + I2 : verifier arrete/dejaTrouve AVANT et APRES detect().
         const detect = async () => {
           if (arrete || dejaTrouveRef.current) return;
           const detector = detectorRef.current;
@@ -107,9 +137,6 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
           }
           try {
             const results = await detector.detect(video);
-            // Fix C1 + I2 : re-verifier APRES await — la modale peut etre
-            // fermee pendant le detect, ou une frame precedente peut avoir
-            // deja trouve.
             if (arrete || dejaTrouveRef.current) return;
             const first = results[0];
             if (first?.rawValue) {
@@ -138,12 +165,33 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
       if (loopRef.current !== null) clearTimeout(loopRef.current);
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
-      // Fix C2 : reset le detector au cleanup. Sans ca, un re-open rapide
-      // garde l'ancien detector en memoire (fuite legere) et la closure
-      // de la boucle precedente peut continuer a l'utiliser.
       detectorRef.current = null;
     };
-  }, [ouvert, onScan, onFermer]);
+  }, [ouvert, onScan, onFermer, facingMode]);
+
+  /**
+   * Toggle torch via `applyConstraints` sur la video track. Si la commande
+   * echoue (cas rare : torch reconnu mais bloque par le pilote), on revert
+   * le state pour rester coherent avec l'etat materiel.
+   */
+  async function basculerTorch() {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    const nouveauEtat = !torchActif;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: nouveauEtat }] } as ConstraintsTorch);
+      setTorchActif(nouveauEtat);
+    } catch {
+      // Reverse : torch refusee par le hardware
+      setTorchActif(false);
+    }
+  }
+
+  function switcherCamera() {
+    // Fix I6 : alterne entre arriere/avant. L'effet redemarre le stream.
+    setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
+    setTorchActif(false);
+  }
 
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(o) => { if (!o) onFermer(); }}>
@@ -178,8 +226,37 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
                   muted
                   className="w-full h-full object-cover"
                 />
+                {/* Fix I5 : viseur agrandi (max-w-[400px] h-40) pour scanner
+                    confortablement depuis un telephone wide. */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-3/4 max-w-[280px] h-32 border-2 border-accent rounded-lg shadow-[0_0_0_2000px_rgba(0,0,0,0.45)]" />
+                  <div className="w-11/12 max-w-[400px] h-40 border-2 border-accent rounded-lg shadow-[0_0_0_2000px_rgba(0,0,0,0.45)]" />
+                </div>
+                {/* Controles flottants : torch (si supporte) + switch camera */}
+                <div className="absolute top-3 right-3 flex flex-col gap-2">
+                  {torchSupporte && (
+                    <button
+                      type="button"
+                      onClick={basculerTorch}
+                      aria-label={torchActif ? "Eteindre le flash" : "Allumer le flash"}
+                      className={`h-10 w-10 rounded-full flex items-center justify-center transition-colors ${
+                        torchActif
+                          ? "bg-warning text-warning-foreground"
+                          : "bg-black/50 text-white hover:bg-black/70"
+                      }`}
+                    >
+                      {torchActif ? <Zap size={18} /> : <ZapOff size={18} />}
+                    </button>
+                  )}
+                  {plusieursCameras && (
+                    <button
+                      type="button"
+                      onClick={switcherCamera}
+                      aria-label="Changer de camera"
+                      className="h-10 w-10 rounded-full flex items-center justify-center bg-black/50 text-white hover:bg-black/70"
+                    >
+                      <RotateCcw size={18} />
+                    </button>
+                  )}
                 </div>
                 <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-2 text-white text-xs">
                   <ScanLine size={14} />
@@ -204,8 +281,7 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
  *
  * Fix C5 : AudioContext singleton (lazy-created au premier scan), reutilise
  * pour tous les scans suivants. Sans ca, Safari iOS crashe apres ~6
- * AudioContext crees (limite navigateur). On ne close jamais le ctx :
- * c'est leger en RAM et reactiver Web Audio coute plus cher.
+ * AudioContext crees (limite navigateur).
  */
 let audioCtxSingleton: AudioContext | null = null;
 
@@ -217,8 +293,6 @@ function bipScanReussi(): void {
       audioCtxSingleton = new AC();
     }
     const ctx = audioCtxSingleton;
-    // Si le ctx a ete suspendu (autoplay policy), le reveiller. C'est
-    // safe meme si deja actif (resume() est no-op).
     if (ctx.state === "suspended") void ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -228,8 +302,7 @@ function bipScanReussi(): void {
     osc.connect(gain).connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.12);
-    // Pas de ctx.close() : on garde le singleton pour les scans suivants.
   } catch {
-    /* silencieux : le scan reussit meme sans son */
+    /* silencieux */
   }
 }
