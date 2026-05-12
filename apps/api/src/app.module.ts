@@ -16,6 +16,7 @@ import { EquipeModule } from "./features/equipe/equipe.module";
 import { ClientModule } from "./features/client/client.module";
 import { AchatModule } from "./features/achat/achat.module";
 import { FideliteModule } from "./features/fidelite/fidelite.module";
+import { ShowcaseModule } from "./features/showcase/showcase.module";
 import { RealtimeModule } from "./features/realtime/realtime.module";
 
 @Module({
@@ -41,6 +42,7 @@ import { RealtimeModule } from "./features/realtime/realtime.module";
     ClientModule,
     AchatModule,
     FideliteModule,
+    ShowcaseModule,
   ],
 })
 export class AppModule {}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button, Card, TextField, Label, Input, Skeleton, toast } from "@heroui/react";
-import { Save } from "lucide-react";
+import { Save, ExternalLink, Copy, Globe } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { ChampSecteur } from "@/features/auth/components/champ-secteur";
@@ -65,6 +65,25 @@ export default function PageProfilBoutique() {
         titre="Profil de la boutique"
         description="Nom, secteur d'activité, devise, contact et adresse de la boutique active. Pour modifier une autre boutique, basculez dessus depuis « Mes boutiques »."
       />
+
+      {boutique && (
+        <Card className="mb-4">
+          <Card.Content className="p-5">
+            <div className="flex items-start gap-3">
+              <span className="w-10 h-10 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                <Globe size={18} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground">Boutique en ligne</p>
+                <p className="text-xs text-muted mt-0.5 mb-2">
+                  Lien public a partager avec vos clients (catalogue + commande WhatsApp).
+                </p>
+                <UrlBoutique slug={boutique.slug} />
+              </div>
+            </div>
+          </Card.Content>
+        </Card>
+      )}
 
       <Card>
         <Card.Content className="p-6 space-y-5">
@@ -133,5 +152,34 @@ export default function PageProfilBoutique() {
         </Card.Content>
       </Card>
     </PageContainer>
+  );
+}
+
+function UrlBoutique({ slug }: { slug: string }) {
+  const url = typeof window !== "undefined"
+    ? `${window.location.origin}/boutique/${slug}`
+    : `/boutique/${slug}`;
+  async function copier() {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Lien copie");
+    } catch {
+      toast.danger("Impossible de copier");
+    }
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <code className="text-xs bg-surface-secondary px-2 py-1 rounded font-mono break-all flex-1 min-w-[200px]">
+        {url}
+      </code>
+      <Button variant="outline" className="gap-1.5 text-xs h-8 px-2" onPress={copier}>
+        <Copy size={12} /> Copier
+      </Button>
+      <a href={`/boutique/${slug}`} target="_blank" rel="noreferrer">
+        <Button variant="outline" className="gap-1.5 text-xs h-8 px-2">
+          <ExternalLink size={12} /> Ouvrir
+        </Button>
+      </a>
+    </div>
   );
 }
