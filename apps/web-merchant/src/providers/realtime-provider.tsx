@@ -23,14 +23,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    console.log("[Realtime] effect fired, token=", token ? "present" : "null");
     if (!token) return;
 
     // On retire le suffix /api/v1 pour pointer sur la racine HTTP (Socket.io
     // ecoute sur /socket.io a la racine du serveur).
     const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
     const wsBase = apiBase.replace(/\/api\/v\d+\/?$/, "");
-    console.log("[Realtime] connecting to", wsBase);
 
     const socket = io(wsBase, {
       auth: { token },
@@ -40,9 +38,6 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       reconnectionDelayMax: 5000,
     });
     socketRef.current = socket;
-    socket.on("connect", () => console.log("[Realtime] connected", socket.id));
-    socket.on("connect_error", (e) => console.warn("[Realtime] connect_error", e.message));
-    socket.on("disconnect", (r) => console.log("[Realtime] disconnected", r));
 
     socket.on("stock.updated", () => {
       queryClient.invalidateQueries({ queryKey: ["stock"] });
