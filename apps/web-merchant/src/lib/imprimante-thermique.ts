@@ -18,6 +18,7 @@
 
 import type { ITicket } from "@/features/vente/types/vente.type";
 import { formatMontant } from "@/features/vente/utils/format";
+import { LABELS_METHODE_PAIEMENT } from "@/features/vente/utils/methode-paiement";
 import { STORAGE_KEYS } from "./storage-keys";
 
 // ===== Types WebUSB (le DOM lib ne les inclut pas par defaut) ============
@@ -45,8 +46,16 @@ export interface DeviceUSB {
   releaseInterface(n: number): Promise<void>;
   transferOut(endpoint: number, data: Uint8Array): Promise<{ bytesWritten: number }>;
 }
+interface USBDeviceFilter {
+  vendorId?: number;
+  productId?: number;
+  classCode?: number;
+  subclassCode?: number;
+  protocolCode?: number;
+  serialNumber?: string;
+}
 interface USB {
-  requestDevice(opts: { filters: { vendorId?: number; productId?: number }[] }): Promise<DeviceUSB>;
+  requestDevice(opts: { filters: USBDeviceFilter[] }): Promise<DeviceUSB>;
   getDevices(): Promise<DeviceUSB[]>;
 }
 declare global {
@@ -156,12 +165,60 @@ export function supporteWebUsb(): boolean {
 }
 
 /**
+ * VendorIds de fabricants d'imprimantes thermiques les plus courants.
+ * Filtre la fenetre de selection USB du navigateur pour eviter d'afficher
+ * webcams, claviers, manettes... et reduire le risque qu'un caissier
+ * appaire un device qui n'est pas une imprimante (fix C3).
+ *
+ * Sources : USB-IF vendor IDs publics. La liste est volontairement large
+ * (couvre Epson, Star, Citizen, Bixolon, SNBC/Beiyang, Xprinter/GooJPRT,
+ * Munbyn, Rongta, HPRT...). Si une marque manque, l'utilisateur peut
+ * cocher "Mode avance" pour passer outre.
+ */
+const VENDOR_IDS_IMPRIMANTES = [
+  0x04b8, // Epson / Seiko Epson
+  0x0519, // Star Micronics
+  0x1504, // Bixolon (anciens modeles)
+  0x1fc9, // NXP / certaines reetiquettes
+  0x1659, // Citizen
+  0x0dd4, // Custom Engineering
+  0x0fe6, // SNBC / Beiyang
+  0x0416, // Winbond / Xprinter (variantes)
+  0x28e9, // GD32 / GooJPRT bas de gamme
+  0x6868, // Xprinter generique
+  0x0483, // STMicro (Rongta, HPRT clones)
+  0x067b, // Prolific (cables RS232-USB pour imprimantes)
+  0x154f, // SNBC
+  0x0fe7, // SNBC
+  0x20d1, // Rongta
+  0x1d4d, // HPRT
+  0x1a86, // QinHeng (Munbyn, MUYIN)
+];
+
+/** Classe USB 7 = Printer (USB-IF). Filtre additionnel a vendorId. */
+const USB_CLASS_PRINTER = 7;
+
+/**
  * Demande a l'utilisateur de choisir une imprimante USB. Le navigateur
  * memorise l'appairage pour les prochaines sessions.
+ *
+ * En mode standard, on filtre sur la classe USB "Printer" (7) + une
+ * liste blanche de vendorIds connus pour eviter qu'un caissier appaire
+ * une webcam par erreur (fix C3). En mode avance, aucun filtre : tout
+ * device USB connecte sera propose.
  */
-export async function appairerImprimante(): Promise<DeviceUSB> {
+export async function appairerImprimante(modeAvance = false): Promise<DeviceUSB> {
   if (!navigator.usb) throw new Error("WebUSB non supporte par ce navigateur");
-  const device = await navigator.usb.requestDevice({ filters: [] });
+  const filters = modeAvance
+    ? []
+    : [
+        // Classe USB 7 = Printer (couvre Epson, Star, Citizen...)
+        { classCode: USB_CLASS_PRINTER },
+        // VendorIds connus en complement (certaines imprimantes Chinoises
+        // declarent classCode=0 et sont reconnues via le vendorId seul).
+        ...VENDOR_IDS_IMPRIMANTES.map((vendorId) => ({ vendorId })),
+      ];
+  const device = await navigator.usb.requestDevice({ filters });
   ecrireDevicePersiste({
     vendorId: device.vendorId,
     productId: device.productId,
@@ -219,9 +276,35 @@ function trouverEndpointOut(device: DeviceUSB): { config: number; interface: num
   return null;
 }
 
+/** Timeout d'un transferOut en ms. Au-dela : l'imprimante est bloquee
+ *  (papier, capot, USB sature). On rejette pour declencher le fallback. */
+const TIMEOUT_TRANSFER_MS = 5000;
+
+/**
+ * Wrap une Promise avec un timeout. Si la promesse ne resout pas dans
+ * `ms`, on rejette avec une erreur explicite. Fix C2 : evite le freeze
+ * indefini si l'imprimante hang (papier, capot, USB sature).
+ */
+function avecTimeout<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    p.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
 /**
  * Ouvre, claim, envoie la commande, libere. Robuste aux reouvertures
  * multiples : si deja ouvert, on continue avec.
+ *
+ * Fix C1 : releaseInterface() dans un finally pour relacher l'interface
+ * meme en cas d'erreur. Sans ca, une erreur USB laisse l'interface
+ * locked et la prochaine impression echoue avec "device busy".
+ *
+ * Fix C2 : timeout de 5s sur chaque transferOut pour eviter le freeze
+ * si l'imprimante hang (papier coince, capot ouvert, USB sature).
  */
 export async function envoyerCommandes(device: DeviceUSB, data: Uint8Array): Promise<void> {
   const cible = trouverEndpointOut(device);
@@ -234,17 +317,33 @@ export async function envoyerCommandes(device: DeviceUSB, data: Uint8Array): Pro
   if (!device.configuration) {
     await device.selectConfiguration(cible.config);
   }
+  let claimed = false;
   try {
     await device.claimInterface(cible.interface);
+    claimed = true;
   } catch {
-    // deja claim : on poursuit
+    // deja claim : on poursuit sans tenter de release (autre tab)
   }
-  // Decoupage en chunks de 64 bytes pour eviter les transferOut tronques
-  // sur certains drivers (Xprinter, GooJPRT...).
-  const chunkSize = 64;
-  for (let i = 0; i < data.length; i += chunkSize) {
-    const slice = data.slice(i, i + chunkSize);
-    await device.transferOut(cible.endpoint, slice);
+  try {
+    // Decoupage en chunks de 64 bytes pour eviter les transferOut tronques
+    // sur certains drivers (Xprinter, GooJPRT...).
+    const chunkSize = 64;
+    for (let i = 0; i < data.length; i += chunkSize) {
+      const slice = data.slice(i, i + chunkSize);
+      await avecTimeout(
+        device.transferOut(cible.endpoint, slice),
+        TIMEOUT_TRANSFER_MS,
+        "L'imprimante ne repond pas (verifier papier, capot, cable USB)",
+      );
+    }
+  } finally {
+    if (claimed) {
+      try {
+        await device.releaseInterface(cible.interface);
+      } catch {
+        // libre quand meme : pas critique
+      }
+    }
   }
 }
 
@@ -253,13 +352,12 @@ export async function envoyerCommandes(device: DeviceUSB, data: Uint8Array): Pro
 interface InfosBoutique { nom: string; devise?: string }
 interface InfosContexte { caissier?: string; numeroSession?: string }
 
-const LIBELLE_PAIEMENT: Record<string, string> = {
-  CASH: "Especes",
-  CARD: "Carte bancaire",
-  MOBILE_MONEY: "Mobile Money",
-  BANK_TRANSFER: "Virement",
-  CREDIT: "Credit",
-};
+/**
+ * Fix I4 + I8 : reutilise les libelles centralises pour eviter la
+ * divergence avec l'UI (ex. LOYALTY oublie sur le ticket papier). Les
+ * accents sont supportes par l'encoder CP858.
+ */
+const LIBELLE_PAIEMENT = LABELS_METHODE_PAIEMENT;
 
 // Largeur fixe pour le ticket 80mm : 42 colonnes en font A (12x24).
 const COLS = 42;

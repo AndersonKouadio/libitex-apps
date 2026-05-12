@@ -22,6 +22,10 @@ export default function PageImprimante() {
   const [device, setDevice] = useState<DeviceUSB | null>(null);
   const [chargement, setChargement] = useState(true);
   const [enCours, setEnCours] = useState(false);
+  // Mode avance (fix C3) : leve le filtre USB class+vendorId pour
+  // afficher tous les peripheriques. Necessaire pour les imprimantes de
+  // marques exotiques qui ne sont pas dans la liste blanche.
+  const [modeAvance, setModeAvance] = useState(false);
 
   useEffect(() => {
     if (!supporte) { setChargement(false); return; }
@@ -34,7 +38,7 @@ export default function PageImprimante() {
   async function connecter() {
     try {
       setEnCours(true);
-      const d = await appairerImprimante();
+      const d = await appairerImprimante(modeAvance);
       setDevice(d);
       toast.success("Imprimante connectee");
     } catch (err) {
@@ -190,6 +194,35 @@ export default function PageImprimante() {
                       isSelected={prefs.imprimerAuto}
                       onChange={() => preferencesPOS.modifier({ imprimerAuto: !prefs.imprimerAuto })}
                       aria-label="Activer l'impression automatique"
+                    >
+                      <Switch.Control><Switch.Thumb /></Switch.Control>
+                    </Switch>
+                  </div>
+                </div>
+              </div>
+            </Card.Content>
+          </Card>
+
+          <Card className="lg:col-span-2">
+            <Card.Content className="p-5">
+              <div className="flex items-start gap-3">
+                <span className="w-10 h-10 rounded-lg bg-warning/10 text-warning flex items-center justify-center shrink-0">
+                  <AlertCircle size={18} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Mode avance</p>
+                      <p className="text-xs text-muted mt-1 leading-relaxed">
+                        Affiche tous les peripheriques USB lors de la connexion (et pas
+                        seulement les imprimantes connues). A activer uniquement si votre
+                        imprimante n&apos;apparait pas dans la liste standard.
+                      </p>
+                    </div>
+                    <Switch
+                      isSelected={modeAvance}
+                      onChange={() => setModeAvance((v) => !v)}
+                      aria-label="Activer le mode avance"
                     >
                       <Switch.Control><Switch.Thumb /></Switch.Control>
                     </Switch>

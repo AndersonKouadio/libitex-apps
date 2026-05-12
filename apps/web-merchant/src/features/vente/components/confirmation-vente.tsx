@@ -46,12 +46,19 @@ export function ConfirmationVente({
   // Auto-print : si la preference est active et qu'on a un ticket reel,
   // declenche l'impression direct au montage de la confirmation. Le caissier
   // n'a rien a cliquer.
+  //
+  // Fix I3 : `handleImprimer` est async — sans .catch() ici, une erreur
+  // synchrone (ex. throw avant le try interne) deviendrait une unhandled
+  // promise rejection qui crashe React DevTools. On garde le toast de
+  // handleImprimer et on log defensivement les cas inattendus.
   useEffect(() => {
     if (!prefs.imprimerAuto) return;
     if (!ticket || !boutiqueActive) return;
     if (dejaImprimeRef.current) return;
     dejaImprimeRef.current = true;
-    handleImprimer();
+    handleImprimer().catch((err) => {
+      console.error("Auto-impression : erreur inattendue", err);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

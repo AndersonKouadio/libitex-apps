@@ -1,5 +1,6 @@
 import type { ITicket } from "../types/vente.type";
 import { formatMontant } from "./format";
+import { LABELS_METHODE_PAIEMENT } from "./methode-paiement";
 import { formaterQuantite } from "@/features/unite/types/unite.type";
 import type { UniteMesure } from "@/features/unite/types/unite.type";
 import {
@@ -18,13 +19,9 @@ interface InfosContexte {
   numeroSession?: string;
 }
 
-const LIBELLE_PAIEMENT: Record<string, string> = {
-  CASH: "Espèces",
-  CARD: "Carte bancaire",
-  MOBILE_MONEY: "Mobile Money",
-  BANK_TRANSFER: "Virement",
-  CREDIT: "Crédit",
-};
+/** Fix I4 : reutilise la table centralisee pour eviter la divergence
+ *  (UI/HTML/ESC-POS doivent dire la meme chose pour CASH, LOYALTY...). */
+const LIBELLE_PAIEMENT = LABELS_METHODE_PAIEMENT;
 
 /**
  * Imprime un ticket. Strategie :
@@ -97,10 +94,10 @@ function construireHtml(
   const aNote = !!ticket.note;
   const blocClientNote = aClient || aNote
     ? `<div class="bloc-meta">
-        ${aClient ? `<div><strong>Client :</strong> ${escape(ticket.nomClient ?? "")}${
-          ticket.telephoneClient ? ` · ${escape(ticket.telephoneClient)}` : ""
+        ${aClient ? `<div><strong>Client :</strong> ${echapperHtml(ticket.nomClient ?? "")}${
+          ticket.telephoneClient ? ` · ${echapperHtml(ticket.telephoneClient)}` : ""
         }</div>` : ""}
-        ${aNote ? `<div><strong>Note :</strong> ${escape(ticket.note!)}</div>` : ""}
+        ${aNote ? `<div><strong>Note :</strong> ${echapperHtml(ticket.note!)}</div>` : ""}
       </div>
       <div class="separateur"></div>`
     : "";
@@ -112,14 +109,14 @@ function construireHtml(
         : String(l.quantite);
       const supplementsHtml = (l.supplements ?? []).length > 0
         ? `<div class="supplements">${(l.supplements ?? [])
-            .map((s) => `+ ${escape(s.nom)} ×${s.quantite} (${formatMontant(s.prixUnitaire * s.quantite)})`)
+            .map((s) => `+ ${echapperHtml(s.nom)} ×${s.quantite} (${formatMontant(s.prixUnitaire * s.quantite)})`)
             .join("<br>")}</div>`
         : "";
       return `
         <tr class="ligne">
           <td class="nom">
-            ${escape(l.nomProduit)}
-            ${l.nomVariante ? `<div class="variante">${escape(l.nomVariante)}</div>` : ""}
+            ${echapperHtml(l.nomProduit)}
+            ${l.nomVariante ? `<div class="variante">${echapperHtml(l.nomVariante)}</div>` : ""}
             <div class="qte-prix">${qte} × ${formatMontant(l.prixUnitaire)}</div>
             ${supplementsHtml}
           </td>
@@ -132,7 +129,7 @@ function construireHtml(
     .map(
       (p) => `
         <div class="ligne-flex">
-          <span>${escape(LIBELLE_PAIEMENT[p.methode] ?? p.methode)}</span>
+          <span>${echapperHtml(LIBELLE_PAIEMENT[p.methode] ?? p.methode)}</span>
           <span>${formatMontant(p.montant)}</span>
         </div>`,
     )
@@ -142,7 +139,7 @@ function construireHtml(
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Ticket ${escape(ticket.numeroTicket)}</title>
+  <title>Ticket ${echapperHtml(ticket.numeroTicket)}</title>
   <style>
     @page { size: 80mm auto; margin: 4mm; }
     * { box-sizing: border-box; }
@@ -177,11 +174,11 @@ function construireHtml(
 </head>
 <body>
   <div class="header">
-    <h1>${escape(boutique.nom)}</h1>
+    <h1>${echapperHtml(boutique.nom)}</h1>
     <div class="meta">${dateStr} · ${heureStr}</div>
-    <div class="meta">Ticket n° ${escape(ticket.numeroTicket)}</div>
-    ${contexte.caissier ? `<div class="meta">Caissier : ${escape(contexte.caissier)}</div>` : ""}
-    ${contexte.numeroSession ? `<div class="meta">Session : ${escape(contexte.numeroSession)}</div>` : ""}
+    <div class="meta">Ticket n° ${echapperHtml(ticket.numeroTicket)}</div>
+    ${contexte.caissier ? `<div class="meta">Caissier : ${echapperHtml(contexte.caissier)}</div>` : ""}
+    ${contexte.numeroSession ? `<div class="meta">Session : ${echapperHtml(contexte.numeroSession)}</div>` : ""}
   </div>
 
   ${blocClientNote}
@@ -227,10 +224,18 @@ function construireHtml(
 </html>`;
 }
 
-function escape(s: string): string {
+/**
+ * Echappe les caracteres dangereux pour HTML. Fix C4 :
+ * - rename `escape` (qui shadowait le global deprecated)
+ * - couvre `'` et `` ` `` car le nom client/note pourrait casser un
+ *   attribut delimite par apostrophes ou un template inline.
+ */
+function echapperHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/`/g, "&#96;");
 }
