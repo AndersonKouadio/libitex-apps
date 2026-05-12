@@ -83,7 +83,7 @@ export default function PageDetailCommande({ params }: { params: Promise<{ id: s
           <Card.Content className="p-4 space-y-3 text-sm">
             <div className="flex items-center justify-between gap-2">
               <span className="text-muted text-xs">Statut</span>
-              <Chip className={`text-[10px] ${CLASSES_STATUT[commande.statut]}`}>
+              <Chip variant="soft" size="sm" className={CLASSES_STATUT[commande.statut]}>
                 {LIBELLE_STATUT[commande.statut]}
               </Chip>
             </div>

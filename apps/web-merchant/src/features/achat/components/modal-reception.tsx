@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Modal, Button, Switch, toast } from "@heroui/react";
+import { Modal, Button, Switch, NumberField, toast } from "@heroui/react";
 import { useReceptionMutation } from "../queries/achat.query";
 import { formatMontant } from "@/features/vente/utils/format";
 import type { ICommande } from "../types/achat.type";
@@ -82,11 +82,8 @@ export function ModalReception({ ouvert, commande, onFermer }: Props) {
     }
   }
 
-  /** Fix I4 : parse robuste — un input vide donne 0 au lieu de NaN. */
-  function parseQte(brut: string): number {
-    const n = Number(brut);
-    return Number.isFinite(n) && n >= 0 ? n : 0;
-  }
+  // Fix I4 : NumberField HeroUI v3 garantit deja une valeur numerique
+  // valide via son onChange (jamais NaN). Pas besoin de parser manuellement.
 
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(o) => { if (!o) onFermer(); }}>
@@ -132,22 +129,21 @@ export function ModalReception({ ouvert, commande, onFermer }: Props) {
                         </p>
                       )}
                     </div>
-                    <input
-                      type="number"
-                      // Fix I4 : pas de NaN — un input vide donne 0
+                    <NumberField
+                      // Fix I4 : NumberField HeroUI v3 garantit valeur numerique
                       value={Number.isFinite(quantites[l.id]) ? (quantites[l.id] ?? 0) : 0}
-                      onChange={(e) => setQuantites((q) => ({ ...q, [l.id]: parseQte(e.target.value) }))}
-                      min={0}
-                      max={reste}
-                      step="0.001"
+                      onChange={(v) => setQuantites((q) => ({ ...q, [l.id]: Number.isFinite(v) ? v : 0 }))}
+                      minValue={0}
+                      maxValue={reste}
+                      step={0.001}
+                      isInvalid={enDepassement}
                       aria-label={`Quantite recue pour ${l.nomProduit}`}
-                      aria-invalid={enDepassement}
-                      className={`w-24 h-9 px-2 text-sm text-right tabular-nums rounded-md border bg-surface focus:outline-none focus:ring-2 ${
-                        enDepassement
-                          ? "border-danger focus:ring-danger/30"
-                          : "border-border focus:ring-accent/30"
-                      }`}
-                    />
+                      className="w-28"
+                    >
+                      <NumberField.Group>
+                        <NumberField.Input className="text-right tabular-nums" />
+                      </NumberField.Group>
+                    </NumberField>
                   </div>
                 );
               })}

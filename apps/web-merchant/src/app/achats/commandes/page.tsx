@@ -87,36 +87,42 @@ export default function PageCommandes() {
         </Card>
       ) : (
         <Card>
-          <Table.ScrollContainer>
-            <Table.Content aria-label="Liste des commandes">
-              <Table.Header>
-                <Table.Column isRowHeader>Numero</Table.Column>
-                <Table.Column>Fournisseur</Table.Column>
-                <Table.Column>Statut</Table.Column>
-                <Table.Column className="text-right">Total</Table.Column>
-                <Table.Column>Date</Table.Column>
-              </Table.Header>
-              <Table.Body>
-                {(commandes ?? []).map((c) => (
-                  <Table.Row key={c.id} href={`/achats/commandes/${c.id}`} className="cursor-pointer hover:bg-surface-secondary">
-                    <Table.Cell className="font-mono text-xs">{c.numero}</Table.Cell>
-                    <Table.Cell className="font-medium">{c.nomFournisseur}</Table.Cell>
-                    <Table.Cell>
-                      <Chip className={`text-[10px] ${CLASSES_STATUT[c.statut]}`}>
-                        {LIBELLE_STATUT[c.statut]}
-                      </Chip>
-                    </Table.Cell>
-                    <Table.Cell className="text-right tabular-nums">
-                      {formatMontant(c.montantTotal)} F
-                    </Table.Cell>
-                    <Table.Cell className="text-xs text-muted">
-                      {new Date(c.creeLe).toLocaleDateString("fr-FR")}
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-            </Table.Content>
-          </Table.ScrollContainer>
+          <Table>
+            <Table.ScrollContainer>
+              <Table.Content aria-label="Liste des commandes">
+                <Table.Header className="table-header-libitex">
+                  <Table.Column isRowHeader>Numero</Table.Column>
+                  <Table.Column>Fournisseur</Table.Column>
+                  <Table.Column>Statut</Table.Column>
+                  <Table.Column className="text-right">Total</Table.Column>
+                  <Table.Column>Date</Table.Column>
+                </Table.Header>
+                <Table.Body>
+                  {(commandes ?? []).map((c) => (
+                    <Table.Row
+                      key={c.id}
+                      href={`/achats/commandes/${c.id}`}
+                      className="cursor-pointer hover:bg-surface-secondary"
+                    >
+                      <Table.Cell className="font-mono text-xs">{c.numero}</Table.Cell>
+                      <Table.Cell className="font-medium">{c.nomFournisseur}</Table.Cell>
+                      <Table.Cell>
+                        <Chip variant="soft" size="sm" className={CLASSES_STATUT[c.statut]}>
+                          {LIBELLE_STATUT[c.statut]}
+                        </Chip>
+                      </Table.Cell>
+                      <Table.Cell className="text-right tabular-nums">
+                        {formatMontant(c.montantTotal)} F
+                      </Table.Cell>
+                      <Table.Cell className="text-xs text-muted">
+                        {new Date(c.creeLe).toLocaleDateString("fr-FR")}
+                      </Table.Cell>
+                    </Table.Row>
+                  ))}
+                </Table.Body>
+              </Table.Content>
+            </Table.ScrollContainer>
+          </Table>
         </Card>
       )}
     </PageContainer>

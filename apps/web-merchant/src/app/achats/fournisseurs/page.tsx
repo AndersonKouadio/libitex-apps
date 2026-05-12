@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Button, TextField, Label, Input, FieldError, Card, Skeleton,
+  Button, SearchField, Card, Skeleton,
 } from "@heroui/react";
 import { Plus, Pencil, Trash2, Phone, Mail, Building2 } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
@@ -52,11 +52,18 @@ export default function PageFournisseurs() {
       />
 
       <div className="mb-4">
-        <TextField value={recherche} onChange={setRecherche} className="max-w-md">
-          <Label className="sr-only">Rechercher</Label>
-          <Input placeholder="Rechercher par nom, contact, telephone ou email" />
-          <FieldError />
-        </TextField>
+        <SearchField
+          value={recherche}
+          onChange={setRecherche}
+          aria-label="Rechercher un fournisseur"
+          className="max-w-md w-full"
+        >
+          <SearchField.Group>
+            <SearchField.SearchIcon />
+            <SearchField.Input placeholder="Rechercher par nom, contact, telephone ou email" />
+            <SearchField.ClearButton />
+          </SearchField.Group>
+        </SearchField>
       </div>
 
       {isLoading ? (

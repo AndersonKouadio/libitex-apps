@@ -3,12 +3,13 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Button, TextField, Label, Input, FieldError, TextArea,
+  Button, TextField, Label, Input, TextArea, NumberField, SearchField,
   Select, ListBox, Card, toast, Spinner,
 } from "@heroui/react";
-import { ArrowLeft, Trash2, Plus, Search } from "lucide-react";
+import { ArrowLeft, Trash2, Plus } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
+import { ChampDate } from "@/components/forms/champ-date";
 import { useFournisseurListQuery, useCreerCommandeMutation } from "@/features/achat/queries/achat.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
@@ -89,18 +90,18 @@ export default function PageNouvelleCommande() {
     });
   }
 
-  /** Fix I4 : parse robuste — un input vide donne 0 au lieu de NaN. */
-  function parseNum(brut: string): number {
-    const n = Number(brut);
-    return Number.isFinite(n) && n >= 0 ? n : 0;
+  /**
+   * Fix I4 : NumberField (HeroUI v3) garantit deja une valeur numerique
+   * valide via son onChange (jamais NaN). On ne fait que clamper a 0+
+   * pour eviter les nombres negatifs en cas de saisie clavier directe.
+   */
+  function modifierQuantite(idx: number, qte: number) {
+    const val = Number.isFinite(qte) && qte >= 0 ? qte : 0;
+    setLignes((prev) => prev.map((l, i) => (i === idx ? { ...l, quantite: val } : l)));
   }
-  function modifierQuantite(idx: number, brut: string) {
-    const qte = parseNum(brut);
-    setLignes((prev) => prev.map((l, i) => (i === idx ? { ...l, quantite: qte } : l)));
-  }
-  function modifierPrix(idx: number, brut: string) {
-    const prix = parseNum(brut);
-    setLignes((prev) => prev.map((l, i) => (i === idx ? { ...l, prixUnitaire: prix } : l)));
+  function modifierPrix(idx: number, prix: number) {
+    const val = Number.isFinite(prix) && prix >= 0 ? prix : 0;
+    setLignes((prev) => prev.map((l, i) => (i === idx ? { ...l, prixUnitaire: val } : l)));
   }
   function retirerLigne(idx: number) {
     setLignes((prev) => prev.filter((_, i) => i !== idx));
@@ -178,10 +179,11 @@ export default function PageNouvelleCommande() {
                 </ListBox>
               </Select.Popover>
             </Select>
-            <TextField value={dateAttendue} onChange={setDateAttendue}>
-              <Label>Date de livraison attendue</Label>
-              <Input type="date" />
-            </TextField>
+            <ChampDate
+              label="Date de livraison attendue"
+              value={dateAttendue}
+              onChange={setDateAttendue}
+            />
             <TextField value={notes} onChange={setNotes}>
               <Label>Notes</Label>
               <TextArea rows={2} placeholder="Reference du fournisseur, instructions..." />
@@ -214,24 +216,30 @@ export default function PageNouvelleCommande() {
                         {l.nomVariante ? `${l.nomVariante} · ` : ""}{l.sku}
                       </p>
                     </div>
-                    <input
-                      type="number"
+                    <NumberField
                       value={Number.isFinite(l.quantite) ? l.quantite : 0}
-                      onChange={(e) => modifierQuantite(i, e.target.value)}
-                      min={0}
-                      step="0.001"
+                      onChange={(v) => modifierQuantite(i, v)}
+                      minValue={0}
+                      step={0.001}
                       aria-label="Quantite"
-                      className="w-20 h-9 px-2 text-sm text-right tabular-nums rounded-md border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30"
-                    />
-                    <input
-                      type="number"
+                      className="w-24"
+                    >
+                      <NumberField.Group>
+                        <NumberField.Input className="text-right tabular-nums" />
+                      </NumberField.Group>
+                    </NumberField>
+                    <NumberField
                       value={Number.isFinite(l.prixUnitaire) ? l.prixUnitaire : 0}
-                      onChange={(e) => modifierPrix(i, e.target.value)}
-                      min={0}
-                      step="1"
+                      onChange={(v) => modifierPrix(i, v)}
+                      minValue={0}
+                      step={1}
                       aria-label="Prix unitaire"
-                      className="w-24 h-9 px-2 text-sm text-right tabular-nums rounded-md border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30"
-                    />
+                      className="w-28"
+                    >
+                      <NumberField.Group>
+                        <NumberField.Input className="text-right tabular-nums" />
+                      </NumberField.Group>
+                    </NumberField>
                     <span className="w-24 text-right text-sm font-semibold tabular-nums shrink-0">
                       {formatMontant(l.quantite * l.prixUnitaire)} F
                     </span>
@@ -250,16 +258,18 @@ export default function PageNouvelleCommande() {
 
             <div className="border-t border-border pt-3">
               <p className="text-xs font-semibold text-muted mb-2">Ajouter un produit</p>
-              <div className="relative mb-2">
-                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
-                <input
-                  type="text"
-                  value={recherche}
-                  onChange={(e) => setRecherche(e.target.value)}
-                  placeholder="Rechercher par nom, variante ou SKU"
-                  className="w-full h-9 pl-7 pr-2 text-sm rounded-md border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30"
-                />
-              </div>
+              <SearchField
+                value={recherche}
+                onChange={setRecherche}
+                aria-label="Rechercher un produit a ajouter"
+                className="mb-2 w-full"
+              >
+                <SearchField.Group>
+                  <SearchField.SearchIcon />
+                  <SearchField.Input placeholder="Rechercher par nom, variante ou SKU" />
+                  <SearchField.ClearButton />
+                </SearchField.Group>
+              </SearchField>
               {chargementProduits ? (
                 <Spinner />
               ) : (
