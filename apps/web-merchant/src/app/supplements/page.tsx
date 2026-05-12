@@ -8,6 +8,7 @@ import {
   Button, Skeleton, Chip, Table, Select, ListBox,
 } from "@heroui/react";
 import { Plus, Pencil, Trash2, UtensilsCrossed, Package } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import {
   useSupplementListQuery, useSupprimerSupplementMutation,
 } from "@/features/supplement/queries/supplement.query";
@@ -147,20 +148,18 @@ export default function PageSupplements() {
             ))}
           </div>
         ) : supplements.length === 0 ? (
-          <div className="bg-surface rounded-xl border border-border py-16 text-center">
-            <div className="w-12 h-12 rounded-full bg-warning/10 inline-flex items-center justify-center mb-3">
-              <UtensilsCrossed size={20} className="text-warning" />
-            </div>
-            <p className="text-sm font-medium text-foreground">Aucun supplément</p>
-            <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
-              Créez vos premiers suppléments (sauce piquante, double fromage, frites moyennes...) pour
-              les rattacher à vos menus.
-            </p>
-            <Button variant="primary" className="gap-1.5 mt-4" onPress={ouvrirCreation}>
-              <Plus size={16} />
-              Créer un supplément
-            </Button>
-          </div>
+          <EmptyState
+            icone={UtensilsCrossed}
+            tonalite="warning"
+            titre="Aucun supplément"
+            description="Créez vos premiers suppléments (sauce piquante, double fromage, frites moyennes...) pour les rattacher à vos menus."
+            action={
+              <Button variant="primary" className="gap-1.5" onPress={ouvrirCreation}>
+                <Plus size={16} />
+                Créer un supplément
+              </Button>
+            }
+          />
         ) : (
           <Table>
             <Table.ScrollContainer>

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import {
-  Modal, Button, Spinner, Chip, TextField, Label, Input, FieldError, TextArea,
+  Modal, Button, Skeleton, Chip, TextField, Label, Input, FieldError, TextArea,
 } from "@heroui/react";
 import {
   Lock, AlertTriangle, PauseCircle, ShoppingCart, Trash2, Clock,
@@ -81,7 +81,12 @@ export function ModalFermetureCaisse({ ouvert, sessionId, onFermer, onReprendreT
 
           <Modal.Body className="space-y-5">
             {recap.isLoading || !recap.data ? (
-              <div className="py-12 flex justify-center"><Spinner /></div>
+              <div className="space-y-3">
+                <Skeleton className="h-14 rounded-xl" />
+                <Skeleton className="h-24 rounded-xl" />
+                <Skeleton className="h-32 rounded-xl" />
+                <Skeleton className="h-20 rounded-xl" />
+              </div>
             ) : (
               <>
                 {/* Recap session — date humaine d'abord, numero en discret */}

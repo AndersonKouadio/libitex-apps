@@ -5,6 +5,7 @@ import { Button, Card, Chip, Skeleton, Select, ListBox, Label } from "@heroui/re
 import {
   Plus, Calendar, Users, Phone, MapPin, Clock, Pencil, Trash2, Check, X,
 } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -151,15 +152,11 @@ export default function PageReservations() {
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 rounded" />)}
         </div>
       ) : (reservations?.length ?? 0) === 0 ? (
-        <Card>
-          <Card.Content className="p-10 text-center">
-            <Calendar size={32} className="mx-auto mb-3 text-muted opacity-50" />
-            <p className="text-sm text-foreground font-medium">Aucune reservation ce jour-la</p>
-            <p className="text-xs text-muted mt-1">
-              Cliquez sur « Nouvelle reservation » pour en ajouter une.
-            </p>
-          </Card.Content>
-        </Card>
+        <EmptyState
+          icone={Calendar}
+          titre="Aucune reservation ce jour-la"
+          description="Cliquez sur « Nouvelle reservation » pour en ajouter une."
+        />
       ) : (
         <div className="space-y-2">
           {(reservations ?? []).map((r) => {

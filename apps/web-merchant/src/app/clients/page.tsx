@@ -9,6 +9,7 @@ import {
   Select, ListBox,
 } from "@heroui/react";
 import { Users, UserPlus, Phone, Mail, MapPin, Trash2, Pencil } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { useClientListQuery, useSupprimerClientMutation } from "@/features/client/queries/client.query";
 import { ModalClient } from "@/features/client/components/modal-client";
 import { ChipSegment, SEGMENT_OPTIONS } from "@/features/client/components/chip-segment";
@@ -93,19 +94,23 @@ export default function PageClients() {
             ))}
           </div>
         ) : clients.length === 0 ? (
-          <div className="bg-surface rounded-xl border border-border py-16 text-center">
-            <div className="w-12 h-12 rounded-full bg-muted/10 inline-flex items-center justify-center mb-3">
-              <Users size={20} className="text-muted/50" />
-            </div>
-            <p className="text-sm font-medium text-foreground">
-              {recherche ? "Aucun client ne correspond" : "Aucun client pour le moment"}
-            </p>
-            {!recherche && (
-              <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
-                Ajoutez vos premiers clients pour les retrouver rapidement et personnaliser leur expérience.
-              </p>
-            )}
-          </div>
+          <EmptyState
+            icone={Users}
+            titre={recherche || segment ? "Aucun client ne correspond" : "Aucun client pour le moment"}
+            description={
+              recherche || segment
+                ? "Modifiez ou effacez les filtres pour voir d'autres clients."
+                : "Ajoutez vos premiers clients pour les retrouver rapidement et personnaliser leur experience."
+            }
+            action={
+              !recherche && !segment ? (
+                <Button variant="primary" className="gap-1.5" onPress={ouvrirCreation}>
+                  <UserPlus size={16} />
+                  Ajouter un client
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
           <Table>
             <Table.ScrollContainer>

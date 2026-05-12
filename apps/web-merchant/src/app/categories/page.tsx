@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { NavCatalogue } from "@/components/layout/nav-catalogue";
 import { Button, Skeleton } from "@heroui/react";
 import { Plus, Pencil, Trash2, FolderTree, Folder, ChevronRight, ArrowUpRight } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { useCategorieListQuery } from "@/features/catalogue/queries/categorie-list.query";
 import { useSupprimerCategorieMutation } from "@/features/catalogue/queries/categorie.mutations";
 import { ModalCategorie } from "@/features/catalogue/components/modal-categorie";
@@ -83,19 +84,18 @@ export default function PageCategories() {
             {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
           </div>
         ) : categories.length === 0 ? (
-          <div className="bg-surface rounded-xl border border-border py-16 text-center">
-            <div className="w-12 h-12 rounded-full bg-accent/10 inline-flex items-center justify-center mb-3">
-              <FolderTree size={20} className="text-accent" />
-            </div>
-            <p className="text-sm font-medium text-foreground">Aucune catégorie</p>
-            <p className="text-xs text-muted mt-1 max-w-sm mx-auto">
-              Créez votre première catégorie pour organiser vos produits (ex. Boissons, Plats, Accessoires).
-            </p>
-            <Button variant="primary" className="gap-1.5 mt-4" onPress={ouvrirCreation}>
-              <Plus size={16} />
-              Créer une catégorie
-            </Button>
-          </div>
+          <EmptyState
+            icone={FolderTree}
+            tonalite="accent"
+            titre="Aucune catégorie"
+            description="Créez votre première catégorie pour organiser vos produits (ex. Boissons, Plats, Accessoires)."
+            action={
+              <Button variant="primary" className="gap-1.5" onPress={ouvrirCreation}>
+                <Plus size={16} />
+                Créer une catégorie
+              </Button>
+            }
+          />
         ) : (
           <div className="bg-surface rounded-xl border border-border overflow-hidden">
             <ul>

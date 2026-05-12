@@ -29,6 +29,7 @@ import {
   MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus,
   Settings, Wheat, Scale, History, ClipboardCheck,
 } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 
 type Onglet = "variantes" | "ingredients";
 
@@ -186,32 +187,29 @@ export default function PageStock() {
               );
             })}
             {(emplacements ?? []).length === 0 && !chargementEmpList && (
-              <Card>
-                <Card.Content className="py-6 text-center">
-                  <MapPin size={20} className="text-muted/30 mx-auto mb-2" />
-                  <p className="text-xs text-muted mb-3">Aucun emplacement</p>
+              <EmptyState
+                variante="subtle"
+                icone={MapPin}
+                titre="Aucun emplacement"
+                action={
                   <Link href="/parametres/emplacements">
                     <Button variant="primary" className="text-xs gap-1.5">
                       <Settings size={12} />
                       Gérer
                     </Button>
                   </Link>
-                </Card.Content>
-              </Card>
+                }
+              />
             )}
           </div>
 
           <div className="lg:col-span-3">
             {!empSelectionne ? (
-              <Card>
-                <Card.Content className="py-20 text-center">
-                  <ArrowDownToLine size={28} className="text-muted/30 mx-auto mb-3" />
-                  <p className="text-sm text-foreground">Sélectionnez un emplacement</p>
-                  <p className="text-xs text-muted mt-1">
-                    pour consulter le stock {onglet === "variantes" ? "des produits" : "des ingrédients"}
-                  </p>
-                </Card.Content>
-              </Card>
+              <EmptyState
+                icone={ArrowDownToLine}
+                titre="Sélectionnez un emplacement"
+                description={`pour consulter le stock ${onglet === "variantes" ? "des produits" : "des ingrédients"}.`}
+              />
             ) : onglet === "variantes" ? (
               chargementStock ? (
                 <div className="bg-surface rounded-xl border border-border p-4 space-y-3">
@@ -223,13 +221,11 @@ export default function PageStock() {
                   ))}
                 </div>
               ) : (stockDetail ?? []).length === 0 ? (
-                <Card>
-                  <Card.Content className="py-16 text-center">
-                    <Package size={28} className="text-muted/30 mx-auto mb-3" />
-                    <p className="text-sm text-foreground">Aucun stock dans cet emplacement</p>
-                    <p className="text-xs text-muted mt-1">Cliquez sur « Recevoir du stock » pour réceptionner de la marchandise</p>
-                  </Card.Content>
-                </Card>
+                <EmptyState
+                  icone={Package}
+                  titre="Aucun stock dans cet emplacement"
+                  description="Cliquez sur « Recevoir du stock » pour réceptionner de la marchandise."
+                />
               ) : (
                 <div>
                   <KpisStock kpis={kpis} />
@@ -245,21 +241,19 @@ export default function PageStock() {
             ) : (
               // Onglet Ingredients : stock + seuil + alerte
               (ingredients ?? []).length === 0 ? (
-                <Card>
-                  <Card.Content className="py-16 text-center">
-                    <Wheat size={28} className="text-muted/30 mx-auto mb-3" />
-                    <p className="text-sm text-foreground">Aucun ingrédient déclaré</p>
-                    <p className="text-xs text-muted mt-1 mb-3">
-                      Déclarez d'abord vos ingrédients (farine, huile, viandes...) dans le catalogue.
-                    </p>
+                <EmptyState
+                  icone={Wheat}
+                  titre="Aucun ingrédient déclaré"
+                  description="Déclarez d'abord vos ingrédients (farine, huile, viandes...) dans le catalogue."
+                  action={
                     <Link href="/ingredients">
-                      <Button variant="primary" className="text-xs gap-1.5">
-                        <ArrowDownToLine size={12} className="rotate-180" />
+                      <Button variant="primary" className="gap-1.5">
+                        <ArrowDownToLine size={14} className="rotate-180" />
                         Aller au catalogue ingrédients
                       </Button>
                     </Link>
-                  </Card.Content>
-                </Card>
+                  }
+                />
               ) : (
                 <div>
                   <KpisStockIngredients kpis={kpisIng} />

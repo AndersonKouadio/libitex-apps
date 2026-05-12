@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Card, Skeleton } from "@heroui/react";
+import { Button, Skeleton } from "@heroui/react";
 import { UserPlus, Users } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -55,19 +56,17 @@ export default function PageEquipe() {
             {[1, 2, 3].map((i) => <Skeleton key={i} className="h-[140px] rounded-xl" />)}
           </div>
         ) : (membres ?? []).length === 0 ? (
-          <Card>
-            <Card.Content className="py-16 text-center">
-              <Users size={32} className="text-muted/30 mx-auto mb-3" />
-              <p className="text-sm font-medium text-foreground">Aucun membre</p>
-              <p className="text-sm text-muted mt-1 mb-4">
-                Vous êtes seul sur cette boutique. Invitez un caissier ou un manager pour commencer.
-              </p>
+          <EmptyState
+            icone={Users}
+            titre="Aucun membre"
+            description="Vous êtes seul sur cette boutique. Invitez un caissier ou un manager pour commencer."
+            action={
               <Button variant="primary" className="gap-1.5" onPress={() => setModalInviter(true)}>
                 <UserPlus size={16} />
                 Inviter le premier membre
               </Button>
-            </Card.Content>
-          </Card>
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {(membres ?? []).map((m) => (

@@ -2,11 +2,12 @@
 
 import { useState, useMemo } from "react";
 import {
-  Select, ListBox, Spinner, Chip, Button,
+  Select, ListBox, Skeleton, Chip, Button,
 } from "@heroui/react";
 import {
   History, Banknote, Receipt, TrendingUp, AlertTriangle,
 } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { CarteKpi } from "@/features/tableau-de-bord/components/carte-kpi";
@@ -174,13 +175,17 @@ export default function PageHistoriqueSessions() {
       )}
 
       {isLoading ? (
-        <div className="py-16 flex justify-center"><Spinner /></div>
-      ) : sessions.length === 0 ? (
-        <div className="py-16 text-center">
-          <History size={32} className="text-muted/30 mx-auto mb-3" />
-          <p className="text-sm text-foreground">Aucune session pour ces filtres</p>
-          <p className="text-xs text-muted mt-1">Les sessions apparaitront ici une fois la caisse ouverte.</p>
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
         </div>
+      ) : sessions.length === 0 ? (
+        <EmptyState
+          icone={History}
+          titre="Aucune session pour ces filtres"
+          description="Les sessions apparaitront ici une fois la caisse ouverte."
+        />
       ) : (
         <>
           <div className="space-y-6">

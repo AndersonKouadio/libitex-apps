@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button, Card, Chip, Skeleton } from "@heroui/react";
 import { Plus, Tag, Pencil, Trash2, Calendar, Users, Hash } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -55,15 +56,18 @@ export default function PagePromotions() {
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 rounded" />)}
         </div>
       ) : (promotions?.length ?? 0) === 0 ? (
-        <Card>
-          <Card.Content className="p-10 text-center">
-            <Tag size={32} className="mx-auto mb-3 text-muted opacity-50" />
-            <p className="text-sm text-foreground font-medium">Aucun code promo</p>
-            <p className="text-xs text-muted mt-1">
-              Creez votre premier code pour booster vos ventes (ex: RENTREE10 pour 10% off).
-            </p>
-          </Card.Content>
-        </Card>
+        <EmptyState
+          icone={Tag}
+          tonalite="accent"
+          titre="Aucun code promo"
+          description="Creez votre premier code pour booster vos ventes (ex: RENTREE10 pour 10% off)."
+          action={
+            <Button variant="primary" className="gap-1.5" onPress={ouvrirCreation}>
+              <Plus size={16} />
+              Nouveau code promo
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-2">
           {(promotions ?? []).map((p) => {

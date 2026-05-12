@@ -1,7 +1,8 @@
 "use client";
 
-import { Card, Button } from "@heroui/react";
+import { Button } from "@heroui/react";
 import { MapPin } from "lucide-react";
+import { EmptyState } from "./empty-state";
 
 interface Props {
   onCreer: () => void;
@@ -27,18 +28,17 @@ export function AucunEmplacement({ onCreer, contexte = "stock" }: Props) {
   const { titre, description } = MESSAGES[contexte];
 
   return (
-    <Card>
-      <Card.Content className="py-12 text-center">
-        <span className="inline-flex w-12 h-12 rounded-full bg-warning/10 text-warning items-center justify-center mb-3">
-          <MapPin size={20} />
-        </span>
-        <p className="text-sm font-semibold text-foreground">{titre}</p>
-        <p className="text-sm text-muted mt-1 max-w-sm mx-auto">{description}</p>
-        <Button variant="primary" className="mt-4 gap-1.5" onPress={onCreer}>
+    <EmptyState
+      icone={MapPin}
+      tonalite="warning"
+      titre={titre}
+      description={description}
+      action={
+        <Button variant="primary" className="gap-1.5" onPress={onCreer}>
           <MapPin size={16} />
           Creer un emplacement
         </Button>
-      </Card.Content>
-    </Card>
+      }
+    />
   );
 }

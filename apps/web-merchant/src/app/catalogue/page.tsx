@@ -15,6 +15,7 @@ import {
   Table, Chip, Button, Skeleton, SearchField, Input, Select, ListBox, toast,
 } from "@heroui/react";
 import { Package, Plus, Pencil, AlertTriangle, Copy, Trash2, Folder, Upload, ChevronUp, ChevronDown, Download } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { useSupprimerProduitMutation } from "@/features/catalogue/queries/produit-delete.mutation";
 import { useConfirmation } from "@/providers/confirmation-provider";
 import { ToggleActifProduit } from "@/features/catalogue/components/toggle-actif-produit";
@@ -382,27 +383,29 @@ export default function PageCatalogue() {
           ))}
         </div>
       ) : produits.length === 0 ? (
-        <div className="bg-surface rounded-xl border border-border py-16 text-center">
-          <Package size={32} className="text-muted/30 mx-auto mb-3" />
-          <p className="text-sm text-foreground font-medium">
-            {recherche || filtreType !== "all" || filtreCategorie !== "all" || filtreStatut !== "all"
+        <EmptyState
+          icone={Package}
+          titre={
+            recherche || filtreType !== "all" || filtreCategorie !== "all" || filtreStatut !== "all"
               ? "Aucun produit pour ces filtres"
-              : "Votre catalogue est vide"}
-          </p>
-          <p className="text-sm text-muted mt-1 mb-4">
-            {recherche || filtreType !== "all" || filtreCategorie !== "all" || filtreStatut !== "all"
-              ? "Modifiez ou effacez les filtres pour voir d'autres produits"
-              : "Ajoutez votre premier produit pour commencer à vendre"}
-          </p>
-          {!recherche && filtreType === "all" && filtreCategorie === "all" && filtreStatut === "all" && (
-            <Link href="/catalogue/nouveau">
-              <Button variant="primary" className="gap-1.5">
-                <Plus size={16} />
-                Ajouter un produit
-              </Button>
-            </Link>
-          )}
-        </div>
+              : "Votre catalogue est vide"
+          }
+          description={
+            recherche || filtreType !== "all" || filtreCategorie !== "all" || filtreStatut !== "all"
+              ? "Modifiez ou effacez les filtres pour voir d'autres produits."
+              : "Ajoutez votre premier produit pour commencer a vendre."
+          }
+          action={
+            !recherche && filtreType === "all" && filtreCategorie === "all" && filtreStatut === "all" ? (
+              <Link href="/catalogue/nouveau">
+                <Button variant="primary" className="gap-1.5">
+                  <Plus size={16} />
+                  Ajouter un produit
+                </Button>
+              </Link>
+            ) : undefined
+          }
+        />
       ) : (
         <Table>
           <Table.ScrollContainer>

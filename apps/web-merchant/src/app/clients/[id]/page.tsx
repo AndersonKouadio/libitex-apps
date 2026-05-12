@@ -7,8 +7,9 @@ import {
   Card, Button, Skeleton, Chip,
 } from "@heroui/react";
 import {
-  ArrowLeft, Pencil, Trash2, Phone, Mail, MapPin, StickyNote, UserPlus,
+  ArrowLeft, Pencil, Trash2, Phone, Mail, MapPin, StickyNote, UserPlus, UserX,
 } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -69,16 +70,18 @@ export default function PageClientDetail({ params }: Props) {
   if (!client) {
     return (
       <PageContainer>
-        <Card>
-          <Card.Content className="py-16 text-center">
-            <p className="text-sm text-foreground">Client introuvable</p>
+        <EmptyState
+          icone={UserX}
+          titre="Client introuvable"
+          description="Ce client a peut-être été supprimé ou l'identifiant est incorrect."
+          action={
             <Link href="/clients">
-              <Button variant="primary" className="mt-3 gap-1.5">
+              <Button variant="primary" className="gap-1.5">
                 <ArrowLeft size={14} /> Retour à la liste
               </Button>
             </Link>
-          </Card.Content>
-        </Card>
+          }
+        />
       </PageContainer>
     );
   }

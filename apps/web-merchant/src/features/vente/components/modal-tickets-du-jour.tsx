@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Modal, Spinner, Chip, toast } from "@heroui/react";
+import { Modal, Spinner, Skeleton, Chip, toast } from "@heroui/react";
 import { Receipt, Printer, AlertCircle } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { useTicketListQuery } from "../queries/ticket-list.query";
 import { venteAPI } from "../apis/vente.api";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -86,17 +87,18 @@ export function ModalTicketsDuJour({ ouvert, onFermer, numeroSession }: Props) {
 
           <Modal.Body>
             {query.isLoading ? (
-              <div className="py-10 text-center">
-                <Spinner size="sm" />
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-14 rounded-lg" />
+                ))}
               </div>
             ) : tickets.length === 0 ? (
-              <div className="py-10 text-center">
-                <Receipt size={28} className="text-muted/30 mx-auto mb-2" />
-                <p className="text-sm text-foreground">Aucun ticket termine aujourd&apos;hui</p>
-                <p className="text-xs text-muted mt-1">
-                  Les tickets encaisses apparaissent ici pour reimpression.
-                </p>
-              </div>
+              <EmptyState
+                variante="subtle"
+                icone={Receipt}
+                titre="Aucun ticket termine aujourd'hui"
+                description="Les tickets encaisses apparaissent ici pour reimpression."
+              />
             ) : (
               <ul className="divide-y divide-border">
                 {tickets.map((t) => (

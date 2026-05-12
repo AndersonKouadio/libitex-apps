@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Modal, Button, TextField, Label, Input, FieldError, Spinner,
+  Modal, Button, TextField, Label, Input, FieldError, Skeleton,
 } from "@heroui/react";
 import { User, Phone, UserPlus, Search } from "lucide-react";
 import { useClientListQuery, useCreerClientMutation } from "@/features/client/queries/client.query";
@@ -108,7 +108,11 @@ export function ModalClientPanier({ ouvert, clientCourant, onConfirmer, onFermer
                 {recherche.length >= 2 && (
                   <div className="border border-border rounded-lg overflow-hidden divide-y divide-border max-h-[280px] overflow-y-auto">
                     {isLoading ? (
-                      <div className="py-6 flex justify-center"><Spinner size="sm" /></div>
+                      <div className="p-2 space-y-2">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                          <Skeleton key={i} className="h-10 rounded" />
+                        ))}
+                      </div>
                     ) : clients.length === 0 ? (
                       <div className="p-3 text-center text-xs text-muted">
                         Aucun client trouvé pour "{recherche}"

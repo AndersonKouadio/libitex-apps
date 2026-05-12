@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from "react";
 import {
-  Select, ListBox, Label, Button, Spinner, Tabs, Card,
+  Select, ListBox, Label, Button, Spinner, Skeleton, Tabs, Card,
 } from "@heroui/react";
 import {
   Printer, Download, BarChart3, FileText, TrendingUp, Calculator, ClipboardList,
 } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { ChampDate } from "@/components/forms/champ-date";
@@ -190,13 +191,11 @@ export default function PageRapports() {
           )}
 
           {!rapport && !isFetching && (
-            <Card>
-              <Card.Content className="py-16 text-center">
-                <FileText size={28} className="text-muted/30 mx-auto mb-3" />
-                <p className="text-sm text-foreground">Sélectionnez un emplacement et une date</p>
-                <p className="text-xs text-muted mt-1">pour générer le Z de caisse</p>
-              </Card.Content>
-            </Card>
+            <EmptyState
+              icone={FileText}
+              titre="Sélectionnez un emplacement et une date"
+              description="pour générer le Z de caisse."
+            />
           )}
         </div>
       )}
@@ -258,7 +257,7 @@ export default function PageRapports() {
 
           {onglet === "ventes-periode" && (
             ventesChargement ? (
-              <Card><Card.Content className="py-10 text-center"><Spinner size="sm" /></Card.Content></Card>
+              <SkeletonRapport />
             ) : rapportVentes ? (
               <RapportVentesPeriode rapport={rapportVentes} />
             ) : null
@@ -266,7 +265,7 @@ export default function PageRapports() {
 
           {onglet === "marges" && (
             margesChargement ? (
-              <Card><Card.Content className="py-10 text-center"><Spinner size="sm" /></Card.Content></Card>
+              <SkeletonRapport />
             ) : rapportMarges ? (
               <RapportMarges rapport={rapportMarges} />
             ) : null
@@ -274,7 +273,7 @@ export default function PageRapports() {
 
           {onglet === "tva" && (
             tvaChargement ? (
-              <Card><Card.Content className="py-10 text-center"><Spinner size="sm" /></Card.Content></Card>
+              <SkeletonRapport />
             ) : rapportTva ? (
               <RapportTva rapport={rapportTva} />
             ) : null
@@ -282,5 +281,20 @@ export default function PageRapports() {
         </div>
       )}
     </PageContainer>
+  );
+}
+
+/**
+ * Skeleton commun aux trois rapports periode (ventes, marges, TVA).
+ * Memes proportions visuelles que le composant final pour eviter le
+ * layout shift quand les donnees arrivent.
+ */
+function SkeletonRapport() {
+  return (
+    <div className="space-y-3">
+      <Skeleton className="h-24 rounded-xl" />
+      <Skeleton className="h-64 rounded-xl" />
+      <Skeleton className="h-40 rounded-xl" />
+    </div>
   );
 }
