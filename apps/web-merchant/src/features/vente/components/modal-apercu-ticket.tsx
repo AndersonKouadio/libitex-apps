@@ -1,6 +1,6 @@
 "use client";
 
-import { Modal, Button } from "@heroui/react";
+import { Modal, Button, toast } from "@heroui/react";
 import { Eye, Printer } from "lucide-react";
 import type { ArticlePanier, Remise, ClientPanier } from "../hooks/usePanier";
 import { formatMontant, formatHeure, formatDateRelative } from "../utils/format";
@@ -71,12 +71,15 @@ export function ModalApercuTicket({
       paiements: [],
       creeLe: maintenant,
     };
-    await imprimerTicket(
+    const res = await imprimerTicket(
       ticketFictif,
       { nom: emplacementNom || boutiqueActive.nom, devise: boutiqueActive.devise },
       0,
       { caissier: caissierNom, numeroSession },
     );
+    if (res.mode === "HTML" && res.fallback) {
+      toast.warning("Imprimante non detectee, apercu ouvert dans le navigateur");
+    }
   }
 
   return (
