@@ -137,8 +137,8 @@ export default function PageFidelite() {
                 <div className="text-xs text-muted">Valeur des points</div>
                 <p className="font-semibold tabular-nums">{formatMontant(valeurGagnee)} F</p>
                 <p className="text-[10px] text-muted leading-relaxed mt-2">
-                  Phase 1 : credit automatique au ticket. L&apos;utilisation des points pour
-                  reduire le total au paiement sera ajoutee dans une mise a jour ulterieure.
+                  Le client gagne des points a chaque ticket et peut les utiliser au paiement
+                  d&apos;un prochain achat (a partir du seuil minimum configure ci-dessus).
                 </p>
               </div>
             </Card.Content>
