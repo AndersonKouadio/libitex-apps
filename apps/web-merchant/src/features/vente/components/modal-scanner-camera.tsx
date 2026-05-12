@@ -53,8 +53,17 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
   useEffect(() => {
     if (!ouvert) return;
 
+    // Reset erreur si on rouvre apres une fermeture sur erreur
+    setErreur(null);
+
     const Ctor = typeof window !== "undefined" ? window.BarcodeDetector : undefined;
     if (!Ctor) {
+      setSupporte(false);
+      return;
+    }
+    // Fix I3 : verifier mediaDevices avant de tenter getUserMedia. Chrome < 53,
+    // contexte HTTP non-secure et certains WebViews n'ont pas mediaDevices.
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
       setSupporte(false);
       return;
     }
@@ -83,6 +92,11 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
         // Boucle de detection : on lit une frame toutes les 200ms (pas de
         // requestAnimationFrame pour ne pas griller le CPU sur du Xiaomi
         // d'entree de gamme).
+        //
+        // Fix C1 : verifier `arrete` ET `dejaTrouveRef.current` AVANT ET APRES
+        // l'await detect(). Sans le check apres, une frame en cours pendant
+        // la fermeture peut declencher onScan() apres unmount (memory leak +
+        // UI inconsistante).
         const detect = async () => {
           if (arrete || dejaTrouveRef.current) return;
           const detector = detectorRef.current;
@@ -93,23 +107,28 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
           }
           try {
             const results = await detector.detect(video);
-            if (results.length > 0 && !dejaTrouveRef.current) {
+            // Fix C1 + I2 : re-verifier APRES await — la modale peut etre
+            // fermee pendant le detect, ou une frame precedente peut avoir
+            // deja trouve.
+            if (arrete || dejaTrouveRef.current) return;
+            const first = results[0];
+            if (first?.rawValue) {
               dejaTrouveRef.current = true;
               bipScanReussi();
-              onScan(results[0]!.rawValue);
+              onScan(first.rawValue);
               onFermer();
               return;
             }
           } catch {
             // detect() peut throw sur certaines frames, on continue
           }
-          loopRef.current = window.setTimeout(detect, 200);
+          if (!arrete) loopRef.current = window.setTimeout(detect, 200);
         };
         detect();
       } catch (err) {
         const message = err instanceof Error ? err.message : "Camera indisponible";
         setErreur(/permission|denied|notallowed/i.test(message)
-          ? "Acces a la camera refuse"
+          ? "Acces a la camera refuse — autorisez la camera dans les parametres du navigateur"
           : message);
       }
     })();
@@ -119,6 +138,10 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
       if (loopRef.current !== null) clearTimeout(loopRef.current);
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+      // Fix C2 : reset le detector au cleanup. Sans ca, un re-open rapide
+      // garde l'ancien detector en memoire (fuite legere) et la closure
+      // de la boucle precedente peut continuer a l'utiliser.
+      detectorRef.current = null;
     };
   }, [ouvert, onScan, onFermer]);
 
@@ -137,8 +160,8 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
                 <div>
                   <p className="text-sm font-semibold text-foreground">Camera non supportee</p>
                   <p className="text-xs text-muted mt-1 leading-relaxed">
-                    Le scan camera est disponible sur Chrome, Edge ou Brave. Sur Safari et Firefox,
-                    utilisez une douchette USB ou saisissez le code manuellement.
+                    Le scan camera est disponible sur Chrome, Edge ou Brave en HTTPS.
+                    Sur Safari, Firefox ou en HTTP, utilisez une douchette USB ou saisissez le code manuellement.
                   </p>
                 </div>
               </div>
@@ -177,15 +200,26 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
 }
 
 /**
- * Petit beep de confirmation (1 sinusoide 880Hz pendant 120ms). Utilise
- * Web Audio direct pour ne pas charger de fichier sound et ne pas declencher
- * la permission audio.
+ * Petit beep de confirmation (1 sinusoide 880Hz pendant 120ms).
+ *
+ * Fix C5 : AudioContext singleton (lazy-created au premier scan), reutilise
+ * pour tous les scans suivants. Sans ca, Safari iOS crashe apres ~6
+ * AudioContext crees (limite navigateur). On ne close jamais le ctx :
+ * c'est leger en RAM et reactiver Web Audio coute plus cher.
  */
+let audioCtxSingleton: AudioContext | null = null;
+
 function bipScanReussi(): void {
   try {
-    const AC = window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AC) return;
-    const ctx = new AC();
+    if (!audioCtxSingleton) {
+      const AC = window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AC) return;
+      audioCtxSingleton = new AC();
+    }
+    const ctx = audioCtxSingleton;
+    // Si le ctx a ete suspendu (autoplay policy), le reveiller. C'est
+    // safe meme si deja actif (resume() est no-op).
+    if (ctx.state === "suspended") void ctx.resume();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.frequency.value = 880;
@@ -194,7 +228,7 @@ function bipScanReussi(): void {
     osc.connect(gain).connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.12);
-    osc.onended = () => ctx.close();
+    // Pas de ctx.close() : on garde le singleton pour les scans suivants.
   } catch {
     /* silencieux : le scan reussit meme sans son */
   }

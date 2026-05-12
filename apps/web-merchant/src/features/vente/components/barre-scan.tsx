@@ -46,9 +46,14 @@ export function BarreScan({ onScan, onOuvrirCamera, className = "" }: Props) {
         <input
           ref={inputRef}
           type="text"
-          inputMode="numeric"
+          // Fix C4 : inputMode="text" (pas numeric) — les codes-barres
+          // peuvent contenir des lettres (Code-128, QR-code) ou les SKU
+          // internes sont alphanumeriques. Sur mobile, "numeric" empechait
+          // la saisie de lettres dans le clavier virtuel.
+          inputMode="text"
           autoComplete="off"
           spellCheck={false}
+          autoCapitalize="off"
           value={valeur}
           onChange={(e) => setValeur(e.target.value)}
           onKeyDown={handleKey}
