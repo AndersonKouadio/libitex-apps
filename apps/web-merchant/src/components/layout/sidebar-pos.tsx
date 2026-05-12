@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Avatar } from "@heroui/react";
-import { PauseCircle, Receipt, BarChart3, Lock, History, Calculator } from "lucide-react";
+import { PauseCircle, Receipt, BarChart3, Lock, History, Calculator, Printer } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useKpisQuery } from "@/features/tableau-de-bord/queries/kpis.query";
@@ -11,6 +11,7 @@ import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-li
 import { useSessionActiveQuery } from "@/features/session-caisse/queries/session-active.query";
 import { formatMontant, formatHeure, formatDateRelative } from "@/features/vente/utils/format";
 import { ModalCalculatrice } from "@/features/vente/components/modal-calculatrice";
+import { ModalTicketsDuJour } from "@/features/vente/components/modal-tickets-du-jour";
 
 interface Props {
   /** Si true, sidebar repliee : on cache les libelles. */
@@ -45,6 +46,7 @@ export function SidebarPOS({ replie }: Props) {
   const empParDefaut = (emplacements ?? []).find((e) => e.type === "STORE");
   const { data: sessionActive } = useSessionActiveQuery(empParDefaut?.id ?? null);
   const [calculatriceOuverte, setCalculatriceOuverte] = useState(false);
+  const [ticketsDuJourOuvert, setTicketsDuJourOuvert] = useState(false);
 
   if (replie) {
     return (
@@ -69,6 +71,14 @@ export function SidebarPOS({ replie }: Props) {
         >
           <Calculator size={18} strokeWidth={1.5} />
         </button>
+        <button
+          type="button"
+          onClick={() => setTicketsDuJourOuvert(true)}
+          className="w-full h-10 rounded-lg flex items-center justify-center text-white/65 hover:text-white hover:bg-white/5 transition-colors"
+          aria-label="Tickets du jour"
+        >
+          <Printer size={18} strokeWidth={1.5} />
+        </button>
         <Link
           href="/rapports"
           className="w-full h-10 rounded-lg flex items-center justify-center text-white/65 hover:text-white hover:bg-white/5 transition-colors"
@@ -77,6 +87,11 @@ export function SidebarPOS({ replie }: Props) {
           <BarChart3 size={18} strokeWidth={1.5} />
         </Link>
         <ModalCalculatrice ouvert={calculatriceOuverte} onFermer={() => setCalculatriceOuverte(false)} />
+        <ModalTicketsDuJour
+          ouvert={ticketsDuJourOuvert}
+          onFermer={() => setTicketsDuJourOuvert(false)}
+          numeroSession={sessionActive?.numeroSession}
+        />
       </nav>
     );
   }
@@ -158,6 +173,14 @@ export function SidebarPOS({ replie }: Props) {
               </span>
             )}
           </Link>
+          <button
+            type="button"
+            onClick={() => setTicketsDuJourOuvert(true)}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-white/65 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <Printer size={16} strokeWidth={1.5} />
+            <span className="flex-1 text-left">Reimprimer un ticket</span>
+          </button>
           <Link
             href="/rapports"
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium text-white/65 hover:text-white hover:bg-white/5 transition-colors"
@@ -184,6 +207,11 @@ export function SidebarPOS({ replie }: Props) {
       </div>
 
       <ModalCalculatrice ouvert={calculatriceOuverte} onFermer={() => setCalculatriceOuverte(false)} />
+      <ModalTicketsDuJour
+        ouvert={ticketsDuJourOuvert}
+        onFermer={() => setTicketsDuJourOuvert(false)}
+        numeroSession={sessionActive?.numeroSession}
+      />
     </nav>
   );
 }

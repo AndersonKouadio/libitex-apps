@@ -6,7 +6,8 @@ import { formaterQuantite } from "@/features/unite/types/unite.type";
 import type { UniteMesure } from "@/features/unite/types/unite.type";
 import {
   retrouverImprimante, envoyerCommandes, genererTicketEscPos, supporteWebUsb,
-} from "@/lib/imprimante-thermique";
+  verifierPapier,
+} from "@/lib/escpos";
 
 interface InfosBoutique {
   nom: string;
@@ -67,6 +68,13 @@ export async function imprimerTicket(
     try {
       const device = await retrouverImprimante();
       if (device) {
+        // Verifie le papier AVANT d'envoyer pour eviter d'imprimer
+        // dans le vide. Si l'imprimante ne supporte pas le statut (null),
+        // on continue sans bloquer.
+        const etat = await verifierPapier(device);
+        if (etat?.vide) {
+          throw new Error("Rouleau de papier epuise — remplacez le rouleau avant de continuer");
+        }
         const data = genererTicketEscPos(ticket, boutique, monnaie, contexte);
         await envoyerCommandes(device, data);
         return { mode: "USB", fallback: false };
