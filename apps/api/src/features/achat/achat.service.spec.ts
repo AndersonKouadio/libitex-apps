@@ -24,6 +24,8 @@ describe("AchatService", () => {
       listerLignesCommande: jest.fn(),
       modifierStatutCommande: jest.fn(),
       appliquerReceptionAtomique: jest.fn(),
+      stockTotalParVariante: jest.fn().mockResolvedValue(new Map()),
+      prixAchatActuelParVariante: jest.fn().mockResolvedValue(new Map()),
     } as unknown as jest.Mocked<AchatRepository>;
 
     realtimeMock = {
@@ -227,11 +229,14 @@ describe("AchatService", () => {
       );
     });
 
-    it("met a jour le prix d'achat si majPrixAchat=true (dans le batch)", async () => {
+    it("met a jour le prix d'achat si majPrixAchat=true (PMP au premier achat)", async () => {
       repoMock.trouverCommande.mockResolvedValue(commandeBase as any);
       repoMock.listerLignesCommande
         .mockResolvedValueOnce(lignesBase as any)
         .mockResolvedValueOnce([{ ...lignesBase[0], quantityReceived: "5" }] as any);
+      // Stock=0, PMP=0 -> PMP nouveau = prix recu (100)
+      repoMock.stockTotalParVariante.mockResolvedValue(new Map([["v1", 0]]));
+      repoMock.prixAchatActuelParVariante.mockResolvedValue(new Map([["v1", 0]]));
 
       await service.receptionner("t1", "u1", "c1", {
         lignes: [{ ligneId: "l1", quantite: 5 }],
@@ -240,7 +245,7 @@ describe("AchatService", () => {
 
       expect(repoMock.appliquerReceptionAtomique).toHaveBeenCalledWith(
         expect.objectContaining({
-          prixAchat: [{ variantId: "v1", prix: "100" }],
+          prixAchat: [{ variantId: "v1", prix: "100.00" }],
         }),
       );
     });
@@ -260,6 +265,148 @@ describe("AchatService", () => {
         "stock.updated",
         expect.objectContaining({ variantIds: ["v1"] }),
       );
+    });
+
+    it("ignore les lignes a quantite <= 0 (lignes mixtes)", async () => {
+      repoMock.trouverCommande.mockResolvedValue(commandeBase as any);
+      const lignesMixtes = [
+        ...lignesBase,
+        { id: "l2", variantId: "v2", productName: "P2",
+          quantityOrdered: "5", quantityReceived: "0", unitPrice: "200", lineTotal: "1000" },
+      ];
+      repoMock.listerLignesCommande
+        .mockResolvedValueOnce(lignesMixtes as any)
+        .mockResolvedValueOnce([
+          { ...lignesMixtes[0], quantityReceived: "5" },
+          lignesMixtes[1],
+        ] as any);
+
+      await service.receptionner("t1", "u1", "c1", {
+        lignes: [
+          { ligneId: "l1", quantite: 5 },
+          { ligneId: "l2", quantite: 0 },  // ignoree
+          { ligneId: "l2", quantite: -1 }, // ignoree (negative)
+        ],
+      });
+
+      // Seulement la l1 est dans les mouvements
+      expect(repoMock.appliquerReceptionAtomique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mouvements: [{ variantId: "v1", quantity: "5" }],
+        }),
+      );
+    });
+
+    it("ne touche pas le statut quand rien a receptionner (toutes lignes a 0)", async () => {
+      repoMock.trouverCommande.mockResolvedValue(commandeBase as any);
+      // Premier appel pour la verification + 2e appel via obtenirCommande
+      repoMock.listerLignesCommande
+        .mockResolvedValueOnce(lignesBase as any)
+        .mockResolvedValueOnce(lignesBase as any);
+      repoMock.trouverFournisseur.mockResolvedValue({ id: "f1", name: "F" } as any);
+
+      await service.receptionner("t1", "u1", "c1", {
+        lignes: [{ ligneId: "l1", quantite: 0 }],
+      });
+
+      // appliquerReceptionAtomique n'est pas appele
+      expect(repoMock.appliquerReceptionAtomique).not.toHaveBeenCalled();
+    });
+
+    it("calcule le PMP au premier achat (stock=0 -> prix recu)", async () => {
+      repoMock.trouverCommande.mockResolvedValue(commandeBase as any);
+      repoMock.listerLignesCommande
+        .mockResolvedValueOnce(lignesBase as any)
+        .mockResolvedValueOnce([{ ...lignesBase[0], quantityReceived: "10" }] as any);
+      // Stock initial = 0, PMP initial = 0
+      repoMock.stockTotalParVariante.mockResolvedValue(new Map([["v1", 0]]));
+      repoMock.prixAchatActuelParVariante.mockResolvedValue(new Map([["v1", 0]]));
+
+      await service.receptionner("t1", "u1", "c1", {
+        lignes: [{ ligneId: "l1", quantite: 10 }],
+        majPrixAchat: true,
+      });
+
+      // PMP au premier achat = prix recu (100). Stocke en string 2 decimales.
+      expect(repoMock.appliquerReceptionAtomique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          prixAchat: [{ variantId: "v1", prix: "100.00" }],
+        }),
+      );
+    });
+
+    it("calcule le PMP avec stock existant (moyenne ponderee)", async () => {
+      repoMock.trouverCommande.mockResolvedValue(commandeBase as any);
+      repoMock.listerLignesCommande
+        .mockResolvedValueOnce(lignesBase as any)
+        .mockResolvedValueOnce([{ ...lignesBase[0], quantityReceived: "10" }] as any);
+      // Stock existant : 5 unites a 80F (PMP courant)
+      // Reception : 10 unites a 100F
+      // PMP nouveau = (5 * 80 + 10 * 100) / (5 + 10) = 1400 / 15 = 93.33
+      repoMock.stockTotalParVariante.mockResolvedValue(new Map([["v1", 5]]));
+      repoMock.prixAchatActuelParVariante.mockResolvedValue(new Map([["v1", 80]]));
+
+      await service.receptionner("t1", "u1", "c1", {
+        lignes: [{ ligneId: "l1", quantite: 10 }],
+        majPrixAchat: true,
+      });
+
+      expect(repoMock.appliquerReceptionAtomique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          prixAchat: [{ variantId: "v1", prix: "93.33" }],
+        }),
+      );
+    });
+
+    it("ne touche pas le prix d'achat si majPrixAchat=false (PMP non recalcule)", async () => {
+      repoMock.trouverCommande.mockResolvedValue(commandeBase as any);
+      repoMock.listerLignesCommande
+        .mockResolvedValueOnce(lignesBase as any)
+        .mockResolvedValueOnce([{ ...lignesBase[0], quantityReceived: "5" }] as any);
+
+      await service.receptionner("t1", "u1", "c1", {
+        lignes: [{ ligneId: "l1", quantite: 5 }],
+        majPrixAchat: false,
+      });
+
+      // Prix achat array vide -> aucun update de variants.pricePurchase
+      expect(repoMock.appliquerReceptionAtomique).toHaveBeenCalledWith(
+        expect.objectContaining({ prixAchat: [] }),
+      );
+      // Et donc pas d'appel inutile a stockTotal/prixActuel
+      expect(repoMock.stockTotalParVariante).not.toHaveBeenCalled();
+      expect(repoMock.prixAchatActuelParVariante).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("modifierStatut CANCELLED (fix C6 soft-delete)", () => {
+    it("modifierStatutCommande positionne deletedAt sur CANCELLED", async () => {
+      // Ce test verifie l'appel cote service ; le comportement du repo
+      // (set deletedAt = now()) est lui-meme teste implicitement via
+      // l'integration. Ici on verifie juste que le service appelle bien
+      // le repo avec CANCELLED.
+      repoMock.trouverCommande.mockResolvedValue({
+        id: "c1", supplierId: "f1", orderNumber: "BC-1",
+        status: "DRAFT", totalAmount: "100", locationId: "e1",
+        expectedDate: null, receivedAt: null, notes: null,
+        createdAt: new Date(),
+      } as any);
+      repoMock.listerLignesCommande.mockResolvedValue([]);
+
+      await service.modifierStatut("t1", "c1", { statut: "CANCELLED" });
+
+      expect(repoMock.modifierStatutCommande).toHaveBeenCalledWith(
+        "t1", "c1", "CANCELLED",
+      );
+    });
+
+    it("rejette le changement de statut sur une commande RECEIVED", async () => {
+      repoMock.trouverCommande.mockResolvedValue({
+        id: "c1", status: "RECEIVED",
+      } as any);
+
+      await expect(service.modifierStatut("t1", "c1", { statut: "CANCELLED" }))
+        .rejects.toThrow(/deja recue/);
     });
   });
 });

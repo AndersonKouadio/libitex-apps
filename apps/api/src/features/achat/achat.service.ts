@@ -279,6 +279,24 @@ export class AchatService {
     const lignes = await this.achatRepo.listerLignesCommande(id);
     const parId = new Map(lignes.map((l) => [l.id, l]));
 
+    // Fix I5 : Prix Moyen Pondere (PMP). On precharge le stock et le prix
+    // d'achat actuel de chaque variante pour calculer la nouvelle moyenne :
+    //   PMP_nouveau = (stock_avant * PMP_avant + qte_recue * prix_recu)
+    //                 / (stock_avant + qte_recue)
+    // Cela evite de faire 2 requetes par variante dans la boucle.
+    let stockActuelMap: Map<string, number> = new Map();
+    let prixAchatActuelMap: Map<string, number> = new Map();
+    if (dto.majPrixAchat) {
+      const variantIdsConcernes = [...new Set(
+        dto.lignes
+          .filter((r) => r.quantite > 0)
+          .map((r) => parId.get(r.ligneId)?.variantId)
+          .filter((v): v is string => !!v),
+      )];
+      stockActuelMap = await this.achatRepo.stockTotalParVariante(tenantId, variantIdsConcernes);
+      prixAchatActuelMap = await this.achatRepo.prixAchatActuelParVariante(variantIdsConcernes);
+    }
+
     // Construit les writes a appliquer atomiquement
     const mouvements: Array<{ variantId: string; quantity: string }> = [];
     const lignesMaj: Array<{ ligneId: string; quantiteRecue: string }> = [];
@@ -311,10 +329,26 @@ export class AchatService {
         quantiteRecue: cumule.toString(),
       });
       if (dto.majPrixAchat) {
+        // Fix I5 : PMP au lieu de l'ecrasement par le dernier prix.
+        // Formule : PMP = (stock * PMP_actuel + qte_recue * prix_recu)
+        //                 / (stock + qte_recue)
+        // Si la variante n'a aucun stock (premier achat) -> PMP = prix recu.
+        const stockAvant = stockActuelMap.get(ligne.variantId) ?? 0;
+        const pmpAvant = prixAchatActuelMap.get(ligne.variantId) ?? 0;
+        const prixRecu = Number(ligne.unitPrice);
+        const qteRecue = recue.quantite;
+        const denom = stockAvant + qteRecue;
+        const pmpNouveau = denom > 0
+          ? (stockAvant * pmpAvant + qteRecue * prixRecu) / denom
+          : prixRecu;
         prixAchatMaj.push({
           variantId: ligne.variantId,
-          prix: ligne.unitPrice,
+          prix: pmpNouveau.toFixed(2),
         });
+        // Le stock projete pour la prochaine ligne (meme variante 2 fois
+        // dans dto.lignes peu probable, mais defense en profondeur).
+        stockActuelMap.set(ligne.variantId, stockAvant + qteRecue);
+        prixAchatActuelMap.set(ligne.variantId, pmpNouveau);
       }
       variantIdsAffectes.add(ligne.variantId);
       cumulesProjetes.set(ligne.id, cumule);

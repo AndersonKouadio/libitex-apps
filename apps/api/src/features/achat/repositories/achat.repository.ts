@@ -81,6 +81,47 @@ export class AchatRepository {
       .where(and(eq(suppliers.id, id), eq(suppliers.tenantId, tenantId)));
   }
 
+  // ─── Calculs Prix Moyen Pondere (PMP) ────────────────────────────────
+
+  /**
+   * Fix I5 : retourne le prix d'achat actuel (PMP en cours) pour un set
+   * de variantes. Permet de calculer le nouveau PMP a chaque reception.
+   *
+   * Retourne une Map<variantId, prixActuel>. Si une variante n'existe pas,
+   * elle est absente de la Map (le service traitera comme prixActuel=0).
+   */
+  async prixAchatActuelParVariante(variantIds: string[]): Promise<Map<string, number>> {
+    if (variantIds.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: variants.id, prixAchat: variants.pricePurchase })
+      .from(variants)
+      .where(inArray(variants.id, variantIds));
+    return new Map(rows.map((r) => [r.id, Number(r.prixAchat ?? 0)]));
+  }
+
+  /**
+   * Fix I5 : stock total agrege sur TOUTES les locations pour chaque
+   * variante. Le PMP est un concept au niveau variante (pas par
+   * emplacement) car le prix d'achat est unique pour la variante.
+   *
+   * Retourne Map<variantId, quantiteTotale>. Variante non-presente = 0.
+   */
+  async stockTotalParVariante(tenantId: string, variantIds: string[]): Promise<Map<string, number>> {
+    if (variantIds.length === 0) return new Map();
+    const rows = await this.db
+      .select({
+        variantId: stockMovements.variantId,
+        total: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+      })
+      .from(stockMovements)
+      .where(and(
+        eq(stockMovements.tenantId, tenantId),
+        inArray(stockMovements.variantId, variantIds),
+      ))
+      .groupBy(stockMovements.variantId);
+    return new Map(rows.map((r) => [r.variantId, Number(r.total)]));
+  }
+
   // ─── Validations tenant ──────────────────────────────────────────────
 
   /**
@@ -197,8 +238,14 @@ export class AchatRepository {
     statut?: string;
     supplierId?: string;
     locationId?: string;
+    /** Si true, inclut les commandes soft-deleted (annulees). Defaut false. */
+    inclureAnnulees?: boolean;
   } = {}) {
     const conditions: SQL[] = [eq(purchaseOrders.tenantId, tenantId)];
+    // Fix C6 : par defaut on cache les commandes annulees (soft-deleted).
+    if (!filtres.inclureAnnulees) {
+      conditions.push(isNull(purchaseOrders.deletedAt));
+    }
     if (filtres.statut) conditions.push(eq(purchaseOrders.status, filtres.statut as any));
     if (filtres.supplierId) conditions.push(eq(purchaseOrders.supplierId, filtres.supplierId));
     if (filtres.locationId) conditions.push(eq(purchaseOrders.locationId, filtres.locationId));
@@ -260,9 +307,13 @@ export class AchatRepository {
     status: "DRAFT" | "SENT" | "PARTIAL" | "RECEIVED" | "CANCELLED",
     receivedAt?: Date,
   ) {
+    // Fix C6 : soft-delete automatique a l'annulation pour ne pas polluer
+    // la liste active. La commande reste consultable via inclureAnnulees=true.
+    const patch: Record<string, unknown> = { status, receivedAt, updatedAt: new Date() };
+    if (status === "CANCELLED") patch.deletedAt = new Date();
     const [row] = await this.db
       .update(purchaseOrders)
-      .set({ status, receivedAt, updatedAt: new Date() })
+      .set(patch)
       .where(and(eq(purchaseOrders.id, id), eq(purchaseOrders.tenantId, tenantId)))
       .returning();
     return row;
