@@ -84,6 +84,33 @@ export class ProduitRepository {
     return variante;
   }
 
+  /**
+   * Trouve un produit dont une variante a le code-barres OU le SKU egal a
+   * `code`. Utile pour le scan POS : douchette / camera renvoient juste le
+   * code, on remonte au produit complet.
+   *
+   * Filtre actif + non supprime (un caissier ne doit pas vendre un produit
+   * desactive meme s'il scanne son code).
+   */
+  async trouverParCodeBarres(tenantId: string, code: string) {
+    const trim = code.trim();
+    if (trim.length === 0) return null;
+    const row = await this.db
+      .select({ productId: variants.productId })
+      .from(variants)
+      .innerJoin(products, eq(variants.productId, products.id))
+      .where(and(
+        eq(products.tenantId, tenantId),
+        eq(products.isActive, true),
+        isNull(products.deletedAt),
+        eq(variants.isActive, true),
+        isNull(variants.deletedAt),
+        or(eq(variants.barcode, trim), eq(variants.sku, trim)),
+      ))
+      .limit(1);
+    return row[0] ?? null;
+  }
+
   async obtenirParId(tenantId: string, id: string) {
     return this.db.query.products.findFirst({
       where: and(eq(products.id, id), eq(products.tenantId, tenantId), isNull(products.deletedAt)),

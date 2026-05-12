@@ -32,6 +32,13 @@ export const catalogueAPI = {
   obtenirProduit: (token: string, id: string) =>
     httpClient.get<IProduit>(`${BASE}/produits/${id}`, { token }),
 
+  /**
+   * Resolution scan POS : retourne le produit complet (avec ses variantes)
+   * dont une variante a le code-barres ou le SKU egal a `code`. 404 si rien.
+   */
+  trouverProduitParCode: (token: string, code: string) =>
+    httpClient.get<IProduit>(`${BASE}/produits/par-code/${encodeURIComponent(code)}`, { token }),
+
   creerProduit: (token: string, data: unknown) =>
     httpClient.post<IProduit>(`${BASE}/produits`, data, { token }),
 

@@ -54,6 +54,15 @@ export class CatalogueController {
     });
   }
 
+  @Get("produits/par-code/:code")
+  @ApiOperation({ summary: "Rechercher un produit par code-barres ou SKU d'une variante (scan POS)" })
+  trouverProduitParCodeBarres(
+    @CurrentUser() user: CurrentUserData,
+    @Param("code") code: string,
+  ) {
+    return this.catalogueService.trouverProduitParCodeBarres(user.tenantId, code);
+  }
+
   @Get("produits/:id")
   @ApiOperation({ summary: "Obtenir un produit par son identifiant" })
   obtenirProduit(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {

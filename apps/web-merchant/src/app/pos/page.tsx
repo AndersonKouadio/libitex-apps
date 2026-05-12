@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  Select, ListBox, Label, Button, Chip, Drawer, Modal, Spinner,
+  Select, ListBox, Label, Button, Chip, Drawer, Modal, Spinner, toast,
 } from "@heroui/react";
 import { ShoppingCart, PauseCircle, X, Lock } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -28,6 +28,9 @@ import { ModalClientPanier } from "@/features/vente/components/modal-client-pani
 import { ModalApercuTicket } from "@/features/vente/components/modal-apercu-ticket";
 import { useSaisieQuantite } from "@/features/vente/hooks/useSaisieQuantite";
 import { useEncaissement } from "@/features/vente/hooks/useEncaissement";
+import { useScanProduit } from "@/features/vente/hooks/useScanProduit";
+import { BarreScan } from "@/features/vente/components/barre-scan";
+import { ModalScannerCamera } from "@/features/vente/components/modal-scanner-camera";
 import { formatMontant } from "@/features/vente/utils/format";
 import { useSessionActiveQuery } from "@/features/session-caisse/queries/session-active.query";
 import { FormulaireOuvertureCaisse } from "@/features/session-caisse/components/formulaire-ouverture-caisse";
@@ -99,6 +102,29 @@ export default function PagePOS() {
 
   const saisieQuantite = useSaisieQuantite(panier, produits);
   const encaissement = useEncaissement(panier, empId, token);
+
+  // Sets memoizes pour O(1) au moment du scan (un scan toutes les ~2s peut
+  // se transformer en ~30 scans/min avec une grosse file, donc on evite
+  // les .includes() en boucle).
+  const indispoVariantesSet = useMemo(
+    () => new Set(dispos?.indisponibles ?? []),
+    [dispos],
+  );
+  const indispoProduitsSet = useMemo(
+    () => new Set(dispos?.indisponiblesProduits ?? []),
+    [dispos],
+  );
+
+  const [cameraOuverte, setCameraOuverte] = useState(false);
+  const { scanner } = useScanProduit({
+    produits,
+    indisponiblesVariantes: indispoVariantesSet,
+    indisponiblesProduits: indispoProduitsSet,
+    onProduitTrouve: (p, v) => {
+      panier.ajouter(p, v);
+      toast.success(`${p.nom}${v.nom ? ` · ${v.nom}` : ""} ajoute`);
+    },
+  });
   // Index de la ligne en cours de personnalisation (suppléments). null = ferme.
   const [ligneSupplements, setLigneSupplements] = useState<number | null>(null);
   const articleEnCours = ligneSupplements !== null ? panier.articles[ligneSupplements] : undefined;
@@ -239,6 +265,14 @@ export default function PagePOS() {
             )}
           </div>
         </header>
+
+        <div className="px-3 sm:px-4 py-2 border-b border-border bg-surface">
+          <BarreScan
+            onScan={scanner}
+            onOuvrirCamera={() => setCameraOuverte(true)}
+            className="max-w-md"
+          />
+        </div>
 
         <div className="flex-1 overflow-hidden flex flex-col pb-20 lg:pb-0">
           <GrilleProduits
@@ -418,6 +452,12 @@ export default function PagePOS() {
         ouvert={modalFermetureOuvert}
         sessionId={sessionActive?.id ?? null}
         onFermer={() => setModalFermetureOuvert(false)}
+      />
+
+      <ModalScannerCamera
+        ouvert={cameraOuverte}
+        onFermer={() => setCameraOuverte(false)}
+        onScan={(code) => { setCameraOuverte(false); scanner(code); }}
       />
 
       <ModalClientPanier

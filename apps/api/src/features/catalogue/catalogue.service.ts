@@ -92,6 +92,17 @@ export class CatalogueService {
     );
   }
 
+  /**
+   * Resolution scan POS : a partir d'un code-barres (ou SKU) scanne, retourne
+   * le produit complet avec toutes ses variantes. Le front identifie ensuite
+   * la variante exacte par comparaison barcode/sku.
+   */
+  async trouverProduitParCodeBarres(tenantId: string, code: string): Promise<ProduitResponseDto> {
+    const row = await this.produitRepo.trouverParCodeBarres(tenantId, code);
+    if (!row) throw new RessourceIntrouvableException("Code-barres", code);
+    return this.obtenirProduit(tenantId, row.productId);
+  }
+
   async listerProduits(
     tenantId: string,
     opts: {
