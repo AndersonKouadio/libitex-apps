@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, varchar, text, numeric, integer, boolean, timestamp, pgEnum, index,
+  pgTable, uuid, varchar, text, numeric, integer, boolean, timestamp, pgEnum, index, uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
 import { customers } from "./customers";
@@ -63,4 +63,12 @@ export const loyaltyTransactions = pgTable("loyalty_transactions", {
   index("idx_loyalty_tx_tenant").on(table.tenantId),
   index("idx_loyalty_tx_customer").on(table.customerId),
   index("idx_loyalty_tx_ticket").on(table.ticketId),
+  // Fix C4 : idempotence sur les transactions liees a un ticket.
+  // Une meme (tenant, customer, ticket, type) ne peut etre creee qu'une
+  // fois — protege contre les replays (sync offline POS, retry webhook).
+  // ADJUST n'est pas borne car ticketId est nullable (non couvert par
+  // l'index dans Postgres : NULL distinct par defaut).
+  uniqueIndex("idx_loyalty_tx_unique").on(
+    table.tenantId, table.customerId, table.ticketId, table.transactionType,
+  ),
 ]);

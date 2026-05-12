@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
+import { Injectable, BadRequestException, ForbiddenException } from "@nestjs/common";
 import { FideliteRepository } from "./repositories/fidelite.repository";
 import {
   ModifierConfigFideliteDto, ConfigFideliteResponseDto,
@@ -39,9 +39,23 @@ export class FideliteService {
   }
 
   /**
+   * Fix C3 + I2 : verifie que customerId appartient au tenant.
+   * Centralise pour utiliser dans toutes les methodes publiques.
+   */
+  private async assertClientTenant(tenantId: string, customerId: string): Promise<void> {
+    const ok = await this.repo.clientAppartientTenant(tenantId, customerId);
+    if (!ok) {
+      throw new ForbiddenException("Client introuvable ou inaccessible");
+    }
+  }
+
+  /**
    * Appele par VenteService.completerTicket apres la cloture d'un ticket.
    * Si la fidelite est active et le ticket est attache a un client, calcule
-   * et credite les points gagnes. Silencieux sinon (pas d'exception).
+   * et credite les points gagnes. Silencieux si tenant != client ou point=0.
+   *
+   * Fix C4 : si la transaction existe deja (replay), on degrade
+   * silencieusement (idempotence).
    */
   async crediterDepuisTicket(
     tenantId: string,
@@ -55,18 +69,25 @@ export class FideliteService {
     if (ratio <= 0) return;
     const points = Math.floor(montantTotal / ratio);
     if (points <= 0) return;
-    await this.repo.ajouterTransaction({
-      tenantId,
-      customerId,
-      points,
-      transactionType: "EARN",
-      ticketId,
-    });
+    try {
+      await this.repo.ajouterTransaction({
+        tenantId,
+        customerId,
+        points,
+        transactionType: "EARN",
+        ticketId,
+      });
+    } catch (err) {
+      if (this.repo.estViolationUniqueLoyalty(err)) return;
+      throw err;
+    }
   }
 
   /**
    * Debit/credit lie a un ticket (paiement avec points = REDEEM negatif).
-   * Pas d'exception : best-effort cote VenteService.
+   *
+   * Fix I3 : verifie le solde avant le debit pour eviter solde negatif.
+   * Fix C4 : idempotent sur (tenant, customer, ticket, REDEEM).
    */
   async ajusterPointsDepuisTicket(
     tenantId: string,
@@ -75,13 +96,27 @@ export class FideliteService {
     points: number,
   ): Promise<void> {
     if (points === 0) return;
-    await this.repo.ajouterTransaction({
-      tenantId,
-      customerId,
-      points,
-      transactionType: "REDEEM",
-      ticketId,
-    });
+    // Fix I3 : si debit (points < 0), verifie qu'il y a assez sur le solde
+    if (points < 0) {
+      const solde = await this.repo.solde(tenantId, customerId);
+      if (solde + points < 0) {
+        throw new BadRequestException(
+          `Solde insuffisant : ${solde} points dispos, ${Math.abs(points)} requis`,
+        );
+      }
+    }
+    try {
+      await this.repo.ajouterTransaction({
+        tenantId,
+        customerId,
+        points,
+        transactionType: "REDEEM",
+        ticketId,
+      });
+    } catch (err) {
+      if (this.repo.estViolationUniqueLoyalty(err)) return;
+      throw err;
+    }
   }
 
   async ajusterPoints(
@@ -91,6 +126,17 @@ export class FideliteService {
     dto: AjusterPointsDto,
   ): Promise<void> {
     if (dto.points === 0) throw new BadRequestException("Les points doivent etre differents de zero");
+    // Fix C3 : empeche un admin d'ajuster un solde cross-tenant.
+    await this.assertClientTenant(tenantId, customerId);
+    // Fix I3 : refuse si le debit ferait passer le solde sous zero.
+    if (dto.points < 0) {
+      const solde = await this.repo.solde(tenantId, customerId);
+      if (solde + dto.points < 0) {
+        throw new BadRequestException(
+          `Ajustement refuse : solde resulterait a ${solde + dto.points} (negatif). Solde courant : ${solde}`,
+        );
+      }
+    }
     await this.repo.ajouterTransaction({
       tenantId,
       customerId,
@@ -102,6 +148,8 @@ export class FideliteService {
   }
 
   async solde(tenantId: string, customerId: string): Promise<SoldeFideliteDto> {
+    // Fix C3 : check tenant avant de lire le solde
+    await this.assertClientTenant(tenantId, customerId);
     const [solde, config] = await Promise.all([
       this.repo.solde(tenantId, customerId),
       this.repo.obtenirOuCreerConfig(tenantId),
@@ -113,6 +161,8 @@ export class FideliteService {
   }
 
   async historique(tenantId: string, customerId: string): Promise<TransactionFideliteDto[]> {
+    // Fix C3 : check tenant avant de lire l'historique
+    await this.assertClientTenant(tenantId, customerId);
     const rows = await this.repo.historique(tenantId, customerId);
     return rows.map((r) => ({
       id: r.id,

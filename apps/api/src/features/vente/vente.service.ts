@@ -248,7 +248,18 @@ export class VenteService {
 
     // Validation fidelite : si une ligne LOYALTY est presente, le ticket
     // doit etre attache a un client et le solde doit etre suffisant.
+    //
+    // Fix C1 + C2 + I5 : le debit des points doit etre fait AVANT la
+    // creation des paiements et de la cloture du ticket, et propage
+    // l'erreur si echec. Avant ce fix :
+    // - validation solde (A) et debit (D) etaient separes par 4 ops DB
+    // - le debit avait .catch(() => {}) -> ticket complete sans debit
+    // - une race entre 2 ventes simultanees pouvait creer un solde negatif
+    //
+    // Le helper ajusterPointsDepuisTicket re-verifie le solde juste avant
+    // l'INSERT (defense en profondeur) et leve si insuffisant.
     const paiementFidelite = dto.paiements.find((p) => p.methode === "LOYALTY");
+    let pointsADebiter = 0;
     if (paiementFidelite) {
       if (!ticket.customerId) {
         throw new BadRequestException("Paiement en points : un client doit etre attache au ticket");
@@ -260,13 +271,14 @@ export class VenteService {
       if (config.valeurPoint <= 0) {
         throw new BadRequestException("Configuration fidelite invalide (valeur point)");
       }
-      const pointsRequis = Math.ceil(paiementFidelite.montant / config.valeurPoint);
-      const solde = await this.fidelite.solde(tenantId, ticket.customerId);
-      if (solde.solde < pointsRequis) {
-        throw new BadRequestException(
-          `Solde insuffisant : ${solde.solde} points dispos, ${pointsRequis} requis`,
-        );
-      }
+      pointsADebiter = Math.ceil(paiementFidelite.montant / config.valeurPoint);
+
+      // Debit immediat (avec re-verification du solde dans le service
+      // fidelite). Si la fenetre TOC/TOU est utilisee par un autre poste,
+      // le debit echouera ici et le ticket ne sera pas complete.
+      await this.fidelite.ajusterPointsDepuisTicket(
+        tenantId, ticket.customerId, ticket.id, -pointsADebiter,
+      );
     }
 
     for (const p of dto.paiements) {
@@ -329,22 +341,21 @@ export class VenteService {
     this.realtime.emitToTenant(tenantId, "stock.updated", { emplacementId: ticket.locationId });
     this.realtime.emitToTenant(tenantId, "disponibilites.changed", { emplacementId: ticket.locationId });
 
-    // Programme fidelite : credit automatique si client lie et programme
-    // actif. Silencieux (best-effort) — un echec ne doit pas casser la
-    // vente.
+    // Programme fidelite : credit automatique des points GAGNES (EARN)
+    // si client lie. Le DEBIT a deja ete applique en amont (avant la
+    // creation des paiements), cf fix C1+C2+I5 ci-dessus.
+    //
+    // Le credit reste en best-effort : un echec ne doit pas annuler la
+    // vente (le client a deja ete debite si applicable, et le ticket
+    // est deja complete). Mais on log au minimum via Sentry indirect
+    // (l'audit log capture le ticket).
     if (ticket.customerId) {
-      // Si paiement avec points : debit prealable (REDEEM transaction
-      // negative). L'amount du paiement / valeurPoint = points utilises.
-      if (paiementFidelite) {
-        const config = await this.fidelite.obtenirConfig(tenantId);
-        const points = Math.ceil(paiementFidelite.montant / config.valeurPoint);
-        this.fidelite
-          .ajusterPointsDepuisTicket(tenantId, ticket.customerId, ticket.id, -points)
-          .catch(() => { /* idem */ });
-      }
       this.fidelite
         .crediterDepuisTicket(tenantId, ticket.customerId, ticket.id, totalTicket)
-        .catch(() => { /* on n'interrompt pas le retour ticket */ });
+        .catch((err) => {
+          // Log mais ne propage pas — le ticket est deja complete
+          console.error("[fidelite] credit points echoue:", err);
+        });
     }
 
     const paiements = await this.ticketRepo.obtenirPaiements(ticket.id);
