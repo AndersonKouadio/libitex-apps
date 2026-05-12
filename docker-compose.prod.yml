@@ -9,6 +9,9 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      # Fix m1+m2 Module 8 : commit SHA pour Sentry release tracking.
+      # Defaut "dev" si APP_VERSION non exporte par deploy.sh.
+      - APP_VERSION=${APP_VERSION:-dev}
       - STORAGE_ENDPOINT=http://minio:9000
       - STORAGE_PUBLIC_ENDPOINT=https://libitex-storage.lunion-lab.com
       - STORAGE_REGION=us-east-1
@@ -41,6 +44,10 @@ services:
     build:
       context: .
       dockerfile: apps/web-merchant/Dockerfile
+      args:
+        # Fix m1+m2 Module 8 : commit SHA inline au build pour le release
+        # tracking Sentry. Defaut "dev" si la variable n'est pas exportee.
+        - NEXT_PUBLIC_APP_VERSION=${APP_VERSION:-dev}
     container_name: libitex-web
     restart: unless-stopped
     environment:

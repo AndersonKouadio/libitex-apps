@@ -10,6 +10,19 @@ echo "=== LIBITEX Deploy ==="
 echo "Composant: $COMPONENT"
 echo ""
 
+# Fix m1+m2 Module 8 : exporte le commit SHA court comme version pour le
+# release tracking Sentry. Pris en compte par docker-compose.prod.yml :
+# - args.NEXT_PUBLIC_APP_VERSION pour le frontend (inline au build)
+# - environment.APP_VERSION pour l'API (runtime)
+# Si pas de .git (deploy depuis tarball), fallback "dev".
+if [ -d .git ]; then
+  export APP_VERSION=$(git rev-parse --short HEAD 2>/dev/null || echo dev)
+else
+  export APP_VERSION=dev
+fi
+echo "Version  : $APP_VERSION"
+echo ""
+
 # Pull latest code, et redemarre le script si lui-meme a change. Sans ce
 # re-exec, bash continue avec la version en memoire (ancien code) bien que
 # le fichier sur disque soit a jour.
