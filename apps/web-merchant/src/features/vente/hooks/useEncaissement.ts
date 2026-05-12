@@ -6,7 +6,7 @@ import { venteAPI } from "../apis/vente.api";
 import { creerTicketSchema } from "../schemas/vente.schema";
 import { useInvalidateVenteQuery } from "../queries/index.query";
 import { useNetworkStatus } from "@/lib/network-status";
-import { fileOffline, QueuePleineException } from "../utils/file-attente-offline";
+import { fileOffline, QueuePleineException } from "../stores/file-attente-offline.store";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { ArticlePanier, Remise, ClientPanier } from "./usePanier";
 import type { ITicket } from "../types/vente.type";

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
+import { createListenerSet } from "@/lib/listener-set";
 
 const STORAGE_KEY = STORAGE_KEYS.POS_OFFLINE_QUEUE;
 /**
@@ -70,8 +71,7 @@ export interface VenteOffline {
   erreur?: string;
 }
 
-type Listener = (file: VenteOffline[]) => void;
-const listeners = new Set<Listener>();
+const store = createListenerSet<VenteOffline[]>();
 
 function lire(): VenteOffline[] {
   if (typeof window === "undefined") return [];
@@ -87,7 +87,7 @@ function lire(): VenteOffline[] {
 function ecrire(file: VenteOffline[]): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(file));
-  for (const l of listeners) l(file);
+  store.emit(file);
 }
 
 /**
@@ -178,12 +178,7 @@ export const fileOffline = {
     return lire().filter((v) => v.tenantId === tenantId);
   },
 
-  subscribe(listener: Listener): () => void {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  },
+  subscribe: store.subscribe,
 
   /**
    * Compteur de numero local atomique (fix C3). Lit la valeur courante,

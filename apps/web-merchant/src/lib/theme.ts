@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { STORAGE_KEYS } from "./storage-keys";
+import { createListenerSet } from "./listener-set";
 
 export type Theme = "light" | "dark";
 
 const STORAGE_KEY = STORAGE_KEYS.THEME;
-
-type Listener = (t: Theme) => void;
-const listeners = new Set<Listener>();
+const store = createListenerSet<Theme>();
 
 function lire(): Theme {
   if (typeof window === "undefined") return "light";
@@ -29,7 +28,7 @@ export function definirTheme(t: Theme): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(STORAGE_KEY, t);
   appliquer(t);
-  for (const l of listeners) l(t);
+  store.emit(t);
 }
 
 export function useTheme(): { theme: Theme; setTheme: (t: Theme) => void; toggle: () => void } {
@@ -37,9 +36,7 @@ export function useTheme(): { theme: Theme; setTheme: (t: Theme) => void; toggle
 
   useEffect(() => {
     setThemeState(lire());
-    const l: Listener = (t) => setThemeState(t);
-    listeners.add(l);
-    return () => { listeners.delete(l); };
+    return store.subscribe(setThemeState);
   }, []);
 
   return {

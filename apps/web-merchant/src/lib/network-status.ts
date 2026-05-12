@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createListenerSet } from "./listener-set";
 
 /**
  * Etat reseau partage de l'app. Combine :
@@ -14,24 +15,19 @@ import { useEffect, useState } from "react";
  * des qu'une autre passe. Le banner POS reflete cet etat.
  */
 
-type Listener = (online: boolean) => void;
-const listeners = new Set<Listener>();
+const store = createListenerSet<boolean>();
 let etatActuel = typeof navigator !== "undefined" ? navigator.onLine : true;
-
-function emettre() {
-  for (const l of listeners) l(etatActuel);
-}
 
 export function marquerOnline(): void {
   if (etatActuel) return;
   etatActuel = true;
-  emettre();
+  store.emit(etatActuel);
 }
 
 export function marquerOffline(): void {
   if (!etatActuel) return;
   etatActuel = false;
-  emettre();
+  store.emit(etatActuel);
 }
 
 export function estEnLigne(): boolean {
@@ -45,12 +41,6 @@ if (typeof window !== "undefined") {
 
 export function useNetworkStatus(): boolean {
   const [enLigne, setEnLigne] = useState<boolean>(etatActuel);
-  useEffect(() => {
-    const l: Listener = (v) => setEnLigne(v);
-    listeners.add(l);
-    return () => {
-      listeners.delete(l);
-    };
-  }, []);
+  useEffect(() => store.subscribe(setEnLigne), []);
   return enLigne;
 }

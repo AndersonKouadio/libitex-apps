@@ -2,7 +2,7 @@
 
 import { CloudOff, AlertTriangle, Loader2 } from "lucide-react";
 import { useNetworkStatus } from "@/lib/network-status";
-import { useFileOfflineTenant } from "@/features/vente/utils/file-attente-offline";
+import { useFileOfflineTenant } from "@/features/vente/stores/file-attente-offline.store";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useEtatDrain } from "@/providers/sync-offline-provider";
 
@@ -65,11 +65,15 @@ export function BannerHorsLigne({ onVoirFile }: Props) {
     danger: "bg-danger/10 text-danger border-danger/20",
   }[ton];
 
+  // Position sticky (au lieu de fixed) : le banner pousse le contenu vers
+  // le bas quand il apparait, donc plus de chevauchement avec la topbar
+  // (fix M3). Il reste colle en haut au scroll comme `fixed`, sans avoir
+  // a injecter un padding-top compensatoire ailleurs dans le layout.
   return (
     <button
       type="button"
       onClick={onVoirFile}
-      className={`fixed top-0 left-0 right-0 z-50 ${couleurs} border-b text-xs font-medium px-3 py-1.5 flex items-center justify-center gap-2 transition-colors hover:brightness-95 safe-top`}
+      className={`sticky top-0 z-50 w-full ${couleurs} border-b text-xs font-medium px-3 py-1.5 flex items-center justify-center gap-2 transition-colors hover:brightness-95 safe-top`}
       aria-label="Voir la file des ventes hors-ligne"
     >
       {icone}

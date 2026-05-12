@@ -2,7 +2,7 @@
 
 import { Modal, Button, Chip } from "@heroui/react";
 import { Trash2, RotateCw, CloudOff, AlertTriangle } from "lucide-react";
-import { fileOffline, useFileOfflineTenant } from "@/features/vente/utils/file-attente-offline";
+import { fileOffline, useFileOfflineTenant } from "@/features/vente/stores/file-attente-offline.store";
 import { formatMontant } from "@/features/vente/utils/format";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useConfirmation } from "@/providers/confirmation-provider";

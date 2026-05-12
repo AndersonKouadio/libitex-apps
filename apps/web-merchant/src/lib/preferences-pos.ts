@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { STORAGE_KEYS } from "./storage-keys";
+import { createListenerSet } from "./listener-set";
 
 /**
  * Preferences POS persistees en localStorage. Reactives via useEffect +
@@ -14,9 +15,7 @@ export interface PreferencesPOS {
 
 const STORAGE_KEY = STORAGE_KEYS.POS_PREFS;
 const DEFAUT: PreferencesPOS = { imprimerAuto: false };
-
-type Listener = (p: PreferencesPOS) => void;
-const listeners = new Set<Listener>();
+const store = createListenerSet<PreferencesPOS>();
 
 function lire(): PreferencesPOS {
   if (typeof window === "undefined") return DEFAUT;
@@ -32,7 +31,7 @@ function lire(): PreferencesPOS {
 function ecrire(p: PreferencesPOS): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
-  for (const l of listeners) l(p);
+  store.emit(p);
 }
 
 export const preferencesPOS = {
@@ -40,14 +39,11 @@ export const preferencesPOS = {
   modifier(patch: Partial<PreferencesPOS>): void {
     ecrire({ ...lire(), ...patch });
   },
-  subscribe(l: Listener): () => void {
-    listeners.add(l);
-    return () => { listeners.delete(l); };
-  },
+  subscribe: store.subscribe,
 };
 
 export function usePreferencesPOS(): PreferencesPOS {
   const [prefs, setPrefs] = useState<PreferencesPOS>(() => lire());
-  useEffect(() => preferencesPOS.subscribe(setPrefs), []);
+  useEffect(() => store.subscribe(setPrefs), []);
   return prefs;
 }

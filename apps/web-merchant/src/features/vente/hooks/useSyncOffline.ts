@@ -6,7 +6,7 @@ import { toast } from "@heroui/react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useNetworkStatus } from "@/lib/network-status";
 import { HttpError } from "@/lib/http";
-import { fileOffline, useFileOffline } from "../utils/file-attente-offline";
+import { fileOffline, useFileOffline } from "../stores/file-attente-offline.store";
 import { venteAPI } from "../apis/vente.api";
 import { useInvalidateVenteQuery } from "../queries/index.query";
 
