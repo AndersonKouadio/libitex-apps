@@ -14,13 +14,24 @@ export function initSentryServer(): void {
     environment: process.env.NODE_ENV ?? "production",
     release: process.env.APP_VERSION ?? "dev",
     tracesSampleRate: 0.1,
-    // Filtre : ignorer les 401 / 404 / 403 — ce sont des erreurs metier
-    // attendues, pas des bugs.
+    // Filtre : erreurs metier attendues (auth refus, ressource manquante,
+    // payload trop gros, rate limit, abort client). Fix I3 Module 8 : on
+    // ajoute les exceptions metier custom + erreurs reseau benignes.
     ignoreErrors: [
       /^Unauthorized$/,
       /^Forbidden$/,
       /^Not Found$/,
-      "PayloadTooLargeError",
+      /^Bad Request$/,
+      "PayloadTooLargeException",
+      "ThrottlerException",            // rate limit declenche
+      "AbortError",                    // client a abandonne la requete
+      "ECONNRESET",                    // tcp reset (normal sur deconnexion)
+      "EPIPE",                         // broken pipe
+      "RessourceIntrouvableException", // exception metier custom
+      "StockInsuffisantException",
+      "SessionCaisseRequiseException",
+      "PaiementInsuffisantException",
+      "TicketNonModifiableException",
     ],
   });
 }

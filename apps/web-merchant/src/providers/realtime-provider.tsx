@@ -78,6 +78,23 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       refreshAuthCount.current = 0;
     });
 
+    // Fix I8 Module 8 : log les disconnects pour traquer les pertes WS
+    // imprevues. Sentry breadcrumb (info-level) — pas une erreur en soi.
+    socket.on("disconnect", (raison) => {
+      // Raisons normales : "io client disconnect" (cleanup voulu), "io server
+      // disconnect" (kick volontaire). Les autres sont anormales et meritent
+      // un breadcrumb pour le debug.
+      const raisonsNormales = ["io client disconnect", "io server disconnect"];
+      if (raisonsNormales.includes(raison)) return;
+      import("@sentry/browser").then(({ addBreadcrumb }) => {
+        addBreadcrumb({
+          category: "websocket",
+          message: `disconnect: ${raison}`,
+          level: "warning",
+        });
+      }).catch(() => { /* sentry indispo */ });
+    });
+
     socket.on("connect_error", (err) => {
       const message = err?.message ?? "";
       // Fix I8 Module 8 : capture des erreurs WS non-auth (server down,

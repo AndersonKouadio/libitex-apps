@@ -22,21 +22,41 @@ export function initSentryClient(): void {
     dsn,
     environment: process.env.NEXT_PUBLIC_APP_ENV ?? "production",
     release: process.env.NEXT_PUBLIC_APP_VERSION ?? "dev",
-    // Reduire le bruit : 10% des transactions normales suffisent pour
-    // detecter les regressions. Erreurs (capture* / unhandled) toujours
-    // capturees a 100%.
     tracesSampleRate: 0.1,
-    // Replay session : sur erreur uniquement, 0% sinon (preserve la bande
-    // passante du caissier).
     replaysSessionSampleRate: 0,
     replaysOnErrorSampleRate: 1.0,
-    // Filtre : ignorer les erreurs reseau benignes du POS offline.
+    // Filtre : erreurs reseau benignes (panne intermittente, navigation
+    // brusque, AbortController) + erreurs Next.js attendues.
+    // Fix I3 Module 8 : enrichi avec ChunkLoadError (deploy en cours) et
+    // erreurs HTTP 4xx classiques.
     ignoreErrors: [
       "NetworkError",
       "Failed to fetch",
       "Load failed",
       "AbortError",
+      "ChunkLoadError",         // deploy en cours, ancien bundle 404
+      /Loading chunk \d+ failed/,
+      "ResizeObserver loop limit exceeded",
+      "Non-Error promise rejection captured",
     ],
+    /**
+     * Fix I4 Module 8 : ne pas envoyer les breadcrumbs de requetes vers
+     * les domaines tiers (CDN, GA, etc.). On ne garde que les fetches
+     * vers notre API + storage. Permet un debug efficace sans pollution.
+     */
+    beforeBreadcrumb(breadcrumb) {
+      if (breadcrumb.category === "fetch" || breadcrumb.category === "xhr") {
+        const url = (breadcrumb.data?.url as string | undefined) ?? "";
+        if (!url) return breadcrumb;
+        const garderDomains = [
+          "libitex-api.lunion-lab.com",
+          "libitex-storage.lunion-lab.com",
+          "localhost",
+        ];
+        if (!garderDomains.some((d) => url.includes(d))) return null;
+      }
+      return breadcrumb;
+    },
   });
   initialise = true;
 }
