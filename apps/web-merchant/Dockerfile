@@ -20,6 +20,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_API_URL=https://libitex-api.lunion-lab.com/api/v1
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
+# Fix m1+m2 Module 8 : version inlined au build pour le release tracking
+# Sentry. Le commit SHA est passe par docker-compose via le deploy.sh.
+ARG NEXT_PUBLIC_APP_VERSION=dev
+ENV NEXT_PUBLIC_APP_VERSION=$NEXT_PUBLIC_APP_VERSION
+
 WORKDIR /app/apps/web-merchant
 RUN pnpm exec next build
 

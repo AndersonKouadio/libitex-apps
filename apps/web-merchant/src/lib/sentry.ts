@@ -3,6 +3,34 @@
 import * as Sentry from "@sentry/browser";
 
 /**
+ * Fix I10 Module 8 : rate limit Sentry pour eviter le DOS dashboard en
+ * cas de boucle d'erreur (ex. useEffect qui throw chaque render).
+ * Memoire onglet (perdu au reload — c'est voulu).
+ */
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_EVENTS = 10;
+const signatureCounter = new Map<string, { count: number; resetAt: number }>();
+
+function signatureFromEvent(event: {
+  message?: string;
+  exception?: { values?: Array<{ type?: string; value?: string }> };
+}): string {
+  const ex = event.exception?.values?.[0];
+  return `${ex?.type ?? ""}:${ex?.value ?? event.message ?? "unknown"}`;
+}
+
+function devraitDropper(signature: string): boolean {
+  const now = Date.now();
+  const slot = signatureCounter.get(signature);
+  if (!slot || now >= slot.resetAt) {
+    signatureCounter.set(signature, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  slot.count += 1;
+  return slot.count > RATE_LIMIT_MAX_EVENTS;
+}
+
+/**
  * Init Sentry cote client. Idempotent : si Sentry est deja init, ne refait
  * rien. Si la variable d'env NEXT_PUBLIC_SENTRY_DSN n'est pas definie, ne
  * fait rien (no-op) — ainsi le code marche en dev local sans config.
@@ -56,6 +84,15 @@ export function initSentryClient(): void {
         if (!garderDomains.some((d) => url.includes(d))) return null;
       }
       return breadcrumb;
+    },
+    /**
+     * Fix I10 Module 8 : rate limit en memoire avant envoi. Protege
+     * Sentry d'un crashloop UI (10 events/min/signature max).
+     */
+    beforeSend(event) {
+      const sig = signatureFromEvent(event);
+      if (devraitDropper(sig)) return null;
+      return event;
     },
   });
   initialise = true;
