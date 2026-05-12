@@ -1,0 +1,179 @@
+"use client";
+
+import { use, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button, Card, Chip, Skeleton } from "@heroui/react";
+import { ArrowLeft, Send, X, PackageCheck } from "lucide-react";
+import { PageContainer } from "@/components/layout/page-container";
+import { PageHeader } from "@/components/layout/page-header";
+import {
+  useCommandeQuery, useModifierStatutCommandeMutation,
+} from "@/features/achat/queries/achat.query";
+import { ModalReception } from "@/features/achat/components/modal-reception";
+import { formatMontant } from "@/features/vente/utils/format";
+import type { StatutCommande } from "@/features/achat/types/achat.type";
+import { useConfirmation } from "@/providers/confirmation-provider";
+
+const LIBELLE_STATUT: Record<StatutCommande, string> = {
+  DRAFT: "Brouillon",
+  SENT: "Envoyee",
+  PARTIAL: "Partielle",
+  RECEIVED: "Recue",
+  CANCELLED: "Annulee",
+};
+const CLASSES_STATUT: Record<StatutCommande, string> = {
+  DRAFT: "bg-muted/10 text-muted",
+  SENT: "bg-accent/10 text-accent",
+  PARTIAL: "bg-warning/10 text-warning",
+  RECEIVED: "bg-success/10 text-success",
+  CANCELLED: "bg-danger/10 text-danger",
+};
+
+export default function PageDetailCommande({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const router = useRouter();
+  const { data: commande, isLoading } = useCommandeQuery(id);
+  const modifierStatut = useModifierStatutCommandeMutation();
+  const [receptionOuverte, setReceptionOuverte] = useState(false);
+  const confirmer = useConfirmation();
+
+  async function envoyer() {
+    if (!commande) return;
+    await modifierStatut.mutateAsync({ id: commande.id, statut: "SENT" });
+  }
+
+  async function annuler() {
+    if (!commande) return;
+    const ok = await confirmer({
+      titre: "Annuler cette commande ?",
+      description: "L'action est irreversible. Aucun mouvement de stock n'aura lieu.",
+      actionLibelle: "Annuler la commande",
+    });
+    if (!ok) return;
+    await modifierStatut.mutateAsync({ id: commande.id, statut: "CANCELLED" });
+  }
+
+  if (isLoading || !commande) {
+    return (
+      <PageContainer>
+        <Skeleton className="h-24 rounded mb-4" />
+        <Skeleton className="h-64 rounded" />
+      </PageContainer>
+    );
+  }
+
+  const peutEnvoyer = commande.statut === "DRAFT";
+  const peutAnnuler = commande.statut === "DRAFT" || commande.statut === "SENT";
+  const peutRecevoir = commande.statut === "SENT" || commande.statut === "PARTIAL";
+
+  return (
+    <PageContainer>
+      <PageHeader
+        titre={commande.numero}
+        description={`Fournisseur : ${commande.nomFournisseur}`}
+        actions={
+          <Button variant="ghost" className="gap-2" onPress={() => router.push("/achats/commandes")}>
+            <ArrowLeft size={16} /> Retour
+          </Button>
+        }
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-1">
+          <Card.Content className="p-4 space-y-3 text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted text-xs">Statut</span>
+              <Chip className={`text-[10px] ${CLASSES_STATUT[commande.statut]}`}>
+                {LIBELLE_STATUT[commande.statut]}
+              </Chip>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted text-xs">Total</span>
+              <span className="font-semibold tabular-nums">{formatMontant(commande.montantTotal)} F</span>
+            </div>
+            {commande.dateAttendue && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted text-xs">Livraison attendue</span>
+                <span>{new Date(commande.dateAttendue).toLocaleDateString("fr-FR")}</span>
+              </div>
+            )}
+            {commande.dateReception && (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted text-xs">Premiere reception</span>
+                <span>{new Date(commande.dateReception).toLocaleDateString("fr-FR")}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted text-xs">Creee le</span>
+              <span>{new Date(commande.creeLe).toLocaleDateString("fr-FR")}</span>
+            </div>
+            {commande.notes && (
+              <div className="pt-2 border-t border-border">
+                <p className="text-xs text-muted mb-1">Notes</p>
+                <p className="text-foreground whitespace-pre-line">{commande.notes}</p>
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-border space-y-2">
+              {peutEnvoyer && (
+                <Button variant="primary" className="w-full gap-2" onPress={envoyer} isDisabled={modifierStatut.isPending}>
+                  <Send size={14} /> Marquer comme envoyee
+                </Button>
+              )}
+              {peutRecevoir && (
+                <Button variant="primary" className="w-full gap-2" onPress={() => setReceptionOuverte(true)}>
+                  <PackageCheck size={14} /> Receptionner
+                </Button>
+              )}
+              {peutAnnuler && (
+                <Button variant="outline" className="w-full gap-2 text-danger border-danger/30" onPress={annuler} isDisabled={modifierStatut.isPending}>
+                  <X size={14} /> Annuler la commande
+                </Button>
+              )}
+            </div>
+          </Card.Content>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <Card.Content className="p-4">
+            <p className="text-sm font-semibold mb-3">
+              Lignes ({(commande.lignes ?? []).length})
+            </p>
+            <div className="space-y-2">
+              {(commande.lignes ?? []).map((l) => (
+                <div key={l.id} className="flex items-center gap-2 p-2 border border-border rounded-lg">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{l.nomProduit}</p>
+                    <p className="text-xs text-muted truncate">
+                      {l.nomVariante ? `${l.nomVariante} · ` : ""}{l.sku}
+                    </p>
+                  </div>
+                  <div className="text-right text-xs">
+                    <p className="text-muted">Cmde · Recu</p>
+                    <p className="tabular-nums">
+                      {l.quantiteCommandee} <span className={l.quantiteRecue >= l.quantiteCommandee ? "text-success" : "text-warning"}>· {l.quantiteRecue}</span>
+                    </p>
+                  </div>
+                  <div className="w-24 text-right">
+                    <p className="text-xs text-muted">PU</p>
+                    <p className="text-sm tabular-nums">{formatMontant(l.prixUnitaire)}</p>
+                  </div>
+                  <div className="w-24 text-right">
+                    <p className="text-xs text-muted">Total</p>
+                    <p className="text-sm font-semibold tabular-nums">{formatMontant(l.totalLigne)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card.Content>
+        </Card>
+      </div>
+
+      <ModalReception
+        ouvert={receptionOuverte}
+        commande={commande}
+        onFermer={() => setReceptionOuverte(false)}
+      />
+    </PageContainer>
+  );
+}

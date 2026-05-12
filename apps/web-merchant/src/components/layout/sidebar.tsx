@@ -7,7 +7,7 @@ import { Button } from "@heroui/react";
 import {
   LayoutDashboard, ShoppingCart, Package, Warehouse,
   Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight,
-  Monitor, History,
+  Monitor, History, Truck,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { SwitcherBoutique } from "@/features/boutique/components/switcher-boutique";
@@ -31,6 +31,12 @@ const NAV_ERP: ItemNav[] = [
     routesActives: ["/categories", "/ingredients", "/supplements"],
   },
   { href: "/stock", libelle: "Stock", icone: Warehouse },
+  {
+    href: "/achats",
+    libelle: "Achats",
+    icone: Truck,
+    routesActives: ["/achats/fournisseurs", "/achats/commandes"],
+  },
   { href: "/clients", libelle: "Clients", icone: Users },
   { href: "/rapports", libelle: "Rapports", icone: BarChart3 },
   { href: "/sessions-caisse", libelle: "Sessions caisse", icone: History },
