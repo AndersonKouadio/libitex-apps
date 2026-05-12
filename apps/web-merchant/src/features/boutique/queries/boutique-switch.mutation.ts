@@ -12,7 +12,13 @@ export function useSwitcherBoutiqueMutation() {
   return useMutation({
     mutationFn: (tenantId: string) => boutiqueAPI.switcher(token!, tenantId),
     onSuccess: (res) => {
-      appliquerSession(res.accessToken, res.refreshToken, res.utilisateur, res.boutiques, res.boutiqueActive);
+      appliquerSession({
+        accessToken: res.accessToken,
+        refreshToken: res.refreshToken,
+        utilisateur: res.utilisateur,
+        boutiques: res.boutiques,
+        boutiqueActive: res.boutiqueActive,
+      });
       queryClient.clear();
       toast.success(`Boutique active : ${res.boutiqueActive.nom}`);
     },

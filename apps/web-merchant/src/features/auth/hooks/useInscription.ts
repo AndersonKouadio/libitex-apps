@@ -21,7 +21,13 @@ export function useInscription(): EtatInscription {
     setEnCours(true);
     try {
       const res = await authAPI.inscrire(data);
-      appliquerSession(res.accessToken, res.refreshToken, res.utilisateur, res.boutiques, res.boutiqueActive);
+      appliquerSession({
+        accessToken: res.accessToken,
+        refreshToken: res.refreshToken,
+        utilisateur: res.utilisateur,
+        boutiques: res.boutiques,
+        boutiqueActive: res.boutiqueActive,
+      });
       return true;
     } catch (err: unknown) {
       setErreur(err instanceof Error ? err.message : "Erreur lors de l'inscription");

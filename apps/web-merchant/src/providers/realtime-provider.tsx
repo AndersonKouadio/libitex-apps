@@ -7,10 +7,29 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { forcerRafraichissementToken } from "@/lib/http";
 
 /**
+ * Limite de refresh consecutifs en cas de connect_error d'auth. Si on
+ * depasse, on abandonne le WS pour eviter la boucle infinie
+ * connect_error -> refresh -> reconnect -> connect_error...
+ * Fix I4 de la revue qualite.
+ */
+const MAX_REFRESH_AUTH_WS = 3;
+
+/**
+ * Mots-cles dans le message connect_error qui indiquent un probleme
+ * d'auth. Si le backend change le wording, ajouter ici.
+ */
+const MOTS_CLES_AUTH = ["token", "auth", "unauthorized", "jwt", "expired", "expire"];
+
+function estErreurAuth(message: string): boolean {
+  const lower = message.toLowerCase();
+  return MOTS_CLES_AUTH.some((mot) => lower.includes(mot));
+}
+
+/**
  * Provider Socket.io : connecte un seul socket par session utilisateur,
  * et invalide les queries TanStack a la reception d'events broadcastes
  * par le backend (stock.updated, ticket.completed, produit.changed,
- * disponibilites.changed).
+ * disponibilites.changed, reservation.changed).
  *
  * Le socket est joint a la room `tenant:{tenantId}`, donc les events
  * d'un autre tenant ne le concernent pas.
@@ -19,16 +38,25 @@ import { forcerRafraichissementToken } from "@/lib/http";
  * gardent leur refetchInterval et refetchOnWindowFocus.
  *
  * Resilience auth : sur connect_error d'auth, on declenche un refresh
- * token via httpClient. Le nouveau token mettra a jour useAuth().token,
- * ce qui re-trigger ce useEffect et reconnecte le socket.
+ * token via httpClient. Limite a MAX_REFRESH_AUTH_WS tentatives par
+ * session pour eviter la boucle infinie.
  */
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const socketRef = useRef<Socket | null>(null);
+  /**
+   * Compteur de refresh consecutifs declenches par le WS. Reset a 0
+   * - au changement de token (nouvelle session apres login/refresh OK)
+   * - sur 'connect' reussi (la connexion fonctionne)
+   * Permet d'arreter apres MAX_REFRESH_AUTH_WS tentatives infructueuses.
+   */
+  const refreshAuthCount = useRef(0);
 
   useEffect(() => {
     if (!token) return;
+    // Nouveau token = nouveau quota de refresh.
+    refreshAuthCount.current = 0;
 
     // On retire le suffix /api/v1 pour pointer sur la racine HTTP (Socket.io
     // ecoute sur /socket.io a la racine du serveur).
@@ -44,17 +72,36 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     });
     socketRef.current = socket;
 
+    socket.on("connect", () => {
+      // Connexion OK : on autorise de futurs refresh si le token venait
+      // a expirer plus tard durant cette session.
+      refreshAuthCount.current = 0;
+    });
+
     socket.on("connect_error", (err) => {
-      // Token expire ou invalide cote handshake : tenter un refresh. Le
-      // listener onTokenRefreshed dans AuthProvider mettra a jour useAuth,
-      // ce qui re-trigger l'effet et recree un socket avec le nouveau token.
-      const message = err?.message?.toLowerCase() ?? "";
-      if (message.includes("token") || message.includes("auth") || message.includes("unauthorized")) {
-        // Stopper les tentatives auto avec le token expire pour eviter de
-        // gaspiller des reconnexions echouees.
+      const message = err?.message ?? "";
+      if (!estErreurAuth(message)) return;
+
+      // Quota epuise : on arrete sans deconnecter le user. Les queries
+      // TanStack continuent via polling (refetchInterval). Le WS est un
+      // boost de fraicheur, pas critique a l'usage.
+      if (refreshAuthCount.current >= MAX_REFRESH_AUTH_WS) {
         socket.disconnect();
-        forcerRafraichissementToken();
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[realtime] Limite de refresh atteinte sur le WS, abandon. "
+          + "Les queries TanStack restent fraiches via polling.",
+        );
+        return;
       }
+      refreshAuthCount.current += 1;
+
+      // Stopper les tentatives socket.io avec le token expire pour eviter
+      // les reconnexions echouees inutiles. Le refresh propagera un
+      // nouveau token via onTokenRefreshed -> useAuth -> re-render -> ce
+      // useEffect re-execute avec le nouveau token et recree un socket.
+      socket.disconnect();
+      forcerRafraichissementToken();
     });
 
     socket.on("stock.updated", () => {
@@ -70,6 +117,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     });
     socket.on("produit.changed", () => {
       queryClient.invalidateQueries({ queryKey: ["catalogue"] });
+    });
+    // Reservations : invalide la liste pour que les autres caissiers
+    // voient les changements de statut en temps reel.
+    socket.on("reservation.changed", () => {
+      queryClient.invalidateQueries({ queryKey: ["reservation"] });
     });
 
     return () => {

@@ -6,6 +6,19 @@ import { authAPI } from "../apis/auth.api";
 import type { ConnexionDTO } from "../schemas/auth.schema";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
 
+/**
+ * Donnees necessaires pour persister une session complete en localStorage
+ * + state React. Signature objet pour clarte aux call-sites (au lieu de
+ * 5 args positionnels).
+ */
+export interface AppliquerSessionParams {
+  accessToken: string;
+  refreshToken: string;
+  utilisateur: IUtilisateurSession;
+  boutiques: IBoutiqueResume[];
+  boutiqueActive: IBoutiqueResume;
+}
+
 interface AuthContextValue {
   token: string | null;
   utilisateur: IUtilisateurSession | null;
@@ -14,13 +27,12 @@ interface AuthContextValue {
   enChargement: boolean;
   connecter: (data: ConnexionDTO) => Promise<void>;
   deconnecter: () => void;
-  appliquerSession: (
-    token: string,
-    refreshToken: string,
-    utilisateur: IUtilisateurSession,
-    boutiques: IBoutiqueResume[],
-    active: IBoutiqueResume,
-  ) => void;
+  /**
+   * Persiste une nouvelle session complete (au login, switch boutique,
+   * MAJ utilisateur...). Signature objet pour eviter les call-sites
+   * positionnels illisibles. Fix I6 de la revue.
+   */
+  appliquerSession: (params: AppliquerSessionParams) => void;
   /**
    * Met a jour le token sans toucher au reste du state. Appele par le
    * httpClient quand un refresh transparent est effectue (voir
@@ -105,27 +117,27 @@ export function useAuthState() {
     return () => window.removeEventListener("storage", handleStorage);
   }, [chargerDepuisStorage]);
 
-  const persister = useCallback((
-    t: string,
-    rt: string,
-    u: IUtilisateurSession,
-    b: IBoutiqueResume[],
-    a: IBoutiqueResume,
-  ) => {
-    setToken(t);
-    setUtilisateur(u);
-    setBoutiques(b);
-    setBoutiqueActive(a);
-    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, t);
-    localStorage.setItem(STORAGE_KEYS.AUTH_REFRESH, rt);
-    localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(u));
-    localStorage.setItem(STORAGE_KEYS.AUTH_BOUTIQUES, JSON.stringify(b));
-    localStorage.setItem(STORAGE_KEYS.AUTH_BOUTIQUE_ACTIVE, JSON.stringify(a));
+  const persister = useCallback((params: AppliquerSessionParams) => {
+    setToken(params.accessToken);
+    setUtilisateur(params.utilisateur);
+    setBoutiques(params.boutiques);
+    setBoutiqueActive(params.boutiqueActive);
+    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, params.accessToken);
+    localStorage.setItem(STORAGE_KEYS.AUTH_REFRESH, params.refreshToken);
+    localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(params.utilisateur));
+    localStorage.setItem(STORAGE_KEYS.AUTH_BOUTIQUES, JSON.stringify(params.boutiques));
+    localStorage.setItem(STORAGE_KEYS.AUTH_BOUTIQUE_ACTIVE, JSON.stringify(params.boutiqueActive));
   }, []);
 
   const connecter = useCallback(async (data: ConnexionDTO) => {
     const res = await authAPI.connecter(data);
-    persister(res.accessToken, res.refreshToken, res.utilisateur, res.boutiques, res.boutiqueActive);
+    persister({
+      accessToken: res.accessToken,
+      refreshToken: res.refreshToken,
+      utilisateur: res.utilisateur,
+      boutiques: res.boutiques,
+      boutiqueActive: res.boutiqueActive,
+    });
   }, [persister]);
 
   const deconnecter = useCallback(() => {

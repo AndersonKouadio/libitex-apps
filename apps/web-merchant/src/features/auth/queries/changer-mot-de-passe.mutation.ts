@@ -18,13 +18,13 @@ export function useChangerMotDePasseMutation() {
         const refreshToken = typeof window !== "undefined"
           ? localStorage.getItem(STORAGE_KEYS.AUTH_REFRESH) ?? ""
           : "";
-        appliquerSession(
-          token,
+        appliquerSession({
+          accessToken: token,
           refreshToken,
-          { ...utilisateur, mustChangePassword: false },
+          utilisateur: { ...utilisateur, mustChangePassword: false },
           boutiques,
           boutiqueActive,
-        );
+        });
       }
       toast.success("Mot de passe modifié");
     },
