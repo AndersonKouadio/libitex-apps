@@ -24,7 +24,13 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LIBITEX",
+  // Module 9 D2 : titres par page. Le `default` couvre les pages sans
+  // metadata propre. Le `template` est applique a tout enfant qui
+  // exporte `metadata.title` (ex. "Catalogue" -> "Catalogue · LIBITEX").
+  title: {
+    default: "LIBITEX",
+    template: "%s · LIBITEX",
+  },
   description: "ERP, point de vente et e-commerce pour commerçants",
   applicationName: "LIBITEX",
   appleWebApp: {
