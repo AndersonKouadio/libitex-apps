@@ -60,6 +60,9 @@ export const purchaseOrders = pgTable("purchase_orders", {
   createdBy: uuid("created_by").references(() => users.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Fix C6 : soft-delete des commandes annulees pour ne pas polluer la
+   *  liste active. L'historique reste consultable via filtre dedie. */
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 }, (table) => [
   index("idx_purchase_orders_tenant").on(table.tenantId),
   index("idx_purchase_orders_supplier").on(table.supplierId),
