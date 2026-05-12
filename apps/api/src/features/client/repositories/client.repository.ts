@@ -11,6 +11,7 @@ interface CreerClientData {
   email?: string;
   address?: string;
   notes?: string;
+  whatsappOptIn?: boolean;
 }
 
 @Injectable()

@@ -8,6 +8,8 @@ export interface IClient {
   email: string | null;
   adresse: string | null;
   notes: string | null;
+  /** Module 10 D2 : opt-in WhatsApp. Default true cote backend. */
+  whatsappOptIn: boolean;
   creeLe: string;
   /** Calcule cote backend, present quand la source est la liste. */
   segment?: SegmentClient;

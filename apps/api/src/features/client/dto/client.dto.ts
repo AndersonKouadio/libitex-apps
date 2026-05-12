@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsEmail } from "class-validator";
+import { IsString, IsNotEmpty, IsOptional, IsEmail, IsBoolean } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreerClientDto {
@@ -31,6 +31,16 @@ export class CreerClientDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  /**
+   * Module 10 D2 : opt-in WhatsApp. Default true cote DB. Permet au
+   * commercant de basculer rapidement a la creation si le client demande
+   * a ne pas etre notifie.
+   */
+  @ApiPropertyOptional({ default: true })
+  @IsBoolean()
+  @IsOptional()
+  whatsappOptIn?: boolean;
 }
 
 export class ModifierClientDto {
@@ -63,6 +73,11 @@ export class ModifierClientDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  whatsappOptIn?: boolean;
 }
 
 export type SegmentClient = "VIP" | "REGULIER" | "OCCASIONNEL" | "INACTIF" | "NOUVEAU";
@@ -75,6 +90,7 @@ export class ClientResponseDto {
   email!: string | null;
   adresse!: string | null;
   notes!: string | null;
+  whatsappOptIn!: boolean;
   creeLe!: string;
   /** Agreges (presents quand le client provient de la liste avec joins). */
   segment?: SegmentClient;

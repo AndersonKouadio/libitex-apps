@@ -3,7 +3,7 @@ import { eq, and, sql, desc } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
   type Database, tickets, ticketLines, ticketPayments,
-  variants, products, serials, batches,
+  variants, products, serials, batches, customers, tenants,
 } from "@libitex/db";
 
 @Injectable()
@@ -105,6 +105,27 @@ export class TicketRepository {
     return this.db.query.tickets.findFirst({
       where: and(eq(tickets.id, ticketId), eq(tickets.tenantId, tenantId)),
     });
+  }
+
+  /**
+   * Module 10 D2 : recupere en une seule query les infos necessaires pour
+   * envoyer une notification ticket : nom boutique + nom/tel/opt-in client.
+   * Le client est null si le ticket n'est pas rattache (customerId null).
+   */
+  async obtenirContexteNotification(tenantId: string, ticketId: string) {
+    const [row] = await this.db
+      .select({
+        nomBoutique: tenants.name,
+        clientPrenom: customers.firstName,
+        clientNom: customers.lastName,
+        clientTelephone: customers.phone,
+        clientOptIn: customers.whatsappOptIn,
+      })
+      .from(tickets)
+      .innerJoin(tenants, eq(tickets.tenantId, tenants.id))
+      .leftJoin(customers, eq(tickets.customerId, customers.id))
+      .where(and(eq(tickets.id, ticketId), eq(tickets.tenantId, tenantId)));
+    return row;
   }
 
   // --- Lignes ---
