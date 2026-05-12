@@ -157,6 +157,9 @@ export function useAuthState() {
     // boutique.
     localStorage.removeItem(STORAGE_KEYS.POS_OFFLINE_QUEUE);
     localStorage.removeItem(STORAGE_KEYS.POS_OFFLINE_COUNTER);
+    // Idem panier draft (fix I3) : ne pas exposer le brouillon au
+    // prochain compte connecte.
+    localStorage.removeItem(STORAGE_KEYS.POS_PANIER_DRAFT);
   }, []);
 
   const rafraichirTokenLocal = useCallback((accessToken: string, refreshToken: string) => {

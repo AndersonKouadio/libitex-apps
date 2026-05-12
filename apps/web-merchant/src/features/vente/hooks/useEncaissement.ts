@@ -211,7 +211,11 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
     if (!token || !empId || panier.articles.length === 0) return;
     if (verrou.current) return;
     if (!enLigne) {
-      toast.warning("Mise en attente indisponible hors-ligne — encaissez ou conservez le panier");
+      // Le panier est persiste en localStorage (fix I3) donc le caissier
+      // peut juste fermer/rouvrir l'onglet sans perte. Mise en attente
+      // serveur (PARKED) demande un appel API qu'on ne peut pas faire
+      // offline.
+      toast.warning("Mise en attente serveur indisponible hors-ligne — le panier reste sauvegarde localement");
       return;
     }
     verrou.current = true;

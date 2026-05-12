@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { IVariante, IProduit } from "@/features/catalogue/types/produit.type";
 import { UniteMesure, uniteAccepteDecimal } from "@/features/unite/types/unite.type";
 import { arrondirAuPas } from "@/features/unite/utils/unite";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 export interface SupplementChoisi {
   supplementId: string;
@@ -85,11 +86,69 @@ export interface ClientPanier {
   telephone?: string;
 }
 
+/**
+ * Donnees du panier persistees en localStorage. Permet de ne PAS perdre
+ * la vente en cours si :
+ * - l'utilisateur ferme l'onglet par erreur
+ * - le browser crash
+ * - l'utilisateur tente "Mettre en attente" hors-ligne (la mise en attente
+ *   serveur est bloquee offline mais le panier reste dispo au reload)
+ *
+ * Fix I3 du Module 2.
+ */
+interface PanierPersiste {
+  articles: ArticlePanier[];
+  remiseGlobale: Remise | null;
+  note: string;
+  client: ClientPanier | null;
+}
+
+function lirePanierPersiste(): PanierPersiste | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.POS_PANIER_DRAFT);
+    if (!raw) return null;
+    return JSON.parse(raw) as PanierPersiste;
+  } catch {
+    return null;
+  }
+}
+
+function ecrirePanierPersiste(p: PanierPersiste): void {
+  if (typeof window === "undefined") return;
+  // Si tout vide, on retire la cle pour ne pas polluer.
+  if (p.articles.length === 0 && !p.remiseGlobale && !p.note && !p.client) {
+    localStorage.removeItem(STORAGE_KEYS.POS_PANIER_DRAFT);
+    return;
+  }
+  localStorage.setItem(STORAGE_KEYS.POS_PANIER_DRAFT, JSON.stringify(p));
+}
+
 export function usePanier() {
-  const [articles, setArticles] = useState<ArticlePanier[]>([]);
-  const [remiseGlobale, setRemiseGlobale] = useState<Remise | null>(null);
-  const [note, setNote] = useState<string>("");
-  const [client, setClient] = useState<ClientPanier | null>(null);
+  // Restaure depuis localStorage au mount (fix I3). lazy init pour eviter
+  // le re-calcul a chaque render.
+  const persistInitial = typeof window !== "undefined" ? lirePanierPersiste() : null;
+  const [articles, setArticles] = useState<ArticlePanier[]>(
+    () => persistInitial?.articles ?? [],
+  );
+  const [remiseGlobale, setRemiseGlobale] = useState<Remise | null>(
+    () => persistInitial?.remiseGlobale ?? null,
+  );
+  const [note, setNote] = useState<string>(() => persistInitial?.note ?? "");
+  const [client, setClient] = useState<ClientPanier | null>(
+    () => persistInitial?.client ?? null,
+  );
+
+  // Persiste a chaque change. Le 1er render persiste a vide, donc skip
+  // via une ref pour ne pas ecrire inutilement au mount.
+  const skipFirstWrite = useRef(true);
+  useEffect(() => {
+    if (skipFirstWrite.current) {
+      skipFirstWrite.current = false;
+      return;
+    }
+    ecrirePanierPersiste({ articles, remiseGlobale, note, client });
+  }, [articles, remiseGlobale, note, client]);
 
   const ajouter = useCallback(
     (

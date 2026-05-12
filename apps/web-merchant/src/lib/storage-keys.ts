@@ -20,6 +20,8 @@ export const STORAGE_KEYS = {
   POS_PREFS: "libitex_prefs_pos",
   POS_OFFLINE_QUEUE: "libitex_offline_queue",
   POS_OFFLINE_COUNTER: "libitex_offline_counter",
+  /** Brouillon du panier (persiste entre reload/offline). Fix I3 du Module 2. */
+  POS_PANIER_DRAFT: "libitex_panier_draft",
   POS_PRINTER_DEVICE: "libitex_imprimante_device",
 
   // Onboarding

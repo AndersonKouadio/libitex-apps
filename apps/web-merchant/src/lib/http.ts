@@ -8,6 +8,30 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
   token?: string;
 }
 
+/**
+ * Erreur HTTP enrichie avec le status code de la reponse. Permet aux
+ * callers de distinguer les erreurs metier (4xx) des erreurs serveur
+ * (5xx) : ex. useSyncOffline retry auto sur 5xx mais marque definitif
+ * sur 4xx. Sans ca on n'avait que `err.message` -> impossible de prendre
+ * la bonne decision sans parser le message.
+ */
+export class HttpError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+    public readonly path?: string,
+  ) {
+    super(message);
+    this.name = "HttpError";
+  }
+
+  /** 4xx : erreur du client / metier — ne pas retry sans intervention. */
+  isClientError(): boolean { return this.status >= 400 && this.status < 500; }
+
+  /** 5xx : erreur serveur — souvent transitoire, retry-safe avec backoff. */
+  isServerError(): boolean { return this.status >= 500 && this.status < 600; }
+}
+
 // ─── Token refresh listeners ────────────────────────────────────────────
 
 /**
@@ -180,7 +204,10 @@ class HttpClient {
 
     if (!response.ok) {
       const errorBody = await response.json().catch(() => null);
-      throw new Error(errorBody?.error || errorBody?.message || `Erreur ${response.status}`);
+      // Si message est un tableau (validation NestJS) on prend le 1er.
+      const msgRaw = errorBody?.error || errorBody?.message || `Erreur ${response.status}`;
+      const msg = Array.isArray(msgRaw) ? msgRaw[0] : msgRaw;
+      throw new HttpError(response.status, msg, path);
     }
 
     if (response.status === 204) return undefined as T;

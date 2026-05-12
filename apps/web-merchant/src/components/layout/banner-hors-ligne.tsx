@@ -1,9 +1,10 @@
 "use client";
 
-import { CloudOff, AlertTriangle } from "lucide-react";
+import { CloudOff, AlertTriangle, Loader2 } from "lucide-react";
 import { useNetworkStatus } from "@/lib/network-status";
 import { useFileOfflineTenant } from "@/features/vente/utils/file-attente-offline";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useEtatDrain } from "@/providers/sync-offline-provider";
 
 interface Props {
   onVoirFile: () => void;
@@ -27,6 +28,7 @@ export function BannerHorsLigne({ onVoirFile }: Props) {
   const enLigne = useNetworkStatus();
   const { utilisateur } = useAuth();
   const file = useFileOfflineTenant(utilisateur?.tenantId);
+  const drain = useEtatDrain();
   const conflits = file.filter((v) => v.erreur).length;
   const enAttente = file.length;
 
@@ -46,6 +48,12 @@ export function BannerHorsLigne({ onVoirFile }: Props) {
     ton = "danger";
     icone = <AlertTriangle size={14} strokeWidth={2.5} />;
     texte = `${conflits} vente${conflits > 1 ? "s" : ""} en conflit — clic pour resoudre`;
+  } else if (drain.enCours && drain.total > 0) {
+    // Progression detaillee (fix I4) : on affiche X/N pendant que le drain
+    // tourne. Spinner anime pour confirmer visuellement l'activite.
+    ton = "info";
+    icone = <Loader2 size={14} strokeWidth={2.5} className="animate-spin" />;
+    texte = `Synchronisation ${drain.traites}/${drain.total} — clic pour voir`;
   } else {
     ton = "info";
     texte = `Synchronisation en cours — ${enAttente} vente${enAttente > 1 ? "s" : ""}`;
