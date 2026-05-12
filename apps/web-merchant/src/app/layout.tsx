@@ -4,6 +4,7 @@ import "./globals.css";
 import { QueryProvider } from "@/providers/query-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import { RealtimeProvider } from "@/providers/realtime-provider";
+import { SyncOfflineProvider } from "@/providers/sync-offline-provider";
 import { ToastProvider } from "@/providers/toast-provider";
 import { ConfirmationProvider } from "@/providers/confirmation-provider";
 import { SWRegister } from "@/providers/sw-register";
@@ -66,9 +67,11 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <RealtimeProvider>
-              <ConfirmationProvider>
-                {children}
-              </ConfirmationProvider>
+              <SyncOfflineProvider>
+                <ConfirmationProvider>
+                  {children}
+                </ConfirmationProvider>
+              </SyncOfflineProvider>
               <ToastProvider />
               <SWRegister />
             </RealtimeProvider>

@@ -1,0 +1,65 @@
+"use client";
+
+import { CloudOff, AlertTriangle } from "lucide-react";
+import { useNetworkStatus } from "@/lib/network-status";
+import { useFileOffline } from "@/features/vente/utils/file-attente-offline";
+
+interface Props {
+  onVoirFile: () => void;
+}
+
+/**
+ * Banner discret affiche en haut de page :
+ * - en orange "Hors-ligne" quand le reseau est tombe
+ * - en rouge "X vente(s) en conflit" si certaines entrees ont une erreur
+ *   au moment de la sync (stock epuise entre-temps...)
+ * - en bleu "X vente(s) en cours de sync" si la file n'est pas vide mais
+ *   qu'on est online et qu'il n'y a pas d'erreur
+ *
+ * Cliquable pour ouvrir la modale qui liste les ventes en attente.
+ */
+export function BannerHorsLigne({ onVoirFile }: Props) {
+  const enLigne = useNetworkStatus();
+  const file = useFileOffline();
+  const conflits = file.filter((v) => v.erreur).length;
+  const enAttente = file.length;
+
+  if (enLigne && enAttente === 0) return null;
+
+  let ton: "warning" | "info" | "danger" = "info";
+  let icone = <CloudOff size={14} strokeWidth={2.5} />;
+  let texte = "";
+
+  if (!enLigne) {
+    ton = "warning";
+    icone = <CloudOff size={14} strokeWidth={2.5} />;
+    texte = enAttente > 0
+      ? `Hors-ligne — ${enAttente} vente${enAttente > 1 ? "s" : ""} en attente`
+      : "Hors-ligne — les ventes seront synchronisees au retour reseau";
+  } else if (conflits > 0) {
+    ton = "danger";
+    icone = <AlertTriangle size={14} strokeWidth={2.5} />;
+    texte = `${conflits} vente${conflits > 1 ? "s" : ""} en conflit — clic pour resoudre`;
+  } else {
+    ton = "info";
+    texte = `Synchronisation en cours — ${enAttente} vente${enAttente > 1 ? "s" : ""}`;
+  }
+
+  const couleurs = {
+    warning: "bg-warning/10 text-warning border-warning/20",
+    info: "bg-accent/10 text-accent border-accent/20",
+    danger: "bg-danger/10 text-danger border-danger/20",
+  }[ton];
+
+  return (
+    <button
+      type="button"
+      onClick={onVoirFile}
+      className={`fixed top-0 left-0 right-0 z-50 ${couleurs} border-b text-xs font-medium px-3 py-1.5 flex items-center justify-center gap-2 transition-colors hover:brightness-95 safe-top`}
+      aria-label="Voir la file des ventes hors-ligne"
+    >
+      {icone}
+      <span className="truncate">{texte}</span>
+    </button>
+  );
+}

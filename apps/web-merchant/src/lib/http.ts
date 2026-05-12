@@ -1,3 +1,5 @@
+import { marquerOnline, marquerOffline } from "./network-status";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
 
 interface RequestOptions extends Omit<RequestInit, "body"> {
@@ -99,12 +101,23 @@ class HttpClient {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-      ...rest,
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        ...rest,
+      });
+    } catch (err) {
+      // TypeError de fetch = pas de reseau ou DNS / TLS. On bascule l'app en
+      // mode offline pour que le banner + la file d'attente prennent le relais.
+      marquerOffline();
+      throw err;
+    }
+    // Toute reponse HTTP (meme 5xx) prouve qu'on a du reseau : on remonte
+    // l'etat online si on etait offline.
+    marquerOnline();
 
     // 401 + on a un token + pas deja retry + endpoint non-refresh : tenter
     // un refresh automatique transparent (token expire en plein service).

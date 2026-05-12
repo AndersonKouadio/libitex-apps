@@ -5,11 +5,15 @@ import { toast } from "@heroui/react";
 import { venteAPI } from "../apis/vente.api";
 import { creerTicketSchema } from "../schemas/vente.schema";
 import { useInvalidateVenteQuery } from "../queries/index.query";
+import { useNetworkStatus } from "@/lib/network-status";
+import { fileOffline, prochainNumeroLocal } from "../utils/file-attente-offline";
 import type { ArticlePanier, Remise, ClientPanier } from "./usePanier";
 import type { ITicket } from "../types/vente.type";
 
 interface PanierActions {
   articles: ArticlePanier[];
+  sousTotal: number;
+  total: number;
   remiseGlobale: Remise | null;
   note: string;
   client: ClientPanier | null;
@@ -24,14 +28,73 @@ interface DerniereVente {
 }
 
 /**
+ * Synthese un ITicket a partir du panier pour pouvoir afficher la
+ * confirmation et imprimer un ticket coherent meme en mode hors-ligne.
+ * Les ids/dates sont locaux ; le vrai ticket sera cree au moment de la sync.
+ */
+function syntheseTicketOffline(
+  numeroLocal: string,
+  panier: PanierActions,
+  paiements: { methode: string; montant: number; reference?: string }[],
+): ITicket {
+  return {
+    id: `offline-${numeroLocal}`,
+    numeroTicket: numeroLocal,
+    statut: "OFFLINE",
+    sousTotal: panier.sousTotal,
+    montantTva: 0, // TVA recalculee cote backend a la sync
+    montantRemise: panier.remiseGlobale?.montant ?? 0,
+    total: panier.total,
+    clientId: panier.client?.id ?? null,
+    nomClient: panier.client?.nom,
+    telephoneClient: panier.client?.telephone,
+    note: panier.note || undefined,
+    lignes: panier.articles.map((a, i) => ({
+      id: `${numeroLocal}-${i}`,
+      varianteId: a.varianteId,
+      nomProduit: a.nomProduit,
+      nomVariante: a.nomVariante || null,
+      sku: a.sku,
+      quantite: a.quantite,
+      prixUnitaire: a.prixUnitaire,
+      remise: a.remise?.montant ?? 0,
+      tauxTva: 0,
+      montantTva: 0,
+      totalLigne: a.totalLigne,
+      uniteVente: a.uniteVente,
+      pasMin: a.pasMin,
+      prixParUnite: a.prixParUnite,
+      supplements: (a.supplements ?? []).map((s) => ({
+        supplementId: s.supplementId,
+        nom: s.nom,
+        prixUnitaire: s.prixUnitaire,
+        quantite: s.quantite,
+      })),
+    })),
+    paiements: paiements.map((p, i) => ({
+      id: `${numeroLocal}-p-${i}`,
+      methode: p.methode,
+      montant: p.montant,
+      reference: p.reference,
+    })),
+    creeLe: new Date().toISOString(),
+  };
+}
+
+/**
  * Hook qui regroupe les deux actions de cloture du panier au POS :
  * encaisser (cree + complete le ticket) et mettreEnAttente (PARK).
  * Possede l'etat de chargement et le recapitulatif de la derniere vente.
+ *
+ * Mode hors-ligne : si le reseau est tombe, l'encaissement bascule sur la
+ * file localStorage. Le caissier voit toujours la confirmation + monnaie.
+ * La sync auto reprend des le retour reseau (useSyncOffline).
  */
 export function useEncaissement(panier: PanierActions, empId: string, token: string | null) {
   const [enCours, setEnCours] = useState(false);
   const [derniereVente, setDerniereVente] = useState<DerniereVente | null>(null);
   const invalidateVente = useInvalidateVenteQuery();
+  const enLigne = useNetworkStatus();
   // Garde anti-double-clic via ref : le state enCours n'est pas frais dans la
   // closure si l'utilisateur tape deux fois avant le prochain re-render.
   const verrou = useRef(false);
@@ -69,6 +132,44 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
 
     verrou.current = true;
     setEnCours(true);
+
+    // Mode hors-ligne : on persiste la vente en file localStorage et on
+    // synthese une confirmation locale. La sync sera faite par useSyncOffline
+    // des le retour reseau.
+    if (!enLigne) {
+      const numeroLocal = prochainNumeroLocal();
+      const paye = paiementsSaisis.reduce((s, p) => s + p.montant, 0);
+      const monnaie = Math.max(0, paye - panier.total);
+      try {
+        fileOffline.ajouter({
+          id: typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          emplacementId: empId,
+          payloadCreer: payload.data,
+          paiements: paiementsSaisis,
+          total: panier.total,
+          monnaie,
+          numeroLocal,
+          creeLe: new Date().toISOString(),
+        });
+        setDerniereVente({
+          numero: numeroLocal,
+          total: panier.total,
+          monnaie,
+          ticket: syntheseTicketOffline(numeroLocal, panier, paiementsSaisis),
+        });
+        panier.vider();
+        toast.warning(`Vente ${numeroLocal} enregistree hors-ligne — sera synchronisee au retour reseau`);
+      } catch (err) {
+        toast.danger(err instanceof Error ? err.message : "Impossible d'enregistrer la vente offline");
+      } finally {
+        setEnCours(false);
+        verrou.current = false;
+      }
+      return;
+    }
+
     try {
       const ticket = await venteAPI.creerTicket(token, payload.data);
       const resultat = await venteAPI.completerTicket(token, ticket.id, {
@@ -88,11 +189,15 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
       setEnCours(false);
       verrou.current = false;
     }
-  }, [token, empId, panier, invalidateVente]);
+  }, [token, empId, panier, invalidateVente, enLigne]);
 
   const mettreEnAttente = useCallback(async () => {
     if (!token || !empId || panier.articles.length === 0) return;
     if (verrou.current) return;
+    if (!enLigne) {
+      toast.warning("Mise en attente indisponible hors-ligne — encaissez ou conservez le panier");
+      return;
+    }
     verrou.current = true;
     setEnCours(true);
     try {
@@ -124,7 +229,7 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
       setEnCours(false);
       verrou.current = false;
     }
-  }, [token, empId, panier, invalidateVente]);
+  }, [token, empId, panier, invalidateVente, enLigne]);
 
   const fermerDerniereVente = useCallback(() => setDerniereVente(null), []);
 
