@@ -36,3 +36,11 @@ export interface ICategoriePublique {
   nom: string;
   slug: string;
 }
+
+/** Reponse paginee du backend pour la liste produits publique. */
+export interface IPageProduitsPublics {
+  data: IProduitPublic[];
+  total: number;
+  limit: number;
+  offset: number;
+}

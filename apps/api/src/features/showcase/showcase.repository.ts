@@ -1,5 +1,5 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { eq, and, isNull, asc } from "drizzle-orm";
+import { eq, and, isNull, inArray, asc, ilike, or, sql, type SQL } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../database/database.module";
 import {
   type Database, tenants, products, variants, categories,
@@ -24,40 +24,87 @@ export class ShowcaseRepository {
    * Produits publics de la boutique. Filtres :
    * - actifs + non supprimes
    * - hors supplements (un client ne commande pas un supplement seul)
-   * - hors MENU si pas de variante (mais on garde les MENU avec variantes pour
-   *   les restaurateurs : un menu visible = ses variantes/recettes)
+   *
+   * Fix C2 : avant on chargeait TOUTES les variantes actives du systeme
+   * puis on filtrait en JS. Avec 5000 produits x 3 variantes ca faisait
+   * 15k rows DL pour rien. Maintenant on filtre directement par
+   * `inArray(variantId, productIds)`.
+   *
+   * Fix I2 (D3) : pagination via limit/offset.
    */
-  async listerProduitsPublics(tenantId: string, categorieId?: string) {
-    const conditions = [
+  async listerProduitsPublics(
+    tenantId: string,
+    opts: { categorieId?: string; recherche?: string; limit?: number; offset?: number } = {},
+  ) {
+    const limit = Math.min(Math.max(opts.limit ?? 24, 1), 100);
+    const offset = Math.max(opts.offset ?? 0, 0);
+
+    const conditions: SQL[] = [
       eq(products.tenantId, tenantId),
       eq(products.isActive, true),
       eq(products.isSupplement, false),
       isNull(products.deletedAt),
     ];
-    if (categorieId) conditions.push(eq(products.categoryId, categorieId));
+    if (opts.categorieId) conditions.push(eq(products.categoryId, opts.categorieId));
+    if (opts.recherche && opts.recherche.length >= 2) {
+      conditions.push(or(
+        ilike(products.name, `%${opts.recherche}%`),
+        ilike(products.brand, `%${opts.recherche}%`),
+      )!);
+    }
 
     const rows = await this.db
       .select()
       .from(products)
       .where(and(...conditions))
-      .orderBy(asc(products.name));
+      .orderBy(asc(products.name))
+      .limit(limit)
+      .offset(offset);
 
     if (rows.length === 0) return [];
 
-    // Variantes actives pour chacun
-    const allVariantes = await this.db.query.variants.findMany({
+    // Fix C2 : charge uniquement les variantes des produits listes.
+    const productIds = rows.map((p) => p.id);
+    const variantesAttachees = await this.db.query.variants.findMany({
       where: and(
+        inArray(variants.productId, productIds),
         isNull(variants.deletedAt),
         eq(variants.isActive, true),
       ),
     });
-    const parProduit = new Map<string, typeof allVariantes>();
-    for (const v of allVariantes) {
-      if (!rows.some((p) => p.id === v.productId)) continue;
+    const parProduit = new Map<string, typeof variantesAttachees>();
+    for (const v of variantesAttachees) {
       if (!parProduit.has(v.productId)) parProduit.set(v.productId, []);
       parProduit.get(v.productId)!.push(v);
     }
     return rows.map((p) => ({ ...p, variantes: parProduit.get(p.id) ?? [] }));
+  }
+
+  /**
+   * Compte les produits publics (utilise pour pagination cote front).
+   */
+  async compterProduitsPublics(
+    tenantId: string,
+    opts: { categorieId?: string; recherche?: string } = {},
+  ): Promise<number> {
+    const conditions: SQL[] = [
+      eq(products.tenantId, tenantId),
+      eq(products.isActive, true),
+      eq(products.isSupplement, false),
+      isNull(products.deletedAt),
+    ];
+    if (opts.categorieId) conditions.push(eq(products.categoryId, opts.categorieId));
+    if (opts.recherche && opts.recherche.length >= 2) {
+      conditions.push(or(
+        ilike(products.name, `%${opts.recherche}%`),
+        ilike(products.brand, `%${opts.recherche}%`),
+      )!);
+    }
+    const [row] = await this.db
+      .select({ total: sql<number>`COUNT(*)::int` })
+      .from(products)
+      .where(and(...conditions));
+    return Number(row?.total ?? 0);
   }
 
   async obtenirProduitPublic(tenantId: string, id: string) {

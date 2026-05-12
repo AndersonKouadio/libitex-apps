@@ -34,6 +34,13 @@ export interface ProduitPublicDto {
   variantes: VariantePublicDto[];
 }
 
+export interface PageProduitsPublicsDto {
+  data: ProduitPublicDto[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface CategoriePublicDto {
   id: string;
   nom: string;
@@ -60,11 +67,26 @@ export class ShowcaseService {
     };
   }
 
-  async listerProduits(slug: string, categorieId?: string): Promise<ProduitPublicDto[]> {
+  /**
+   * Liste paginee + filtres recherche/categorie. Renvoie aussi le total
+   * pour permettre une pagination cote front.
+   */
+  async listerProduits(
+    slug: string,
+    opts: { categorieId?: string; recherche?: string; limit?: number; offset?: number } = {},
+  ): Promise<PageProduitsPublicsDto> {
     const t = await this.repo.trouverBoutiqueParSlug(slug);
     if (!t) throw new NotFoundException("Boutique introuvable");
-    const rows = await this.repo.listerProduitsPublics(t.id, categorieId);
-    return rows.map((p) => this.mapProduit(p));
+    const [rows, total] = await Promise.all([
+      this.repo.listerProduitsPublics(t.id, opts),
+      this.repo.compterProduitsPublics(t.id, opts),
+    ]);
+    return {
+      data: rows.map((p) => this.mapProduit(p)),
+      total,
+      limit: opts.limit ?? 24,
+      offset: opts.offset ?? 0,
+    };
   }
 
   async obtenirProduit(slug: string, id: string): Promise<ProduitPublicDto> {

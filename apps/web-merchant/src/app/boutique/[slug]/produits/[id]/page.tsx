@@ -1,174 +1,69 @@
-"use client";
-
-import { use, useState } from "react";
-import Link from "next/link";
-import { Spinner } from "@heroui/react";
-import { ArrowLeft, Package, MessageCircle, Phone } from "lucide-react";
-import {
-  useBoutiquePubliqueQuery, useProduitPublicQuery,
-} from "@/features/showcase/queries/showcase.query";
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { showcaseAPI } from "@/features/showcase/apis/showcase.api";
 import { HeaderBoutique } from "@/features/showcase/components/header-boutique";
-import { formatMontant } from "@/features/vente/utils/format";
+import { ProduitDetailClient } from "@/features/showcase/components/produit-detail-client";
 
-export default function PageProduitPublic({
-  params,
-}: {
+interface PageParams {
   params: Promise<{ slug: string; id: string }>;
-}) {
-  const { slug, id } = use(params);
-  const { data: boutique, isLoading: chBoutique } = useBoutiquePubliqueQuery(slug);
-  const { data: produit, isLoading: chProduit, error } = useProduitPublicQuery(slug, id);
-  const [varianteId, setVarianteId] = useState<string>("");
-  const [imageActive, setImageActive] = useState<number>(0);
+}
 
-  if (chBoutique || chProduit) {
-    return <div className="min-h-screen flex items-center justify-center"><Spinner /></div>;
+export const revalidate = 60;
+
+async function chargerDonnees(slug: string, id: string) {
+  try {
+    const [boutique, produit] = await Promise.all([
+      showcaseAPI.obtenirBoutique(slug, { next: { revalidate: 60 } }),
+      showcaseAPI.obtenirProduit(slug, id, { next: { revalidate: 60 } }),
+    ]);
+    return { boutique, produit };
+  } catch {
+    return null;
   }
-  if (error || !boutique || !produit) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-center p-8">
-        <div>
-          <p className="text-sm text-foreground">Produit introuvable</p>
-          <Link href={`/boutique/${slug}`} className="text-xs text-accent underline mt-2 block">
-            Retour a la boutique
-          </Link>
-        </div>
-      </div>
-    );
+}
+
+export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
+  const { slug, id } = await params;
+  const donnees = await chargerDonnees(slug, id);
+  if (!donnees) {
+    return { title: "Produit introuvable", robots: { index: false } };
   }
+  const { boutique, produit } = donnees;
+  const title = `${produit.nom} — ${boutique.nom}`;
+  const description = produit.description
+    ? produit.description.slice(0, 200)
+    : `${produit.nom} disponible chez ${boutique.nom}. Commandez directement par WhatsApp.`;
+  const image = produit.images[0] ?? boutique.logoUrl ?? undefined;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      siteName: boutique.nom,
+      images: image ? [{ url: image }] : undefined,
+    },
+    twitter: {
+      card: image ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: image ? [image] : undefined,
+    },
+  };
+}
 
-  const variante = produit.variantes.find((v) => v.id === varianteId) ?? produit.variantes[0];
-  const prix = variante?.prixDetail ?? 0;
-  const prixPromo = produit.enPromotion && produit.prixPromotion ? produit.prixPromotion : null;
+export default async function PageProduitPublic({ params }: PageParams) {
+  const { slug, id } = await params;
+  const donnees = await chargerDonnees(slug, id);
 
-  const message = encodeURIComponent(
-    `Bonjour ${boutique.nom}, je suis interesse(e) par ${produit.nom}`
-    + (variante?.nom ? ` (${variante.nom})` : ""),
-  );
-  const numero = boutique.telephone?.replace(/[^\d]/g, "");
-  const whatsapp = numero ? `https://wa.me/${numero}?text=${message}` : null;
+  // Fix I6 : 404 propre (notFound throw une exception qui rend la 404.tsx).
+  if (!donnees) notFound();
 
   return (
     <>
-      <HeaderBoutique boutique={boutique} />
-
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        <Link href={`/boutique/${slug}`} className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-accent mb-4">
-          <ArrowLeft size={14} /> Retour
-        </Link>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <div className="aspect-square bg-surface-secondary rounded-xl overflow-hidden flex items-center justify-center">
-              {produit.images[imageActive] ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={produit.images[imageActive]} alt={produit.nom} className="w-full h-full object-cover" />
-              ) : (
-                <Package size={48} className="text-muted opacity-30" />
-              )}
-            </div>
-            {produit.images.length > 1 && (
-              <div className="mt-3 grid grid-cols-5 gap-2">
-                {produit.images.map((img, i) => (
-                  <button
-                    key={img}
-                    type="button"
-                    onClick={() => setImageActive(i)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                      imageActive === i ? "border-accent" : "border-transparent"
-                    }`}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={img} alt={`${produit.nom} ${i + 1}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div>
-            {produit.marque && (
-              <p className="text-xs text-muted uppercase tracking-wide mb-1">{produit.marque}</p>
-            )}
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{produit.nom}</h1>
-
-            <div className="mt-3 flex items-baseline gap-3">
-              {prixPromo ? (
-                <>
-                  <span className="text-3xl font-bold text-danger tabular-nums">
-                    {formatMontant(prixPromo)}
-                    <span className="text-base font-normal ml-1.5">{boutique.devise}</span>
-                  </span>
-                  <span className="text-base text-muted line-through tabular-nums">
-                    {formatMontant(prix)}
-                  </span>
-                </>
-              ) : (
-                <span className="text-3xl font-bold text-foreground tabular-nums">
-                  {formatMontant(prix)}
-                  <span className="text-base font-normal text-muted ml-1.5">{boutique.devise}</span>
-                </span>
-              )}
-            </div>
-
-            {produit.enRupture && (
-              <span className="inline-block mt-3 text-xs font-semibold uppercase text-danger bg-danger/10 px-2 py-1 rounded">
-                En rupture
-              </span>
-            )}
-
-            {produit.description && (
-              <p className="mt-4 text-sm text-foreground whitespace-pre-line leading-relaxed">
-                {produit.description}
-              </p>
-            )}
-
-            {produit.variantes.length > 1 && (
-              <div className="mt-5">
-                <p className="text-xs font-semibold text-muted mb-2">Options</p>
-                <div className="flex flex-wrap gap-2">
-                  {produit.variantes.map((v) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => setVarianteId(v.id)}
-                      className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
-                        (varianteId || produit.variantes[0]?.id) === v.id
-                          ? "bg-accent text-accent-foreground border-accent"
-                          : "bg-surface border-border hover:border-accent/40"
-                      }`}
-                    >
-                      {v.nom || v.sku} — {formatMontant(v.prixDetail)} {boutique.devise}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="mt-6 space-y-2">
-              {whatsapp && (
-                <a
-                  href={whatsapp}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-3 text-sm font-semibold rounded-lg bg-success text-success-foreground hover:brightness-95"
-                >
-                  <MessageCircle size={16} /> Commander sur WhatsApp
-                </a>
-              )}
-              {boutique.telephone && (
-                <a
-                  href={`tel:${boutique.telephone.replace(/\s/g, "")}`}
-                  className="flex items-center justify-center gap-2 w-full py-3 text-sm font-semibold rounded-lg bg-surface border border-border text-foreground hover:border-accent/40"
-                >
-                  <Phone size={16} /> Appeler {boutique.telephone}
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-      </main>
-
+      <HeaderBoutique boutique={donnees.boutique} />
+      <ProduitDetailClient boutique={donnees.boutique} produit={donnees.produit} />
       <footer className="max-w-6xl mx-auto px-4 py-8 text-center text-xs text-muted">
         Propulse par <span className="font-semibold text-foreground">LIBITEX</span>
       </footer>
