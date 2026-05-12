@@ -212,6 +212,29 @@ export class VenteService {
     const totalTicket = Number(ticket.total);
     if (totalPaye < totalTicket) throw new PaiementInsuffisantException(totalPaye, totalTicket);
 
+    // Validation fidelite : si une ligne LOYALTY est presente, le ticket
+    // doit etre attache a un client et le solde doit etre suffisant.
+    const paiementFidelite = dto.paiements.find((p) => p.methode === "LOYALTY");
+    if (paiementFidelite) {
+      if (!ticket.customerId) {
+        throw new BadRequestException("Paiement en points : un client doit etre attache au ticket");
+      }
+      const config = await this.fidelite.obtenirConfig(tenantId);
+      if (!config.actif) {
+        throw new BadRequestException("Le programme fidelite n'est pas actif");
+      }
+      if (config.valeurPoint <= 0) {
+        throw new BadRequestException("Configuration fidelite invalide (valeur point)");
+      }
+      const pointsRequis = Math.ceil(paiementFidelite.montant / config.valeurPoint);
+      const solde = await this.fidelite.solde(tenantId, ticket.customerId);
+      if (solde.solde < pointsRequis) {
+        throw new BadRequestException(
+          `Solde insuffisant : ${solde.solde} points dispos, ${pointsRequis} requis`,
+        );
+      }
+    }
+
     for (const p of dto.paiements) {
       await this.ticketRepo.creerPaiement({
         ticketId: ticket.id, method: p.methode, amount: p.montant.toString(), reference: p.reference,
@@ -276,6 +299,15 @@ export class VenteService {
     // actif. Silencieux (best-effort) — un echec ne doit pas casser la
     // vente.
     if (ticket.customerId) {
+      // Si paiement avec points : debit prealable (REDEEM transaction
+      // negative). L'amount du paiement / valeurPoint = points utilises.
+      if (paiementFidelite) {
+        const config = await this.fidelite.obtenirConfig(tenantId);
+        const points = Math.ceil(paiementFidelite.montant / config.valeurPoint);
+        this.fidelite
+          .ajusterPointsDepuisTicket(tenantId, ticket.customerId, ticket.id, -points)
+          .catch(() => { /* idem */ });
+      }
       this.fidelite
         .crediterDepuisTicket(tenantId, ticket.customerId, ticket.id, totalTicket)
         .catch(() => { /* on n'interrompt pas le retour ticket */ });

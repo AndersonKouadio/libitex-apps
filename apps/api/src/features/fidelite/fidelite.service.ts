@@ -64,6 +64,26 @@ export class FideliteService {
     });
   }
 
+  /**
+   * Debit/credit lie a un ticket (paiement avec points = REDEEM negatif).
+   * Pas d'exception : best-effort cote VenteService.
+   */
+  async ajusterPointsDepuisTicket(
+    tenantId: string,
+    customerId: string,
+    ticketId: string,
+    points: number,
+  ): Promise<void> {
+    if (points === 0) return;
+    await this.repo.ajouterTransaction({
+      tenantId,
+      customerId,
+      points,
+      transactionType: "REDEEM",
+      ticketId,
+    });
+  }
+
   async ajusterPoints(
     tenantId: string,
     userId: string,

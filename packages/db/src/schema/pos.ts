@@ -22,6 +22,7 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "MOBILE_MONEY",
   "BANK_TRANSFER",
   "CREDIT",
+  "LOYALTY",
 ]);
 
 export const cashSessionStatusEnum = pgEnum("cash_session_status", [

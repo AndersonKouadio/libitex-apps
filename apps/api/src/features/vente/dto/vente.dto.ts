@@ -26,6 +26,7 @@ export enum MethodePaiement {
   MOBILE_MONEY = "MOBILE_MONEY",
   VIREMENT = "BANK_TRANSFER",
   CREDIT = "CREDIT",
+  FIDELITE = "LOYALTY",
 }
 
 // --- Requete ---

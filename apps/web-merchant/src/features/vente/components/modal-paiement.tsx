@@ -3,12 +3,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@heroui/react";
 import {
-  Banknote, Smartphone, CreditCard, Landmark, Hourglass, X, type LucideIcon,
+  Banknote, Smartphone, CreditCard, Landmark, Hourglass, X, Sparkles, type LucideIcon,
 } from "lucide-react";
 import { MethodePaiement } from "../types/vente.type";
 import { formatMontant } from "../utils/format";
 import { BoutonPOS } from "./bouton-pos";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useSoldeFideliteQuery, useConfigFideliteQuery } from "@/features/fidelite/queries/fidelite.query";
 
 export interface PaiementSaisi {
   methode: string;
@@ -18,6 +19,8 @@ export interface PaiementSaisi {
 interface Props {
   total: number;
   enCours: boolean;
+  /** Client lie au ticket : permet le paiement en points fidelite. */
+  clientId?: string;
   /** Reçoit la liste complete des paiements a appliquer. */
   onPayer: (paiements: PaiementSaisi[]) => void;
   /** Conserve pour API compatibilite — fermeture geree par le Modal.Backdrop */
@@ -51,9 +54,13 @@ const QUICK_RECU = [1000, 2000, 5000, 10000];
  * Pour Especes en dernier paiement : si le montant saisi depasse le reste,
  * la "monnaie a rendre" est affichee. Le surplus est compte comme paye.
  */
-export function ModalPaiement({ total, enCours, onPayer }: Props) {
+export function ModalPaiement({ total, enCours, clientId, onPayer }: Props) {
   const { boutiqueActive } = useAuth();
   const methodesActives = boutiqueActive?.methodesPaiement ?? ["CASH"];
+  // Fidelite : ne charge le solde que si un client est lie. Sinon les hooks
+  // sont desactives (enabled=false dans la query).
+  const { data: configFidelite } = useConfigFideliteQuery();
+  const { data: solde } = useSoldeFideliteQuery(clientId);
   const METHODES = useMemo(
     () => TOUTES_METHODES.filter((m) => methodesActives.includes(m.code as any)),
     [methodesActives],
@@ -157,6 +164,24 @@ export function ModalPaiement({ total, enCours, onPayer }: Props) {
         </div>
       </div>
 
+      {/* Fidelite : si client lie + programme actif + solde >= seuil, on
+          propose un bouton "Utiliser X points" qui ajoute un paiement LOYALTY
+          plafonne au reste a payer. */}
+      {reste > 0 && clientId && configFidelite?.actif && solde && solde.solde >= configFidelite.seuilUtilisation && (
+        <BoutonFidelite
+          solde={solde.solde}
+          valeurPoint={configFidelite.valeurPoint}
+          reste={reste}
+          dejaUtilise={paiements.some((p) => p.methode === "LOYALTY")}
+          onAjouter={(montant, points) => {
+            setPaiements((prev) => [...prev, {
+              methode: "LOYALTY",
+              montant,
+            }]);
+          }}
+        />
+      )}
+
       {/* Saisie d'un nouveau paiement (cache si tout regle) */}
       {reste > 0 && (
         <>
@@ -259,5 +284,49 @@ export function ModalPaiement({ total, enCours, onPayer }: Props) {
         </BoutonPOS>
       )}
     </div>
+  );
+}
+
+/**
+ * Encart fidelite : montre le solde, calcule le montant max utilisable
+ * (plafonne au reste a payer), et permet d'ajouter un paiement LOYALTY au
+ * panier en 1 clic.
+ */
+function BoutonFidelite({ solde, valeurPoint, reste, dejaUtilise, onAjouter }: {
+  solde: number;
+  valeurPoint: number;
+  reste: number;
+  dejaUtilise: boolean;
+  onAjouter: (montant: number, points: number) => void;
+}) {
+  // Valeur dispo en F = solde * valeurPoint. On plafonne au reste a payer
+  // pour eviter de creer une "monnaie negative" en points.
+  const valeurMaxDispo = solde * valeurPoint;
+  const montantAUtiliser = Math.min(valeurMaxDispo, reste);
+  // Recalcule les points reels utilises (ceil pour ne pas creer de
+  // fraction de point — preserve le solde a l'avantage de la boutique).
+  const pointsUtilises = valeurPoint > 0 ? Math.ceil(montantAUtiliser / valeurPoint) : 0;
+
+  if (dejaUtilise || montantAUtiliser <= 0) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onAjouter(montantAUtiliser, pointsUtilises)}
+      className="w-full flex items-center gap-3 p-3 rounded-lg border border-warning/30 bg-warning/5 hover:bg-warning/10 transition-colors text-left"
+    >
+      <span className="w-9 h-9 rounded-lg bg-warning/15 text-warning flex items-center justify-center shrink-0">
+        <Sparkles size={16} />
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-foreground">
+          Utiliser {pointsUtilises} point{pointsUtilises > 1 ? "s" : ""}
+        </p>
+        <p className="text-xs text-muted">
+          Solde {solde} pts · couvre {formatMontant(montantAUtiliser)} F
+        </p>
+      </div>
+      <span className="text-warning text-xs font-semibold">+</span>
+    </button>
   );
 }

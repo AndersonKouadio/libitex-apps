@@ -1,4 +1,4 @@
-import { Banknote, CreditCard, Smartphone, Landmark, Receipt, type LucideIcon } from "lucide-react";
+import { Banknote, CreditCard, Smartphone, Landmark, Receipt, Sparkles, type LucideIcon } from "lucide-react";
 
 export const LABELS_METHODE_PAIEMENT: Record<string, string> = {
   CASH: "Espèces",
@@ -6,6 +6,7 @@ export const LABELS_METHODE_PAIEMENT: Record<string, string> = {
   CARD: "Carte bancaire",
   BANK_TRANSFER: "Virement",
   CREDIT: "Crédit client",
+  LOYALTY: "Points fidelite",
 };
 
 export const ICONES_METHODE_PAIEMENT: Record<string, LucideIcon> = {
@@ -14,6 +15,7 @@ export const ICONES_METHODE_PAIEMENT: Record<string, LucideIcon> = {
   CARD: CreditCard,
   BANK_TRANSFER: Landmark,
   CREDIT: Receipt,
+  LOYALTY: Sparkles,
 };
 
 export function libelleMethode(code: string): string {

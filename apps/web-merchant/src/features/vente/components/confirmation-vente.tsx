@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Modal, toast } from "@heroui/react";
-import { CheckCircle2, Printer } from "lucide-react";
+import { CheckCircle2, Printer, MessageCircle } from "lucide-react";
 import { formatMontant } from "../utils/format";
 import { imprimerTicket } from "../utils/imprimer-ticket";
 import { BoutonPOS } from "./bouton-pos";
@@ -55,6 +55,19 @@ export function ConfirmationVente({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Numero WhatsApp du client + message pre-rempli (numero ticket + total
+  // + monnaie a rendre). Le caissier ouvre WhatsApp en 1 clic, envoie au
+  // client comme accuse de reception / recu.
+  const numeroBrut = ticket?.telephoneClient?.replace(/[^\d]/g, "");
+  const lienWhatsApp = numeroBrut && ticket && boutiqueActive
+    ? `https://wa.me/${numeroBrut}?text=${encodeURIComponent(
+      `Bonjour, merci pour votre achat chez ${boutiqueActive.nom}.\n`
+      + `Ticket: ${ticket.numeroTicket}\n`
+      + `Total: ${formatMontant(ticket.total)} ${boutiqueActive.devise ?? "F CFA"}`
+      + (monnaie > 0 ? `\nMonnaie rendue: ${formatMontant(monnaie)} F` : "")
+    )}`
+    : null;
+
   return (
     <Modal.Backdrop isOpen onOpenChange={(open) => { if (!open) onNouvelle(); }}>
       <Modal.Container size="sm">
@@ -85,6 +98,17 @@ export function ConfirmationVente({
                 <Printer size={16} />
                 Imprimer le ticket
               </BoutonPOS>
+            )}
+            {lienWhatsApp && (
+              <a
+                href={lienWhatsApp}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 text-sm font-semibold rounded-lg bg-success/10 text-success border border-success/30 hover:bg-success/15 transition-colors"
+              >
+                <MessageCircle size={16} />
+                Envoyer le recu par WhatsApp
+              </a>
             )}
             <BoutonPOS variant="primary" className="w-full" onPress={onNouvelle}>
               Nouvelle vente

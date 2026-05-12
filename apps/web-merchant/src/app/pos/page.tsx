@@ -394,6 +394,7 @@ export default function PagePOS() {
               <ModalPaiement
                 total={panier.total}
                 enCours={encaissement.enCours}
+                clientId={panier.client?.id}
                 onPayer={lancerEncaissement}
                 onFermer={() => setPaiementOuvert(false)}
               />
