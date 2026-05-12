@@ -8,6 +8,7 @@ import {
   ConnexionDto, InscriptionDto, ChangerMotDePasseDto,
   DemanderResetDto, ReinitialiserMotDePasseDto,
   ModifierProfilDto, SupprimerCompteDto,
+  RafraichirTokenDto, RafraichirTokenResponseDto,
 } from "./dto/auth.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 
@@ -35,9 +36,18 @@ export class AuthController {
 
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Rafraichit l'access token a partir d'un refresh token valide (rotate)" })
-  rafraichirToken(@Body() body: { refreshToken: string }) {
-    return this.authService.rafraichirToken(body.refreshToken);
+  @ApiOperation({
+    summary: "Rafraichit l'access token a partir d'un refresh token valide (rotate)",
+    description:
+      "Echange un refreshToken contre un nouveau couple access+refresh. "
+      + "L'ancien refresh est invalide (usage unique). Echoue si le token est "
+      + "expire, le compte desactive, ou la membership revoquee.",
+  })
+  @ApiResponse({ status: 200, description: "Nouveau couple access+refresh", type: RafraichirTokenResponseDto })
+  @ApiResponse({ status: 400, description: "Body invalide (refreshToken manquant ou pas une chaine)" })
+  @ApiResponse({ status: 403, description: "Token invalide/expire, compte desactive, ou acces a la boutique revoque" })
+  rafraichirToken(@Body() dto: RafraichirTokenDto) {
+    return this.authService.rafraichirToken(dto.refreshToken);
   }
 
   @Post("changer-mot-de-passe")

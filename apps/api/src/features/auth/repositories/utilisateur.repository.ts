@@ -106,6 +106,16 @@ export class UtilisateurRepository {
     await this.db.update(users).set({ refreshToken: hash }).where(eq(users.id, userId));
   }
 
+  /**
+   * Invalide la session en stockant NULL (plutot que chaine vide). Utilise
+   * en cas de suspicion de vol de token (mismatch hash) ou de logout
+   * explicite : aucune autre tentative de refresh ne pourra reussir tant
+   * qu'une nouvelle connexion n'est pas faite.
+   */
+  async invaliderRefreshToken(userId: string) {
+    await this.db.update(users).set({ refreshToken: null }).where(eq(users.id, userId));
+  }
+
   async sauvegarderTokenReset(userId: string, tokenHash: string, expiresAt: Date) {
     await this.db
       .update(users)

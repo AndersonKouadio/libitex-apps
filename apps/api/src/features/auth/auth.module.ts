@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
+import type { StringValue } from "ms";
 import { PassportModule } from "@nestjs/passport";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
@@ -18,7 +19,8 @@ import { StockModule } from "../stock/stock.module";
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>("JWT_SECRET"),
         signOptions: {
-          expiresIn: config.get<string>("JWT_EXPIRES_IN", "15m") as any,
+          // ms.StringValue : format attendu par jsonwebtoken (ex: "15m", "1h", "7d")
+          expiresIn: config.get<string>("JWT_EXPIRES_IN", "15m") as StringValue,
         },
       }),
     }),

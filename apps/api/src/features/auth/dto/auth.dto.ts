@@ -136,6 +136,25 @@ export class DemanderResetDto {
   email!: string;
 }
 
+/**
+ * Body POST /auth/refresh. Le refresh token est verifie cryptographiquement
+ * (signature + hash en DB) puis utilise une seule fois (rotation).
+ */
+export class RafraichirTokenDto {
+  @ApiProperty({ description: "Refresh token JWT recu lors de la derniere connexion" })
+  @IsString({ message: "Le refresh token doit etre une chaine" })
+  @IsNotEmpty({ message: "Le refresh token est requis" })
+  refreshToken!: string;
+}
+
+export class RafraichirTokenResponseDto {
+  @ApiProperty()
+  accessToken!: string;
+
+  @ApiProperty()
+  refreshToken!: string;
+}
+
 export class ModifierProfilDto {
   @ApiPropertyOptional({ example: "Amadou" })
   @IsString()

@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
+import type { StringValue } from "ms";
 import * as bcrypt from "bcryptjs";
 import { randomBytes, createHash } from "node:crypto";
 import { ActivitySector, ACTIVITY_SECTOR_PRODUCT_TYPES } from "@libitex/shared";
@@ -207,7 +208,8 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.config.getOrThrow<string>("JWT_REFRESH_SECRET"),
-      expiresIn: this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "7d") as any,
+      // ms.StringValue : format "7d", "15m", "1h" — meme type que JwtSignOptions
+      expiresIn: this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "7d") as StringValue,
     });
     const refreshHash = await bcrypt.hash(refreshToken, 10);
     await this.utilisateurRepo.sauvegarderRefreshToken(user.id, refreshHash);
@@ -234,6 +236,17 @@ export class AuthService {
    * pair. Rotate le refresh (un refresh ne peut servir qu'une seule fois)
    * et invalide l'ancien. Le frontend appelle cet endpoint sur 401 ou
    * juste avant expiration de l'access token, evite la deconnexion.
+   *
+   * Defenses cumulatives :
+   * 1. Signature JWT valide + non expire
+   * 2. Hash en DB correspond (anti-reutilisation token revoque)
+   * 3. Utilisateur actif (isActive=true, deletedAt=null)
+   * 4. Membership encore valide sur le tenant du payload (un admin peut
+   *    revoquer l'acces : le refresh doit echouer meme si le token est
+   *    cryptographiquement valide)
+   *
+   * Audit : USER_TOKEN_REFRESHED a chaque succes, USER_TOKEN_REFRESH_FAILED
+   * sur mismatch hash (possible vol).
    */
   async rafraichirToken(refreshToken: string): Promise<{
     accessToken: string;
@@ -252,26 +265,69 @@ export class AuthService {
     if (!user || !user.refreshToken) {
       throw new ForbiddenException("Session invalide");
     }
+
+    // Compte desactive (banni, supprime, etc.) → on refuse meme si le token
+    // est cryptographiquement valide.
+    if (!user.isActive) {
+      await this.audit.log({
+        tenantId: payload.tenantId, userId: user.id,
+        action: AUDIT_ACTIONS.USER_TOKEN_REFRESH_FAILED,
+        entityType: "USER", entityId: user.id,
+        after: { raison: "compte_desactive" },
+      });
+      throw new ForbiddenException("Compte desactive");
+    }
+
     const matchHash = await bcrypt.compare(refreshToken, user.refreshToken);
     if (!matchHash) {
-      // Token non reconnu : possible vol/reutilisation. On annule la session.
-      await this.utilisateurRepo.sauvegarderRefreshToken(user.id, "");
+      // Token non reconnu : possible vol / reutilisation. On annule la
+      // session pour forcer une reconnexion sur tous les appareils.
+      await this.utilisateurRepo.invaliderRefreshToken(user.id);
+      await this.audit.log({
+        tenantId: payload.tenantId, userId: user.id,
+        action: AUDIT_ACTIONS.USER_TOKEN_REFRESH_FAILED,
+        entityType: "USER", entityId: user.id,
+        after: { raison: "hash_mismatch_session_revoked" },
+      });
       throw new ForbiddenException("Refresh token non reconnu");
     }
 
+    // Membership : le user a-t-il encore acces a ce tenant ? L'admin a pu
+    // retirer la membership entre temps.
+    const membership = await this.membershipRepo.trouver(user.id, payload.tenantId);
+    if (!membership || !membership.isActive) {
+      await this.audit.log({
+        tenantId: payload.tenantId, userId: user.id,
+        action: AUDIT_ACTIONS.USER_TOKEN_REFRESH_FAILED,
+        entityType: "USER", entityId: user.id,
+        after: { raison: "membership_revoked", tenantId: payload.tenantId },
+      });
+      throw new ForbiddenException("Acces a cette boutique revoque");
+    }
+
     // Rotate : nouveau access + nouveau refresh, l'ancien hash est ecrase.
+    // Le role est relu depuis la membership courante (pas du payload), au
+    // cas ou il a change (CASHIER -> MANAGER...).
     const nouveauPayload: TokenPayload = {
       sub: user.id,
       tenantId: payload.tenantId,
-      role: payload.role,
+      role: membership.role,
     };
     const accessToken = this.jwtService.sign(nouveauPayload);
     const nouveauRefresh = this.jwtService.sign(nouveauPayload, {
       secret: this.config.getOrThrow<string>("JWT_REFRESH_SECRET"),
-      expiresIn: this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "7d") as any,
+      expiresIn: this.config.get<string>("JWT_REFRESH_EXPIRES_IN", "7d") as StringValue,
     });
     const nouveauHash = await bcrypt.hash(nouveauRefresh, 10);
     await this.utilisateurRepo.sauvegarderRefreshToken(user.id, nouveauHash);
+    // Trace l'activite : utile pour les rapports "dernier acces" cote admin.
+    await this.utilisateurRepo.mettreAJourDerniereConnexion(user.id);
+
+    await this.audit.log({
+      tenantId: payload.tenantId, userId: user.id,
+      action: AUDIT_ACTIONS.USER_TOKEN_REFRESHED,
+      entityType: "USER", entityId: user.id,
+    });
 
     return { accessToken, refreshToken: nouveauRefresh };
   }
