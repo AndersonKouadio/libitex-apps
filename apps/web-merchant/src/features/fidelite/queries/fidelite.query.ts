@@ -31,21 +31,41 @@ export function useModifierConfigFideliteMutation() {
   });
 }
 
-export function useSoldeFideliteQuery(customerId: string | undefined) {
+/**
+ * Lit le solde points d'un client.
+ *
+ * Fix I10 : `staleTime: 0` + `refetchOnWindowFocus: true` quand la query
+ * est utilisee dans un contexte de paiement critique (sinon le solde
+ * affiche peut etre stale si un autre poste a debite entre temps).
+ * Pour les contextes non-critiques (fiche client), `staleTime: 30s` reste
+ * acceptable via le parametre `fresh`.
+ */
+export function useSoldeFideliteQuery(
+  customerId: string | undefined,
+  options?: { fresh?: boolean },
+) {
   const { token } = useAuth();
   return useQuery({
     queryKey: fideliteKey("solde", customerId),
     queryFn: () => fideliteAPI.solde(token!, customerId!),
     enabled: !!token && !!customerId,
-    staleTime: 30_000,
+    staleTime: options?.fresh ? 0 : 30_000,
+    refetchOnWindowFocus: options?.fresh ? true : false,
   });
 }
 
-export function useHistoriqueFideliteQuery(customerId: string | undefined) {
+/**
+ * Historique des transactions fidelite. Pagine via limit/offset.
+ * Fix I8 : le client peut charger plus de pages au-dela des 20 premieres.
+ */
+export function useHistoriqueFideliteQuery(
+  customerId: string | undefined,
+  opts?: { limit?: number; offset?: number },
+) {
   const { token } = useAuth();
   return useQuery({
-    queryKey: fideliteKey("historique", customerId),
-    queryFn: () => fideliteAPI.historique(token!, customerId!),
+    queryKey: fideliteKey("historique", customerId, opts?.limit ?? 20, opts?.offset ?? 0),
+    queryFn: () => fideliteAPI.historique(token!, customerId!, opts),
     enabled: !!token && !!customerId,
     staleTime: 30_000,
   });

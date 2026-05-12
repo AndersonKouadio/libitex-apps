@@ -160,10 +160,14 @@ export class FideliteService {
     };
   }
 
-  async historique(tenantId: string, customerId: string): Promise<TransactionFideliteDto[]> {
+  async historique(
+    tenantId: string,
+    customerId: string,
+    opts: { limit?: number; offset?: number } = {},
+  ): Promise<TransactionFideliteDto[]> {
     // Fix C3 : check tenant avant de lire l'historique
     await this.assertClientTenant(tenantId, customerId);
-    const rows = await this.repo.historique(tenantId, customerId);
+    const rows = await this.repo.historique(tenantId, customerId, opts);
     return rows.map((r) => ({
       id: r.id,
       points: r.points,

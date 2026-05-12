@@ -59,8 +59,13 @@ export function ModalPaiement({ total, enCours, clientId, onPayer }: Props) {
   const methodesActives = boutiqueActive?.methodesPaiement ?? ["CASH"];
   // Fidelite : ne charge le solde que si un client est lie. Sinon les hooks
   // sont desactives (enabled=false dans la query).
+  //
+  // Fix I10 : on demande `fresh: true` (staleTime=0 + refetch sur focus)
+  // car le solde affiche est utilise pour decider d'un paiement — un
+  // affichage stale pourrait laisser le caissier valider un paiement
+  // que le solde reel ne couvre plus (autre poste a debite entre temps).
   const { data: configFidelite } = useConfigFideliteQuery();
-  const { data: solde } = useSoldeFideliteQuery(clientId);
+  const { data: solde } = useSoldeFideliteQuery(clientId, { fresh: true });
   const METHODES = useMemo(
     () => TOUTES_METHODES.filter((m) => methodesActives.includes(m.code as any)),
     [methodesActives],
@@ -163,6 +168,36 @@ export function ModalPaiement({ total, enCours, clientId, onPayer }: Props) {
           </span>
         </div>
       </div>
+
+      {/* Fix m4 : encart "Vous allez gagner X points" — engagement client.
+          Affiche AVANT le paiement (le caissier peut le verbaliser) et
+          calcule sur total - paiement_LOYALTY (le redeem ne fait pas
+          gagner de points : on credite sur le net paye en cash/carte). */}
+      {clientId && configFidelite?.actif && configFidelite.ratioGain > 0 && (
+        (() => {
+          const totalLoyaltyUtilise = paiements
+            .filter((p) => p.methode === "LOYALTY")
+            .reduce((s, p) => s + p.montant, 0);
+          const montantPourGain = Math.max(0, total - totalLoyaltyUtilise);
+          const pointsAGagner = Math.floor(montantPourGain / configFidelite.ratioGain);
+          if (pointsAGagner <= 0) return null;
+          return (
+            <div className="rounded-lg border border-success/30 bg-success/5 p-2.5 flex items-center gap-2.5">
+              <span className="w-8 h-8 rounded-lg bg-success/15 text-success flex items-center justify-center shrink-0">
+                <Sparkles size={14} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-success">
+                  +{pointsAGagner} point{pointsAGagner > 1 ? "s" : ""} a la cle
+                </p>
+                <p className="text-xs text-muted">
+                  Le client gagnera ces points sur son solde apres encaissement.
+                </p>
+              </div>
+            </div>
+          );
+        })()
+      )}
 
       {/* Fidelite : si client lie + programme actif + solde >= seuil, on
           propose un bouton "Utiliser X points" qui ajoute un paiement LOYALTY
