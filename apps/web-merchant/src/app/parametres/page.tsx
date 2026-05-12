@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Card } from "@heroui/react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { Store, Users, ChevronRight, Building2, User, MapPin, Wallet, Printer, Sparkles, Tag } from "lucide-react";
+import { Store, Users, ChevronRight, Building2, User, MapPin, Wallet, Printer, Sparkles, Tag, MessageCircle } from "lucide-react";
 
 interface SectionConfig {
   href: string;
@@ -70,6 +70,13 @@ const SECTIONS: SectionConfig[] = [
     titre: "Codes promo",
     description: "Codes de reduction (% ou montant fixe) actifs sur une plage de dates ou un nombre d'usages.",
     classes: "bg-danger/10 text-danger",
+  },
+  {
+    href: "/parametres/notifications",
+    icone: MessageCircle,
+    titre: "Notifications WhatsApp",
+    description: "Suivi des envois (ticket, reservation, fournisseur) et etat de la connexion Meta.",
+    classes: "bg-success/10 text-success",
   },
   {
     href: "/parametres/mon-compte",

@@ -3,7 +3,7 @@ import { eq, and, isNull, sql, desc, ilike, or, inArray, type SQL } from "drizzl
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
   type Database, suppliers, purchaseOrders, purchaseOrderLines,
-  stockMovements, variants, products, locations,
+  stockMovements, variants, products, locations, tenants,
 } from "@libitex/db";
 
 @Injectable()
@@ -278,6 +278,40 @@ export class AchatRepository {
         eq(purchaseOrders.tenantId, tenantId),
       ),
     });
+  }
+
+  /**
+   * Module 10 D3 : contexte pour l'envoi WhatsApp d'un bon de commande
+   * a un fournisseur. Retourne en une query :
+   * - nom boutique (tenant.name)
+   * - infos fournisseur (nom + telephone)
+   * - meta commande (numero + total)
+   * Le nombre de lignes est compte separement (count).
+   */
+  async obtenirContexteEnvoiBdC(tenantId: string, commandeId: string) {
+    const [row] = await this.db
+      .select({
+        commandeId: purchaseOrders.id,
+        numeroCommande: purchaseOrders.orderNumber,
+        montantTotal: purchaseOrders.totalAmount,
+        statut: purchaseOrders.status,
+        nomBoutique: tenants.name,
+        nomFournisseur: suppliers.name,
+        telephoneFournisseur: suppliers.phone,
+      })
+      .from(purchaseOrders)
+      .innerJoin(tenants, eq(purchaseOrders.tenantId, tenants.id))
+      .innerJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id))
+      .where(and(
+        eq(purchaseOrders.id, commandeId),
+        eq(purchaseOrders.tenantId, tenantId),
+      ));
+    if (!row) return null;
+    const [countRow] = await this.db
+      .select({ n: sql<number>`COUNT(*)::int` })
+      .from(purchaseOrderLines)
+      .where(eq(purchaseOrderLines.purchaseOrderId, commandeId));
+    return { ...row, nombreLignes: Number(countRow?.n ?? 0) };
   }
 
   /** Lignes + variante + produit (pour le rendu). */
