@@ -8,6 +8,7 @@ import { CatalogueService } from "../catalogue/catalogue.service";
 import { RealtimeGateway } from "../realtime/realtime.gateway";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import { CashSessionRepository } from "../session-caisse/repositories/cash-session.repository";
+import { FideliteService } from "../fidelite/fidelite.service";
 import {
   RessourceIntrouvableException,
   PaiementInsuffisantException,
@@ -35,6 +36,7 @@ export class VenteService {
     private readonly audit: AuditService,
     @Inject(forwardRef(() => CashSessionRepository))
     private readonly sessionRepo: CashSessionRepository,
+    private readonly fidelite: FideliteService,
   ) {}
 
   // --- Creer un ticket (ouvert) ---
@@ -269,6 +271,15 @@ export class VenteService {
     });
     this.realtime.emitToTenant(tenantId, "stock.updated", { emplacementId: ticket.locationId });
     this.realtime.emitToTenant(tenantId, "disponibilites.changed", { emplacementId: ticket.locationId });
+
+    // Programme fidelite : credit automatique si client lie et programme
+    // actif. Silencieux (best-effort) — un echec ne doit pas casser la
+    // vente.
+    if (ticket.customerId) {
+      this.fidelite
+        .crediterDepuisTicket(tenantId, ticket.customerId, ticket.id, totalTicket)
+        .catch(() => { /* on n'interrompt pas le retour ticket */ });
+    }
 
     const paiements = await this.ticketRepo.obtenirPaiements(ticket.id);
     const response = this.mapTicket(complete, lignes.map(this.mapLigne), paiements.map(this.mapPaiement));

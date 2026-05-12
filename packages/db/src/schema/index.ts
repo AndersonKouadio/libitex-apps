@@ -9,3 +9,4 @@ export * from "./restauration";
 export * from "./audit";
 export * from "./customers";
 export * from "./achats";
+export * from "./fidelite";

@@ -18,6 +18,7 @@ import { ModalClient } from "@/features/client/components/modal-client";
 import { KpisClient } from "@/features/client/components/kpis-client";
 import { HistoriqueClient } from "@/features/client/components/historique-client";
 import { ChipSegment } from "@/features/client/components/chip-segment";
+import { CarteFideliteClient } from "@/features/fidelite/components/carte-fidelite-client";
 import { useConfirmation } from "@/providers/confirmation-provider";
 
 interface Props {
@@ -138,6 +139,8 @@ export default function PageClientDetail({ params }: Props) {
           <KpisClient kpis={kpis} />
         </div>
       )}
+
+      <CarteFideliteClient customerId={id} />
 
       <HistoriqueClient clientId={id} />
 
