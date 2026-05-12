@@ -29,7 +29,7 @@ export class FideliteController {
     @CurrentUser() user: CurrentUserData,
     @Body() dto: ModifierConfigFideliteDto,
   ) {
-    return this.service.modifierConfig(user.tenantId, dto);
+    return this.service.modifierConfig(user.tenantId, user.userId, dto);
   }
 
   @Get("clients/:customerId/solde")

@@ -131,6 +131,24 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["achat", "commandes"] });
     });
 
+    // Fidelite : config ou solde modifie -> invalide les caches fidelite
+    // pour que les autres postes (modal paiement, fiche client) voient
+    // l'etat a jour (fix I9 Module 6).
+    socket.on("fidelite.changed", (payload?: { type?: string; customerId?: string }) => {
+      if (payload?.type === "config") {
+        queryClient.invalidateQueries({ queryKey: ["fidelite", "config"] });
+        return;
+      }
+      // type=balance : invalide solde + historique du client cible
+      // (ou tous si customerId absent, par defense).
+      if (payload?.customerId) {
+        queryClient.invalidateQueries({ queryKey: ["fidelite", "solde", payload.customerId] });
+        queryClient.invalidateQueries({ queryKey: ["fidelite", "historique", payload.customerId] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["fidelite"] });
+      }
+    });
+
     return () => {
       socket.disconnect();
       socketRef.current = null;
