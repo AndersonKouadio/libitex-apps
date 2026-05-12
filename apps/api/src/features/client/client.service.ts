@@ -44,6 +44,7 @@ export class ClientService {
       email: dto.email,
       address: dto.adresse,
       notes: dto.notes,
+      whatsappOptIn: dto.whatsappOptIn,
     });
     return this.toResponse(client);
   }
@@ -95,6 +96,7 @@ export class ClientService {
     if (dto.email !== undefined) updates.email = dto.email;
     if (dto.adresse !== undefined) updates.address = dto.adresse;
     if (dto.notes !== undefined) updates.notes = dto.notes;
+    if (dto.whatsappOptIn !== undefined) updates.whatsappOptIn = dto.whatsappOptIn;
 
     const updated = await this.clientRepo.modifier(tenantId, id, updates);
     return this.toResponse(updated);
@@ -149,6 +151,7 @@ export class ClientService {
       email: c.email,
       adresse: c.address,
       notes: c.notes,
+      whatsappOptIn: c.whatsappOptIn ?? true,
       creeLe: c.createdAt?.toISOString?.() ?? c.createdAt,
     };
   }

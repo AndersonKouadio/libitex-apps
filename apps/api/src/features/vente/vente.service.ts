@@ -10,6 +10,7 @@ import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import { CashSessionRepository } from "../session-caisse/repositories/cash-session.repository";
 import { FideliteService } from "../fidelite/fidelite.service";
 import { PromotionService } from "../promotion/promotion.service";
+import { NotificationsService } from "../notifications/notifications.service";
 import {
   RessourceIntrouvableException,
   PaiementInsuffisantException,
@@ -39,7 +40,15 @@ export class VenteService {
     private readonly sessionRepo: CashSessionRepository,
     private readonly fidelite: FideliteService,
     private readonly promotion: PromotionService,
+    private readonly notifications: NotificationsService,
   ) {}
+
+  /**
+   * Module 10 D2 : seuil minimum pour declencher l'envoi WhatsApp du
+   * ticket. En-dessous, on ne spam pas le client pour un petit achat
+   * (cafe, eau...). Configurable via env si besoin plus tard.
+   */
+  private readonly SEUIL_ENVOI_TICKET_FCFA = 5000;
 
   // --- Creer un ticket (ouvert) ---
 
@@ -358,10 +367,57 @@ export class VenteService {
         });
     }
 
+    // Module 10 D2 : envoi WhatsApp du ticket en best-effort.
+    // Conditions cumulatives :
+    // - ticket rattache a un client (customerId)
+    // - total >= seuil (5000 FCFA) pour ne pas spam les petits achats
+    // - client a un telephone valide
+    // - client a whatsapp_opt_in = true (default true, opt-out manuel)
+    // - antiDoublon=true (par ticket.id) pour resister aux retries front
+    if (ticket.customerId && totalTicket >= this.SEUIL_ENVOI_TICKET_FCFA) {
+      this.envoyerNotificationTicket(tenantId, ticket.id, complete.ticketNumber, totalTicket)
+        .catch((err) => console.error("[notif ticket] echoue:", err));
+    }
+
     const paiements = await this.ticketRepo.obtenirPaiements(ticket.id);
     const response = this.mapTicket(complete, lignes.map(this.mapLigne), paiements.map(this.mapPaiement));
     response.monnaie = totalPaye - totalTicket;
     return response;
+  }
+
+  /**
+   * Module 10 D2 : envoie une notification WhatsApp de confirmation au
+   * client apres un ticket. Helper privé pour garder completerTicket
+   * lisible. Toujours en best-effort : un echec ici ne doit jamais
+   * bloquer le flow de vente.
+   */
+  private async envoyerNotificationTicket(
+    tenantId: string, ticketId: string, numeroTicket: string, total: number,
+  ): Promise<void> {
+    const ctx = await this.ticketRepo.obtenirContexteNotification(tenantId, ticketId);
+    if (!ctx) return;
+    if (!ctx.clientTelephone || !ctx.clientOptIn) return;
+
+    const prenom = ctx.clientPrenom ?? "Client";
+    const nomComplet = ctx.clientNom ? `${prenom} ${ctx.clientNom}` : prenom;
+    const texte = this.notifications.templates.ticket({
+      nomClient: nomComplet,
+      numeroTicket,
+      total,
+      nomBoutique: ctx.nomBoutique,
+    });
+
+    await this.notifications.envoyer({
+      tenantId,
+      canal: "whatsapp",
+      type: "ticket",
+      destinataire: ctx.clientTelephone,
+      texte,
+      entityType: "TICKET",
+      entityId: ticketId,
+      antiDoublon: true,
+      payload: { numeroTicket, total },
+    });
   }
 
   // --- Mettre en attente ---

@@ -5,12 +5,14 @@ import {
   ReservationResponseDto, ResumeJourDto,
 } from "./dto/reservation.dto";
 import { RealtimeGateway } from "../realtime/realtime.gateway";
+import { NotificationsService } from "../notifications/notifications.service";
 
 @Injectable()
 export class ReservationService {
   constructor(
     private readonly repo: ReservationRepository,
     private readonly realtime: RealtimeGateway,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async creer(
@@ -37,6 +39,14 @@ export class ReservationService {
     this.realtime.emitToTenant(tenantId, "reservation.changed", {
       reservationId: row.id, action: "created",
     });
+
+    // Module 10 D2 : confirmation WhatsApp en best-effort. Conditions :
+    // - reservation a un telephone (snapshot, suffit meme sans customerId)
+    // - si client lie : respecter whatsapp_opt_in
+    // - antiDoublon : pas de double envoi si l'API retry
+    this.envoyerNotifReservation(tenantId, row.id, "reservation_created")
+      .catch((err) => console.error("[notif reservation.created] echoue:", err));
+
     return this.map(row);
   }
 
@@ -90,7 +100,65 @@ export class ReservationService {
     this.realtime.emitToTenant(tenantId, "reservation.changed", {
       reservationId: row.id, action: "updated",
     });
+
+    // Module 10 D2 : si le statut a change, notifier le client.
+    // Les transitions silencieuses (notes, table) ne declenchent rien.
+    if (dto.statut && dto.statut !== existant.status) {
+      this.envoyerNotifReservation(tenantId, row.id, "reservation_status", dto.statut)
+        .catch((err) => console.error("[notif reservation.status] echoue:", err));
+    }
+
     return this.map(row);
+  }
+
+  /**
+   * Module 10 D2 : envoie une notification de reservation au client.
+   * Helper unifie pour creer/modifier — choisit le template selon le type.
+   */
+  private async envoyerNotifReservation(
+    tenantId: string,
+    reservationId: string,
+    type: "reservation_created" | "reservation_status",
+    nouveauStatut?: string,
+  ): Promise<void> {
+    const ctx = await this.repo.obtenirContexteNotification(tenantId, reservationId);
+    if (!ctx?.customerPhone) return;
+    // Si le client est lie au CRM et a opt-out, on respecte.
+    // Si pas lie (saisie libre), on envoie quand meme (le numero a ete
+    // saisi par le commercant explicitement pour ce booking).
+    if (ctx.clientOptIn === false) return;
+
+    let texte: string;
+    if (type === "reservation_created") {
+      texte = this.notifications.templates.reservationCreated({
+        nomClient: ctx.customerName,
+        dateHeure: ctx.reservedAt,
+        nombrePersonnes: ctx.partySize,
+        numeroTable: ctx.tableNumber,
+        nomBoutique: ctx.nomBoutique,
+      });
+    } else {
+      texte = this.notifications.templates.reservationStatusChanged({
+        nomClient: ctx.customerName,
+        statut: (nouveauStatut ?? ctx.status) as any,
+        dateHeure: ctx.reservedAt,
+        nomBoutique: ctx.nomBoutique,
+      });
+    }
+
+    await this.notifications.envoyer({
+      tenantId,
+      canal: "whatsapp",
+      type,
+      destinataire: ctx.customerPhone,
+      texte,
+      entityType: "RESERVATION",
+      entityId: reservationId,
+      // Pour `created`, antiDoublon evite les doublons sur retry.
+      // Pour `status`, on autorise plusieurs envois (chaque changement).
+      antiDoublon: type === "reservation_created",
+      payload: { type, statut: nouveauStatut },
+    });
   }
 
   async supprimer(tenantId: string, id: string): Promise<void> {

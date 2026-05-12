@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import {
-  Modal, Button, TextField, Label, Input, FieldError, TextArea,
+  Modal, Button, TextField, Label, Input, FieldError, TextArea, Switch,
 } from "@heroui/react";
-import { UserPlus, Pencil } from "lucide-react";
+import { UserPlus, Pencil, MessageCircle } from "lucide-react";
 import { useCreerClientMutation, useModifierClientMutation } from "../queries/client.query";
 import { creerClientSchema, type CreerClientDTO } from "../schemas/client.schema";
 import type { IClient } from "../types/client.type";
@@ -23,6 +23,7 @@ const VIDE: CreerClientDTO = {
   email: "",
   adresse: "",
   notes: "",
+  whatsappOptIn: true,
 };
 
 export function ModalClient({ ouvert, onFermer, client }: Props) {
@@ -42,6 +43,7 @@ export function ModalClient({ ouvert, onFermer, client }: Props) {
         email: client.email ?? "",
         adresse: client.adresse ?? "",
         notes: client.notes ?? "",
+        whatsappOptIn: client.whatsappOptIn ?? true,
       });
     } else {
       setForm(VIDE);
@@ -130,6 +132,30 @@ export function ModalClient({ ouvert, onFermer, client }: Props) {
               <TextArea placeholder="Cliente fidèle, préfère Mobile Money..." rows={3} />
               <FieldError />
             </TextField>
+
+            {/* Module 10 D2 : opt-in WhatsApp. Active par defaut — le
+                client peut decocher si la personne demande a ne pas
+                etre notifiee. Cache si pas de telephone (n'a pas de sens). */}
+            {(form.telephone ?? "").trim() !== "" && (
+              <div className="flex items-start justify-between gap-3 p-3 rounded-lg bg-success/5 border border-success/20">
+                <div className="flex items-start gap-2 min-w-0 flex-1">
+                  <MessageCircle size={16} className="text-success mt-0.5 shrink-0" />
+                  <div className="text-sm min-w-0">
+                    <p className="text-foreground font-medium">Notifications WhatsApp</p>
+                    <p className="text-xs text-muted mt-0.5">
+                      Recevoir le ticket apres encaissement et les rappels de reservation.
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  isSelected={form.whatsappOptIn ?? true}
+                  onChange={(v) => maj("whatsappOptIn", v)}
+                  aria-label="Activer les notifications WhatsApp"
+                >
+                  <Switch.Control><Switch.Thumb /></Switch.Control>
+                </Switch>
+              </div>
+            )}
           </Modal.Body>
 
           <Modal.Footer>

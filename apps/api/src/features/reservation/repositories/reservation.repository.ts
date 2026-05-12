@@ -2,7 +2,7 @@ import { Injectable, Inject } from "@nestjs/common";
 import { eq, and, isNull, gte, lte, sql, asc, type SQL } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
-  type Database, reservations, customers,
+  type Database, reservations, customers, tenants,
 } from "@libitex/db";
 
 @Injectable()
@@ -92,6 +92,30 @@ export class ReservationRepository {
       .update(reservations)
       .set({ deletedAt: new Date() })
       .where(and(eq(reservations.id, id), eq(reservations.tenantId, tenantId)));
+  }
+
+  /**
+   * Module 10 D2 : recupere les infos necessaires pour envoyer une
+   * notification de reservation (nom boutique + opt-in client si lie).
+   * Le customerPhone snapshot est sur reservations directement.
+   */
+  async obtenirContexteNotification(tenantId: string, reservationId: string) {
+    const [row] = await this.db
+      .select({
+        nomBoutique: tenants.name,
+        customerPhone: reservations.customerPhone,
+        customerName: reservations.customerName,
+        reservedAt: reservations.reservedAt,
+        partySize: reservations.partySize,
+        tableNumber: reservations.tableNumber,
+        status: reservations.status,
+        clientOptIn: customers.whatsappOptIn,
+      })
+      .from(reservations)
+      .innerJoin(tenants, eq(reservations.tenantId, tenants.id))
+      .leftJoin(customers, eq(reservations.customerId, customers.id))
+      .where(and(eq(reservations.id, reservationId), eq(reservations.tenantId, tenantId)));
+    return row;
   }
 
   /**
