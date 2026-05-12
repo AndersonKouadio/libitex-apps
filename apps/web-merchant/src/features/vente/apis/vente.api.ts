@@ -22,6 +22,8 @@ export const venteAPI = {
     nomClient?: string;
     telephoneClient?: string;
     note?: string;
+    /** Cle d'idempotence pour les ventes offline resyncees. UUID v4. */
+    idempotencyKey?: string;
   }) =>
     httpClient.post<ITicket>(`${BASE}/tickets`, data, { token }),
 

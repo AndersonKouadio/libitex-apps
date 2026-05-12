@@ -44,6 +44,25 @@ export class VenteService {
   // --- Creer un ticket (ouvert) ---
 
   async creerTicket(tenantId: string, userId: string, dto: CreerTicketDto): Promise<TicketResponseDto> {
+    // Idempotence : si le frontend offline avait deja cree ce ticket avant
+    // un crash de sync, retourner le ticket existant au lieu de faire un
+    // doublon. La cle est un UUID v4 cote frontend (file-attente-offline).
+    // Fix C4 du Module 2.
+    if (dto.idempotencyKey) {
+      const existant = await this.ticketRepo.trouverParIdempotencyKey(
+        tenantId, dto.idempotencyKey,
+      );
+      if (existant) {
+        const lignes = await this.ticketRepo.obtenirLignes(existant.id);
+        const paiements = await this.ticketRepo.obtenirPaiements(existant.id);
+        return this.mapTicket(
+          existant,
+          lignes.map(this.mapLigne),
+          paiements.map(this.mapPaiement),
+        );
+      }
+    }
+
     // Garde session : refuser si pas de session ouverte du caissier
     // sur l'emplacement concerne. Toute vente est rattachee.
     const session = await this.sessionRepo.trouverActive(tenantId, userId, dto.emplacementId);
@@ -94,6 +113,7 @@ export class VenteService {
       ticketNumber: numeroTicket,
       customerId: dto.clientId,
       customerName: dto.nomClient, customerPhone: dto.telephoneClient, note: dto.note,
+      idempotencyKey: dto.idempotencyKey,
     });
 
     let sousTotal = 0;

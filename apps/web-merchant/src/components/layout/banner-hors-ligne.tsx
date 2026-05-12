@@ -2,7 +2,8 @@
 
 import { CloudOff, AlertTriangle } from "lucide-react";
 import { useNetworkStatus } from "@/lib/network-status";
-import { useFileOffline } from "@/features/vente/utils/file-attente-offline";
+import { useFileOfflineTenant } from "@/features/vente/utils/file-attente-offline";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 interface Props {
   onVoirFile: () => void;
@@ -16,11 +17,16 @@ interface Props {
  * - en bleu "X vente(s) en cours de sync" si la file n'est pas vide mais
  *   qu'on est online et qu'il n'y a pas d'erreur
  *
+ * Filtre par tenant courant (fix C2) : on ne compte que les ventes du
+ * tenant actif, pour eviter d'afficher un compteur faux apres switch
+ * de boutique.
+ *
  * Cliquable pour ouvrir la modale qui liste les ventes en attente.
  */
 export function BannerHorsLigne({ onVoirFile }: Props) {
   const enLigne = useNetworkStatus();
-  const file = useFileOffline();
+  const { utilisateur } = useAuth();
+  const file = useFileOfflineTenant(utilisateur?.tenantId);
   const conflits = file.filter((v) => v.erreur).length;
   const enAttente = file.length;
 

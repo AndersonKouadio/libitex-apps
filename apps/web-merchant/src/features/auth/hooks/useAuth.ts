@@ -150,6 +150,13 @@ export function useAuthState() {
     localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
     localStorage.removeItem(STORAGE_KEYS.AUTH_BOUTIQUES);
     localStorage.removeItem(STORAGE_KEYS.AUTH_BOUTIQUE_ACTIVE);
+    // Securite (fix C1 Module 2) : on purge aussi la file de ventes
+    // offline ET son compteur. Sans ca, un user qui se connecte sur le
+    // meme device verrait/synchroniserait les ventes du precedent user
+    // -> leak de donnees entre comptes + ventes envoyees sur la mauvaise
+    // boutique.
+    localStorage.removeItem(STORAGE_KEYS.POS_OFFLINE_QUEUE);
+    localStorage.removeItem(STORAGE_KEYS.POS_OFFLINE_COUNTER);
   }, []);
 
   const rafraichirTokenLocal = useCallback((accessToken: string, refreshToken: string) => {

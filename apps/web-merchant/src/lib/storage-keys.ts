@@ -19,6 +19,7 @@ export const STORAGE_KEYS = {
   // POS prefs + offline
   POS_PREFS: "libitex_prefs_pos",
   POS_OFFLINE_QUEUE: "libitex_offline_queue",
+  POS_OFFLINE_COUNTER: "libitex_offline_counter",
   POS_PRINTER_DEVICE: "libitex_imprimante_device",
 
   // Onboarding

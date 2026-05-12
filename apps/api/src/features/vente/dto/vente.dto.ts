@@ -125,6 +125,18 @@ export class CreerTicketDto {
   @IsOptional()
   note?: string;
 
+  /**
+   * Cle d'idempotence fournie par le frontend (UUID v4) pour eviter les
+   * doublons en cas de drain offline interrompu apres creerTicket OK
+   * mais avant completerTicket. Si la cle est deja vue, le backend
+   * retourne le ticket existant (200) au lieu de creer un doublon.
+   * Optionnel : les ventes online classiques peuvent l'omettre.
+   */
+  @ApiPropertyOptional({ description: "UUID v4 pour idempotence du POST" })
+  @IsString()
+  @IsOptional()
+  idempotencyKey?: string;
+
   @ApiProperty({ type: [LigneTicketDto] })
   @ValidateNested({ each: true })
   @Type(() => LigneTicketDto)

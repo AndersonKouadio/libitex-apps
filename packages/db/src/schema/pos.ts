@@ -88,6 +88,17 @@ export const tickets = pgTable("tickets", {
   customerName: varchar("customer_name", { length: 255 }),
   customerPhone: varchar("customer_phone", { length: 50 }),
   note: text("note"),
+  /**
+   * Cle d'idempotence pour eviter les doublons sur les ventes offline
+   * resyncees apres interruption. UUID v4 fourni par le frontend
+   * (file-attente-offline). Si la cle existe deja, le backend retourne
+   * le ticket existant au lieu de creer un doublon.
+   * Index unique scope au tenant pour permettre la meme cle sur 2
+   * tenants differents (theoriquement impossible avec UUID v4 mais
+   * defense en profondeur).
+   * Fix C4 du Module 2.
+   */
+  idempotencyKey: varchar("idempotency_key", { length: 64 }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -100,6 +111,7 @@ export const tickets = pgTable("tickets", {
   index("idx_tickets_number").on(table.ticketNumber),
   index("idx_tickets_created").on(table.createdAt),
   index("idx_tickets_customer").on(table.customerId),
+  index("idx_tickets_idempotency").on(table.tenantId, table.idempotencyKey),
 ]);
 
 // ─── Ticket Lines ───

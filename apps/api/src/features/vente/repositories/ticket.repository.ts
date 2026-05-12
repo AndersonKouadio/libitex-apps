@@ -27,12 +27,27 @@ export class TicketRepository {
     tenantId: string; locationId: string; userId: string; sessionId: string;
     ticketNumber: string; customerId?: string;
     customerName?: string; customerPhone?: string; note?: string;
+    /** Cle d'idempotence pour les ventes offline resyncees (fix C4). */
+    idempotencyKey?: string;
   }) {
     const [ticket] = await this.db
       .insert(tickets)
       .values({ ...data, status: "OPEN" })
       .returning();
     return ticket;
+  }
+
+  /**
+   * Lookup par cle d'idempotence (UUID v4 envoye par le frontend offline).
+   * Si trouve, on retourne ce ticket pour eviter un doublon. Fix C4.
+   */
+  async trouverParIdempotencyKey(tenantId: string, idempotencyKey: string) {
+    return this.db.query.tickets.findFirst({
+      where: and(
+        eq(tickets.tenantId, tenantId),
+        eq(tickets.idempotencyKey, idempotencyKey),
+      ),
+    });
   }
 
   async rattacherSession(ticketId: string, sessionId: string) {

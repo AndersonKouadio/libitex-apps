@@ -6,7 +6,8 @@ import { venteAPI } from "../apis/vente.api";
 import { creerTicketSchema } from "../schemas/vente.schema";
 import { useInvalidateVenteQuery } from "../queries/index.query";
 import { useNetworkStatus } from "@/lib/network-status";
-import { fileOffline, prochainNumeroLocal } from "../utils/file-attente-offline";
+import { fileOffline, QueuePleineException } from "../utils/file-attente-offline";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { ArticlePanier, Remise, ClientPanier } from "./usePanier";
 import type { ITicket } from "../types/vente.type";
 
@@ -95,6 +96,8 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
   const [derniereVente, setDerniereVente] = useState<DerniereVente | null>(null);
   const invalidateVente = useInvalidateVenteQuery();
   const enLigne = useNetworkStatus();
+  const { utilisateur } = useAuth();
+  const tenantId = utilisateur?.tenantId ?? null;
   // Garde anti-double-clic via ref : le state enCours n'est pas frais dans la
   // closure si l'utilisateur tape deux fois avant le prochain re-render.
   const verrou = useRef(false);
@@ -135,18 +138,27 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
 
     // Mode hors-ligne : on persiste la vente en file localStorage et on
     // synthese une confirmation locale. La sync sera faite par useSyncOffline
-    // des le retour reseau.
+    // des le retour reseau. La cle d'idempotence (id de l'entry, UUID v4)
+    // sera envoyee au backend lors de la sync pour eviter les doublons en
+    // cas de drain interrompu.
     if (!enLigne) {
-      const numeroLocal = prochainNumeroLocal();
+      if (!tenantId) {
+        toast.danger("Session perdue — connectez-vous avant d'encaisser");
+        setEnCours(false);
+        verrou.current = false;
+        return;
+      }
+      const numeroLocal = fileOffline.prochainNumeroLocal();
+      const idEntry = fileOffline.genererId();
       const paye = paiementsSaisis.reduce((s, p) => s + p.montant, 0);
       const monnaie = Math.max(0, paye - panier.total);
       try {
         fileOffline.ajouter({
-          id: typeof crypto !== "undefined" && "randomUUID" in crypto
-            ? crypto.randomUUID()
-            : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          id: idEntry,
+          idempotencyKey: idEntry,
+          tenantId,
           emplacementId: empId,
-          payloadCreer: payload.data,
+          payloadCreer: { ...payload.data, idempotencyKey: idEntry },
           paiements: paiementsSaisis,
           total: panier.total,
           monnaie,
@@ -162,7 +174,11 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
         panier.vider();
         toast.warning(`Vente ${numeroLocal} enregistree hors-ligne — sera synchronisee au retour reseau`);
       } catch (err) {
-        toast.danger(err instanceof Error ? err.message : "Impossible d'enregistrer la vente offline");
+        if (err instanceof QueuePleineException) {
+          toast.danger(err.message);
+        } else {
+          toast.danger(err instanceof Error ? err.message : "Impossible d'enregistrer la vente offline");
+        }
       } finally {
         setEnCours(false);
         verrou.current = false;
@@ -189,7 +205,7 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
       setEnCours(false);
       verrou.current = false;
     }
-  }, [token, empId, panier, invalidateVente, enLigne]);
+  }, [token, empId, panier, invalidateVente, enLigne, tenantId]);
 
   const mettreEnAttente = useCallback(async () => {
     if (!token || !empId || panier.articles.length === 0) return;

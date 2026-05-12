@@ -73,11 +73,11 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <RealtimeProvider>
-              <SyncOfflineProvider>
-                <ConfirmationProvider>
+              <ConfirmationProvider>
+                <SyncOfflineProvider>
                   {children}
-                </ConfirmationProvider>
-              </SyncOfflineProvider>
+                </SyncOfflineProvider>
+              </ConfirmationProvider>
               <ToastProvider />
               <SWRegister />
             </RealtimeProvider>
