@@ -3,11 +3,13 @@ import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { AchatService } from "./achat.service";
 import { AchatRepository } from "./repositories/achat.repository";
 import { RealtimeGateway } from "../realtime/realtime.gateway";
+import { NotificationsService } from "../notifications/notifications.service";
 
 describe("AchatService", () => {
   let service: AchatService;
   let repoMock: jest.Mocked<AchatRepository>;
   let realtimeMock: jest.Mocked<RealtimeGateway>;
+  let notificationsMock: jest.Mocked<NotificationsService>;
 
   beforeEach(async () => {
     repoMock = {
@@ -26,17 +28,27 @@ describe("AchatService", () => {
       appliquerReceptionAtomique: jest.fn(),
       stockTotalParVariante: jest.fn().mockResolvedValue(new Map()),
       prixAchatActuelParVariante: jest.fn().mockResolvedValue(new Map()),
+      obtenirContexteEnvoiBdC: jest.fn(),
     } as unknown as jest.Mocked<AchatRepository>;
 
     realtimeMock = {
       emitToTenant: jest.fn(),
     } as unknown as jest.Mocked<RealtimeGateway>;
 
+    notificationsMock = {
+      envoyer: jest.fn(),
+      lister: jest.fn(),
+      templates: {
+        purchaseOrder: jest.fn().mockReturnValue("Bon de commande"),
+      } as any,
+    } as unknown as jest.Mocked<NotificationsService>;
+
     const moduleRef = await Test.createTestingModule({
       providers: [
         AchatService,
         { provide: AchatRepository, useValue: repoMock },
         { provide: RealtimeGateway, useValue: realtimeMock },
+        { provide: NotificationsService, useValue: notificationsMock },
       ],
     }).compile();
 
@@ -407,6 +419,74 @@ describe("AchatService", () => {
 
       await expect(service.modifierStatut("t1", "c1", { statut: "CANCELLED" }))
         .rejects.toThrow(/deja recue/);
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Module 10 D3 : envoi WhatsApp au fournisseur
+  // ──────────────────────────────────────────────────────────────────────
+  describe("envoyerAuFournisseur", () => {
+    it("leve NotFound si la commande n'existe pas", async () => {
+      (repoMock.obtenirContexteEnvoiBdC as jest.Mock).mockResolvedValue(null);
+      await expect(service.envoyerAuFournisseur("t1", "c-inexistant"))
+        .rejects.toThrow(/introuvable/);
+    });
+
+    it("leve BadRequest si le fournisseur n'a pas de telephone", async () => {
+      (repoMock.obtenirContexteEnvoiBdC as jest.Mock).mockResolvedValue({
+        commandeId: "c1", numeroCommande: "BC-1", montantTotal: "1000",
+        statut: "DRAFT", nomBoutique: "Test", nomFournisseur: "F",
+        telephoneFournisseur: null, nombreLignes: 1,
+      });
+      await expect(service.envoyerAuFournisseur("t1", "c1"))
+        .rejects.toThrow(/telephone/);
+    });
+
+    it("envoie le BdC et bascule DRAFT -> SENT", async () => {
+      (repoMock.obtenirContexteEnvoiBdC as jest.Mock).mockResolvedValue({
+        commandeId: "c1", numeroCommande: "BC-001", montantTotal: "150000",
+        statut: "DRAFT", nomBoutique: "Boutique", nomFournisseur: "Fournisseur",
+        telephoneFournisseur: "+22507123456", nombreLignes: 5,
+      });
+      (notificationsMock.envoyer as jest.Mock).mockResolvedValue(true);
+
+      const r = await service.envoyerAuFournisseur("t1", "c1");
+
+      expect(r.envoye).toBe(true);
+      expect(notificationsMock.envoyer).toHaveBeenCalledWith(expect.objectContaining({
+        tenantId: "t1", canal: "whatsapp", type: "purchase_order",
+        destinataire: "+22507123456", entityType: "PURCHASE_ORDER", entityId: "c1",
+      }));
+      // Statut DRAFT -> SENT
+      expect(repoMock.modifierStatutCommande).toHaveBeenCalledWith("t1", "c1", "SENT");
+    });
+
+    it("ne bascule pas le statut si deja SENT", async () => {
+      (repoMock.obtenirContexteEnvoiBdC as jest.Mock).mockResolvedValue({
+        commandeId: "c1", numeroCommande: "BC-001", montantTotal: "1000",
+        statut: "SENT", nomBoutique: "B", nomFournisseur: "F",
+        telephoneFournisseur: "+22507123456", nombreLignes: 1,
+      });
+      (notificationsMock.envoyer as jest.Mock).mockResolvedValue(true);
+
+      await service.envoyerAuFournisseur("t1", "c1");
+
+      expect(repoMock.modifierStatutCommande).not.toHaveBeenCalled();
+    });
+
+    it("ne bascule pas le statut si l'envoi a echoue", async () => {
+      (repoMock.obtenirContexteEnvoiBdC as jest.Mock).mockResolvedValue({
+        commandeId: "c1", numeroCommande: "BC-001", montantTotal: "1000",
+        statut: "DRAFT", nomBoutique: "B", nomFournisseur: "F",
+        telephoneFournisseur: "+22507123456", nombreLignes: 1,
+      });
+      (notificationsMock.envoyer as jest.Mock).mockResolvedValue(false);
+
+      const r = await service.envoyerAuFournisseur("t1", "c1");
+
+      expect(r.envoye).toBe(false);
+      expect(r.raison).toMatch(/Echec/);
+      expect(repoMock.modifierStatutCommande).not.toHaveBeenCalled();
     });
   });
 });

@@ -6,12 +6,14 @@ import {
   CommandeResponseDto, LigneCommandeResponseDto,
 } from "./dto/achat.dto";
 import { RealtimeGateway } from "../realtime/realtime.gateway";
+import { NotificationsService } from "../notifications/notifications.service";
 
 @Injectable()
 export class AchatService {
   constructor(
     private readonly achatRepo: AchatRepository,
     private readonly realtime: RealtimeGateway,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // ─── Fournisseurs ─────────────────────────────────────────────────────
@@ -237,6 +239,58 @@ export class AchatService {
     }
     await this.achatRepo.modifierStatutCommande(tenantId, id, dto.statut);
     return this.obtenirCommande(tenantId, id);
+  }
+
+  /**
+   * Module 10 D3 : envoie le bon de commande au fournisseur via WhatsApp.
+   * Le commercant clique sur "Envoyer au fournisseur" depuis la page
+   * detail. La commande passe automatiquement en statut SENT si elle
+   * etait en DRAFT (cohesion : envoyer = annoncer).
+   *
+   * Pre-conditions :
+   * - commande existe
+   * - fournisseur a un telephone
+   * Sinon le service leve une BadRequest claire (afficher cote front).
+   */
+  async envoyerAuFournisseur(
+    tenantId: string, commandeId: string,
+  ): Promise<{ envoye: boolean; raison?: string }> {
+    const ctx = await this.achatRepo.obtenirContexteEnvoiBdC(tenantId, commandeId);
+    if (!ctx) throw new NotFoundException("Commande introuvable");
+    if (!ctx.telephoneFournisseur) {
+      throw new BadRequestException(
+        "Le fournisseur n'a pas de telephone enregistre. Ajoutez-le dans sa fiche.",
+      );
+    }
+
+    const texte = this.notifications.templates.purchaseOrder({
+      nomFournisseur: ctx.nomFournisseur,
+      numeroCommande: ctx.numeroCommande,
+      nombreLignes: ctx.nombreLignes,
+      montantTotal: Number(ctx.montantTotal),
+      nomBoutique: ctx.nomBoutique,
+    });
+
+    const ok = await this.notifications.envoyer({
+      tenantId,
+      canal: "whatsapp",
+      type: "purchase_order",
+      destinataire: ctx.telephoneFournisseur,
+      texte,
+      entityType: "PURCHASE_ORDER",
+      entityId: commandeId,
+      // Pas d'anti-doublon : le commercant peut vouloir renvoyer
+      // (le fournisseur a perdu le message, etc.).
+      antiDoublon: false,
+      payload: { numeroCommande: ctx.numeroCommande, montant: Number(ctx.montantTotal) },
+    });
+
+    // Bascule DRAFT -> SENT si applicable (envoyer = marquer envoye).
+    if (ok && ctx.statut === "DRAFT") {
+      await this.achatRepo.modifierStatutCommande(tenantId, commandeId, "SENT");
+    }
+
+    return { envoye: ok, raison: ok ? undefined : "Echec d'envoi WhatsApp (voir notifications admin)" };
   }
 
   /**

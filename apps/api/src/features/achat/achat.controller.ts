@@ -126,4 +126,15 @@ export class AchatController {
   ) {
     return this.achatService.receptionner(user.tenantId, user.userId, id, dto);
   }
+
+  @Post("commandes/:id/envoyer-fournisseur")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Module 10 D3 : envoyer le bon de commande par WhatsApp au fournisseur" })
+  @Roles("ADMIN", "MANAGER", "WAREHOUSE")
+  envoyerFournisseur(
+    @CurrentUser() user: CurrentUserData,
+    @Param("id") id: string,
+  ) {
+    return this.achatService.envoyerAuFournisseur(user.tenantId, id);
+  }
 }

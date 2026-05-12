@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Card, Chip, Skeleton } from "@heroui/react";
-import { ArrowLeft, Send, X, PackageCheck } from "lucide-react";
+import { ArrowLeft, Send, X, PackageCheck, MessageCircle } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -16,14 +16,28 @@ import {
   CLASSES_STATUT_COMMANDE as CLASSES_STATUT,
 } from "@/features/achat/utils/statut";
 import { useConfirmation } from "@/providers/confirmation-provider";
+import { useEnvoyerBdCMutation } from "@/features/notifications/queries/notification.query";
 
 export default function PageDetailCommande({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const { data: commande, isLoading } = useCommandeQuery(id);
   const modifierStatut = useModifierStatutCommandeMutation();
+  const envoyerBdC = useEnvoyerBdCMutation();
   const [receptionOuverte, setReceptionOuverte] = useState(false);
   const confirmer = useConfirmation();
+
+  async function envoyerAuFournisseur() {
+    if (!commande) return;
+    const ok = await confirmer({
+      titre: `Envoyer la commande au fournisseur ?`,
+      description: `Un message WhatsApp sera envoye a ${commande.nomFournisseur}. ` +
+        `Si la commande est en brouillon, son statut passera a "Envoyee".`,
+      actionLibelle: "Envoyer",
+    });
+    if (!ok) return;
+    await envoyerBdC.mutateAsync(commande.id);
+  }
 
   async function envoyer() {
     if (!commande) return;
@@ -53,6 +67,10 @@ export default function PageDetailCommande({ params }: { params: Promise<{ id: s
   const peutEnvoyer = commande.statut === "DRAFT";
   const peutAnnuler = commande.statut === "DRAFT" || commande.statut === "SENT";
   const peutRecevoir = commande.statut === "SENT" || commande.statut === "PARTIAL";
+  // Module 10 D3 : envoi WhatsApp possible tant que pas annulee/recue.
+  const peutEnvoyerWhatsApp = commande.statut === "DRAFT"
+    || commande.statut === "SENT"
+    || commande.statut === "PARTIAL";
 
   return (
     <PageContainer>
@@ -106,6 +124,18 @@ export default function PageDetailCommande({ params }: { params: Promise<{ id: s
               {peutEnvoyer && (
                 <Button variant="primary" className="w-full gap-2" onPress={envoyer} isDisabled={modifierStatut.isPending}>
                   <Send size={14} /> Marquer comme envoyee
+                </Button>
+              )}
+              {/* Module 10 D3 : envoi WhatsApp au fournisseur */}
+              {peutEnvoyerWhatsApp && (
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 text-success border-success/30"
+                  onPress={envoyerAuFournisseur}
+                  isDisabled={envoyerBdC.isPending}
+                >
+                  <MessageCircle size={14} />
+                  {envoyerBdC.isPending ? "Envoi..." : "Envoyer par WhatsApp"}
                 </Button>
               )}
               {peutRecevoir && (
