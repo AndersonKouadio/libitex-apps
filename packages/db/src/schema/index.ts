@@ -11,3 +11,4 @@ export * from "./customers";
 export * from "./achats";
 export * from "./fidelite";
 export * from "./promotions";
+export * from "./reservations";

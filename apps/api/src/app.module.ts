@@ -18,6 +18,7 @@ import { AchatModule } from "./features/achat/achat.module";
 import { FideliteModule } from "./features/fidelite/fidelite.module";
 import { ShowcaseModule } from "./features/showcase/showcase.module";
 import { PromotionModule } from "./features/promotion/promotion.module";
+import { ReservationModule } from "./features/reservation/reservation.module";
 import { RealtimeModule } from "./features/realtime/realtime.module";
 
 @Module({
@@ -45,6 +46,7 @@ import { RealtimeModule } from "./features/realtime/realtime.module";
     FideliteModule,
     ShowcaseModule,
     PromotionModule,
+    ReservationModule,
   ],
 })
 export class AppModule {}

@@ -7,7 +7,7 @@ import { Button } from "@heroui/react";
 import {
   LayoutDashboard, ShoppingCart, Package, Warehouse,
   Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight,
-  Monitor, History, Truck,
+  Monitor, History, Truck, CalendarCheck,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { SwitcherBoutique } from "@/features/boutique/components/switcher-boutique";
@@ -39,6 +39,14 @@ const NAV_ERP: ItemNav[] = [
     routesActives: ["/achats/fournisseurs", "/achats/commandes"],
   },
   { href: "/clients", libelle: "Clients", icone: Users },
+  {
+    href: "/reservations",
+    libelle: "Reservations",
+    icone: CalendarCheck,
+    // Reserve aux secteurs de service a table (resto, bar...). Cache pour
+    // les autres secteurs ou ca n'a pas de sens (alimentaire, vetement...).
+    visibleSi: (secteur) => secteur === "RESTAURATION",
+  },
   { href: "/rapports", libelle: "Rapports", icone: BarChart3 },
   { href: "/sessions-caisse", libelle: "Sessions caisse", icone: History },
   { href: "/parametres", libelle: "Paramètres", icone: Settings },
