@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Button, TextField, Label, Input, TextArea, NumberField, SearchField,
-  Select, ListBox, Card, toast, Spinner,
+  Select, ListBox, Card, toast, Skeleton,
 } from "@heroui/react";
 import { ArrowLeft, Trash2, Plus } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
@@ -43,13 +43,23 @@ export default function PageNouvelleCommande() {
 
   const produits = produitsData?.data ?? [];
 
-  // Liste plate { produit, variante } filtree par recherche, exclut MENU
-  // (les menus n'ont pas de cout d'achat propre, ce sont les ingredients
-  // qui s'achetent).
+  /**
+   * Produits commandables aupres d'un fournisseur = produits a stock.
+   * On exclut :
+   * - MENU : recettes composees d'ingredients. On commande les ingredients,
+   *   pas la recette elle-meme (qui n'a pas de cout d'achat propre).
+   *
+   * On garde :
+   * - SIMPLE / VARIANT / SERIALIZED / PERISHABLE : tous tracent du stock
+   * - isSupplement : true ou false (les supplements sont eux-memes des
+   *   produits a commander : sauce piquante, sucre, etc.)
+   */
+  const TYPES_AVEC_STOCK = new Set(["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE"]);
+
   const variantesDispo = useMemo(() => {
     const flat: Array<{ produitId: string; varianteId: string; nomProduit: string; nomVariante: string | null; sku: string; prixAchat: number }> = [];
     for (const p of produits) {
-      if (p.typeProduit === "MENU") continue;
+      if (!TYPES_AVEC_STOCK.has(p.typeProduit)) continue;
       for (const v of p.variantes) {
         flat.push({
           produitId: p.id,
@@ -221,11 +231,14 @@ export default function PageNouvelleCommande() {
                       onChange={(v) => modifierQuantite(i, v)}
                       minValue={0}
                       step={0.001}
-                      aria-label="Quantite"
+                      aria-label="Quantite a commander"
                       className="w-24"
                     >
                       <NumberField.Group>
-                        <NumberField.Input className="text-right tabular-nums" />
+                        <NumberField.Input
+                          placeholder="Quantite"
+                          className="text-right tabular-nums"
+                        />
                       </NumberField.Group>
                     </NumberField>
                     <NumberField
@@ -233,11 +246,14 @@ export default function PageNouvelleCommande() {
                       onChange={(v) => modifierPrix(i, v)}
                       minValue={0}
                       step={1}
-                      aria-label="Prix unitaire"
+                      aria-label="Prix unitaire d'achat"
                       className="w-28"
                     >
                       <NumberField.Group>
-                        <NumberField.Input className="text-right tabular-nums" />
+                        <NumberField.Input
+                          placeholder="Prix unitaire"
+                          className="text-right tabular-nums"
+                        />
                       </NumberField.Group>
                     </NumberField>
                     <span className="w-24 text-right text-sm font-semibold tabular-nums shrink-0">
@@ -271,7 +287,13 @@ export default function PageNouvelleCommande() {
                 </SearchField.Group>
               </SearchField>
               {chargementProduits ? (
-                <Spinner />
+                // Skeleton plutot qu'un loader : occupe l'espace exact
+                // attendu, evite le saut visuel quand les vraies lignes arrivent.
+                <div className="max-h-60 overflow-y-auto space-y-1">
+                  {[...Array(6)].map((_, i) => (
+                    <Skeleton key={i} className="h-8 w-full rounded" />
+                  ))}
+                </div>
               ) : (
                 <div className="max-h-60 overflow-y-auto space-y-1">
                   {variantesDispo.length === 0 ? (
