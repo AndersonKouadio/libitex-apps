@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Package } from "lucide-react";
 import type { IProduitPublic } from "../types/showcase.type";
-import { formatMontant } from "@/features/vente/utils/format";
+import { formatPrix } from "../utils/format-prix";
 
 interface Props {
   slug: string;
@@ -21,10 +22,15 @@ export function CarteProduitPublic({ slug, produit, devise }: Props) {
       href={`/boutique/${slug}/produits/${produit.id}`}
       className="block bg-surface rounded-xl border border-border overflow-hidden hover:border-accent/40 transition-colors"
     >
-      <div className="aspect-square bg-surface-secondary flex items-center justify-center">
+      <div className="aspect-square bg-surface-secondary relative flex items-center justify-center">
         {image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt={produit.nom} className="w-full h-full object-cover" />
+          <Image
+            src={image}
+            alt={produit.nom}
+            fill
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+            className="object-cover"
+          />
         ) : (
           <Package size={32} className="text-muted opacity-30" />
         )}
@@ -38,15 +44,15 @@ export function CarteProduitPublic({ slug, produit, devise }: Props) {
           {prixPromo ? (
             <>
               <span className="text-base font-bold text-danger tabular-nums">
-                {formatMontant(prixPromo)} <span className="text-xs font-normal">{devise}</span>
+                {formatPrix(prixPromo, devise)}
               </span>
               <span className="text-xs text-muted line-through tabular-nums">
-                {formatMontant(prix)}
+                {formatPrix(prix, devise)}
               </span>
             </>
           ) : (
             <span className="text-base font-bold text-foreground tabular-nums">
-              {formatMontant(prix)} <span className="text-xs font-normal">{devise}</span>
+              {formatPrix(prix, devise)}
             </span>
           )}
         </div>

@@ -1,5 +1,4 @@
-"use client";
-
+import Image from "next/image";
 import { MapPin, Phone, Mail } from "lucide-react";
 import type { IBoutiquePublic } from "../types/showcase.type";
 
@@ -19,11 +18,14 @@ export function HeaderBoutique({ boutique }: Props) {
       <div className="max-w-6xl mx-auto px-4 py-6 sm:py-10">
         <div className="flex items-start gap-4 flex-wrap">
           {boutique.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={boutique.logoUrl}
               alt={boutique.nom}
+              width={80}
+              height={80}
+              sizes="80px"
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover shrink-0"
+              priority
             />
           ) : (
             <span className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-accent/10 text-accent text-3xl font-bold flex items-center justify-center shrink-0">

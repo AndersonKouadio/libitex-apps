@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { SearchField } from "@heroui/react";
-import { Store } from "lucide-react";
+import { useEffect, useState } from "react";
+import { SearchField, Spinner, toast } from "@heroui/react";
+import { Store, AlertCircle } from "lucide-react";
 import {
   useProduitsPublicsQuery, useCategoriesPubliquesQuery,
 } from "../queries/showcase.query";
@@ -45,12 +45,25 @@ export function ShowcaseClient({ boutique, produitsInitiaux, categoriesInitiales
   // Produits : avec filtres actifs, on requete a nouveau. Si pas de filtre +
   // page 0, on utilise les donnees prechargees (placeholderData).
   const aDesFiltres = categorieId !== "" || (rechercheDebounced.length >= 2) || page > 0;
-  const { data: produitsPagine } = useProduitsPublicsQuery(slug, {
+  const {
+    data: produitsPagine,
+    isFetching: produitsLoading,
+    error: produitsError,
+  } = useProduitsPublicsQuery(slug, {
     categorieId: categorieId || undefined,
     recherche: rechercheDebounced.length >= 2 ? rechercheDebounced : undefined,
     limit: TAILLE_PAGE,
     offset: page * TAILLE_PAGE,
   });
+
+  // Fix I9 Module 7 : distinction explicite des erreurs reseau.
+  // Le 404 boutique-introuvable est deja gere par le Server Component
+  // (notFound()). Ici on cible les pannes API/reseau.
+  useEffect(() => {
+    if (produitsError) {
+      toast.danger("Connexion echouee — verifiez votre reseau et reessayez");
+    }
+  }, [produitsError]);
 
   const produits = aDesFiltres ? produitsPagine : produitsInitiaux;
   const visibles = produits?.data ?? [];
@@ -110,7 +123,17 @@ export function ShowcaseClient({ boutique, produitsInitiaux, categoriesInitiales
         </div>
       )}
 
-      {visibles.length === 0 ? (
+      {produitsError ? (
+        <div className="text-center py-16">
+          <AlertCircle size={32} className="mx-auto mb-3 text-danger opacity-60" />
+          <p className="text-sm text-foreground">Impossible de charger les produits</p>
+          <p className="text-xs text-muted mt-1">Verifiez votre connexion et reessayez.</p>
+        </div>
+      ) : aDesFiltres && produitsLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <Spinner size="sm" />
+        </div>
+      ) : visibles.length === 0 ? (
         <div className="text-center py-16">
           <Store size={32} className="mx-auto mb-3 text-muted opacity-30" />
           <p className="text-sm text-muted">
