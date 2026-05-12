@@ -1,7 +1,7 @@
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, Logger } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
-import { initSentryServer } from "./common/sentry/sentry";
+import { initSentryServer, Sentry } from "./common/sentry/sentry";
 // Sentry doit s'initialiser AVANT l'import du AppModule pour que les
 // instrumentations Node (http, undici...) hookent correctement.
 initSentryServer();
@@ -9,9 +9,34 @@ import { AppModule } from "./app.module";
 import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
 
+/**
+ * Fix C4 Module 8 : handlers globaux pour les erreurs non geres par le
+ * filtre Nest (qui ne voit que les exceptions HTTP).
+ *
+ * - uncaughtException : un throw synchrone hors du contexte HTTP (bg job,
+ *   setInterval, EventEmitter listener)
+ * - unhandledRejection : une promise rejetee dont personne ne fait .catch()
+ *
+ * Strategie : log + Sentry + on continue de tourner (pas d'exit 1 brutal).
+ * Sans ces handlers, Node 20+ peut crasher le process sur unhandled.
+ */
+function installerHandlersProcessus(logger: Logger): void {
+  process.on("uncaughtException", (err) => {
+    logger.error(`[uncaughtException] ${err.message}`, err.stack);
+    Sentry.captureException(err, { tags: { source: "uncaughtException" } });
+  });
+
+  process.on("unhandledRejection", (reason) => {
+    const err = reason instanceof Error ? reason : new Error(String(reason));
+    logger.error(`[unhandledRejection] ${err.message}`, err.stack);
+    Sentry.captureException(err, { tags: { source: "unhandledRejection" } });
+  });
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger("Bootstrap");
+  installerHandlersProcessus(logger);
 
   // Prefixe global
   app.setGlobalPrefix("api/v1");

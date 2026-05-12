@@ -22,6 +22,7 @@ import { ShowcaseModule } from "./features/showcase/showcase.module";
 import { PromotionModule } from "./features/promotion/promotion.module";
 import { ReservationModule } from "./features/reservation/reservation.module";
 import { RealtimeModule } from "./features/realtime/realtime.module";
+import { HealthModule } from "./features/health/health.module";
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { RealtimeModule } from "./features/realtime/realtime.module";
     ShowcaseModule,
     PromotionModule,
     ReservationModule,
+    HealthModule,
   ],
   providers: [
     // Active le ThrottlerGuard globalement. Les routes peuvent override

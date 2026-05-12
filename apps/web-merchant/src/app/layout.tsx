@@ -8,6 +8,7 @@ import { SyncOfflineProvider } from "@/providers/sync-offline-provider";
 import { ToastProvider } from "@/providers/toast-provider";
 import { ConfirmationProvider } from "@/providers/confirmation-provider";
 import { SWRegister } from "@/providers/sw-register";
+import { ErrorBoundary } from "@/providers/error-boundary";
 import { SCRIPT_INIT_THEME } from "@/lib/theme";
 
 const inter = Inter({
@@ -70,19 +71,24 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_INIT_THEME }} />
       </head>
       <body className="bg-background text-foreground antialiased" suppressHydrationWarning>
-        <QueryProvider>
-          <AuthProvider>
-            <RealtimeProvider>
-              <ConfirmationProvider>
-                <SyncOfflineProvider>
-                  {children}
-                </SyncOfflineProvider>
-              </ConfirmationProvider>
-              <ToastProvider />
-              <SWRegister />
-            </RealtimeProvider>
-          </AuthProvider>
-        </QueryProvider>
+        {/* Fix C1 Module 8 : ErrorBoundary global au-dessus de tout le
+            reste pour capturer les crashes React de n'importe quel
+            provider/feature. Sentry capture le crash + UI fallback. */}
+        <ErrorBoundary>
+          <QueryProvider>
+            <AuthProvider>
+              <RealtimeProvider>
+                <ConfirmationProvider>
+                  <SyncOfflineProvider>
+                    {children}
+                  </SyncOfflineProvider>
+                </ConfirmationProvider>
+                <ToastProvider />
+                <SWRegister />
+              </RealtimeProvider>
+            </AuthProvider>
+          </QueryProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

@@ -25,6 +25,15 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    # Fix C3 Module 8 : Docker peut detecter API down via /health/live et
+    # le restart auto se declenche apres 3 retries. start_period=30s pour
+    # laisser le temps a NestJS de bootstrap.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:3000/api/v1/health/live || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     networks:
       - libitex
 

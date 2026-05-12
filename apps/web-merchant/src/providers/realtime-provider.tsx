@@ -80,7 +80,18 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
     socket.on("connect_error", (err) => {
       const message = err?.message ?? "";
-      if (!estErreurAuth(message)) return;
+      // Fix I8 Module 8 : capture des erreurs WS non-auth (server down,
+      // network unreachable, certificat...). Sans ca on perd la visibilite
+      // sur les pannes realtime en prod.
+      if (!estErreurAuth(message)) {
+        import("@sentry/browser").then(({ captureException }) => {
+          captureException(err, {
+            tags: { source: "websocket-connect-error" },
+            extra: { message },
+          });
+        }).catch(() => { /* sentry indispo : silencieux */ });
+        return;
+      }
 
       // Quota epuise : on arrete sans deconnecter le user. Les queries
       // TanStack continuent via polling (refetchInterval). Le WS est un
