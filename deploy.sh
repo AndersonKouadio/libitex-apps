@@ -30,14 +30,16 @@ if [ ! -f .env ] && [[ "$COMPONENT" != "nginx" && "$COMPONENT" != "status" && "$
   exit 1
 fi
 
-# Pousse le schema Drizzle vers la base (Neon). A appeler apres chaque deploy
-# api/all ou en standalone via './deploy.sh db'. Idempotent : ne fait rien si
-# le schema est deja a jour.
+# Pousse le schema Drizzle vers la base (Neon). Idempotent : ne fait rien
+# si le schema est deja a jour. Auto-detecte les modifications dans
+# packages/db/src/schema et n'envoie le push que si necessaire (pour les
+# deploys "web" rapides). Force le push pour "api", "all", "db".
 #
 # Tourne dans un container Node ephemere : pas besoin de Node/pnpm sur l'host
 # (utile en CI/CD ou en SSH non-interactif ou le PATH est minimal).
 push_schema() {
-  echo ">> Push du schema Drizzle vers la base (container Node)..."
+  local raison="${1:-force}"
+  echo ">> Push du schema Drizzle vers la base ($raison)..."
   # Extrait DATABASE_URL via grep (et non par sourcing) car le caractere & dans
   # une URL Neon non-quotee est interprete comme operateur de fork bash.
   local db_url
@@ -61,29 +63,53 @@ push_schema() {
   echo ">> Schema OK"
 }
 
+# Detecte si la derniere mise a jour git a modifie le schema Drizzle. Permet
+# au composant "web" de pousser le schema uniquement si c'est necessaire, sans
+# ajouter 20s a chaque deploy frontend pur.
+schema_a_change() {
+  # Compare HEAD au commit precedent. HEAD@{1} pointe sur l'etat avant le pull
+  # (refspec recente Git). Si HEAD@{1} n'existe pas (clone tout neuf), on
+  # considere que le schema a change pour etre safe.
+  if ! git rev-parse --verify HEAD@{1} >/dev/null 2>&1; then
+    return 0  # premier deploy : push obligatoire
+  fi
+  if ! git diff --name-only HEAD@{1} HEAD | grep -q "^packages/db/src/schema/"; then
+    return 1  # pas de changement dans le schema
+  fi
+  return 0
+}
+
 case $COMPONENT in
   api)
-    push_schema
+    push_schema "deploy api"
     echo ">> Build API..."
     docker compose -f docker-compose.prod.yml build api
     echo ">> Restart API..."
     docker compose -f docker-compose.prod.yml up -d --force-recreate api
     ;;
   web)
+    # Push le schema uniquement si packages/db/src/schema a change.
+    # Le frontend peut consommer des types `@libitex/db` qui dependent du
+    # schema courant — meilleur safe que sorry pour les colonnes ajoutees.
+    if schema_a_change; then
+      push_schema "schema modifie dans ce deploy"
+    else
+      echo ">> Schema inchange, skip push (deploy web pur)"
+    fi
     echo ">> Build Frontend..."
     docker compose -f docker-compose.prod.yml build web
     echo ">> Restart Frontend..."
     docker compose -f docker-compose.prod.yml up -d --force-recreate web
     ;;
   all)
-    push_schema
+    push_schema "deploy all"
     echo ">> Build all..."
     docker compose -f docker-compose.prod.yml build
     echo ">> Start all..."
     docker compose -f docker-compose.prod.yml up -d
     ;;
   db)
-    push_schema
+    push_schema "push DB demande explicitement"
     ;;
   nginx)
     echo ">> Installation des configs Nginx..."
