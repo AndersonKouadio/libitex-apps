@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from "@nestjs/common";
 import { ProduitRepository } from "./repositories/produit.repository";
 import { RessourceIntrouvableException } from "../../common/exceptions/metier.exception";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
+import { RealtimeGateway } from "../realtime/realtime.gateway";
 import {
   CreerProduitDto, ModifierProduitDto, CreerCategorieDto,
   ProduitResponseDto, VarianteResponseDto, CategorieResponseDto,
@@ -14,7 +15,12 @@ export class CatalogueService {
   constructor(
     private readonly produitRepo: ProduitRepository,
     private readonly audit: AuditService,
+    private readonly realtime: RealtimeGateway,
   ) {}
+
+  private emettreProduitChange(tenantId: string, produitId: string, action: "created" | "updated" | "deleted") {
+    this.realtime.emitToTenant(tenantId, "produit.changed", { produitId, action });
+  }
 
   async creerProduit(tenantId: string, userId: string, dto: CreerProduitDto): Promise<ProduitResponseDto> {
     const produit = await this.produitRepo.creerProduit(tenantId, {
@@ -64,6 +70,8 @@ export class CatalogueService {
       entityType: "PRODUIT", entityId: produit.id,
       after: { nom: produit.name, type: produit.productType, nbVariantes: variantes.length },
     });
+
+    this.emettreProduitChange(tenantId, produit.id, "created");
 
     const emplacementsDisponibles = dto.emplacementsDisponibles ?? [];
     return this.mapProduit(produit, variantes, emplacementsDisponibles);
@@ -156,6 +164,8 @@ export class CatalogueService {
       { nom: updated.name, marque: updated.brand, actif: updated.isActive },
     );
 
+    this.emettreProduitChange(tenantId, id, "updated");
+
     const [rawVariantes, emplacementsDisponibles] = await Promise.all([
       this.produitRepo.obtenirVariantes(id),
       this.produitRepo.listerEmplacementsDuProduit(id),
@@ -173,6 +183,7 @@ export class CatalogueService {
     await this.audit.logDelete(tenantId, userId, "PRODUIT", id, {
       nom: avant.nom, type: avant.typeProduit,
     });
+    this.emettreProduitChange(tenantId, id, "deleted");
   }
 
   /**

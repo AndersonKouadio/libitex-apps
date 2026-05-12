@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/providers/query-provider";
 import { AuthProvider } from "@/providers/auth-provider";
+import { RealtimeProvider } from "@/providers/realtime-provider";
 import { ToastProvider } from "@/providers/toast-provider";
 import { ConfirmationProvider } from "@/providers/confirmation-provider";
 import { SWRegister } from "@/providers/sw-register";
@@ -64,11 +65,13 @@ export default function RootLayout({
       <body className="bg-background text-foreground antialiased" suppressHydrationWarning>
         <QueryProvider>
           <AuthProvider>
-            <ConfirmationProvider>
-              {children}
-            </ConfirmationProvider>
-            <ToastProvider />
-            <SWRegister />
+            <RealtimeProvider>
+              <ConfirmationProvider>
+                {children}
+              </ConfirmationProvider>
+              <ToastProvider />
+              <SWRegister />
+            </RealtimeProvider>
           </AuthProvider>
         </QueryProvider>
       </body>
