@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { STORAGE_KEYS } from "./storage-keys";
 
 /**
  * Preferences POS persistees en localStorage. Reactives via useEffect +
@@ -11,7 +12,7 @@ export interface PreferencesPOS {
   imprimerAuto: boolean;
 }
 
-const STORAGE_KEY = "libitex_prefs_pos";
+const STORAGE_KEY = STORAGE_KEYS.POS_PREFS;
 const DEFAUT: PreferencesPOS = { imprimerAuto: false };
 
 type Listener = (p: PreferencesPOS) => void;

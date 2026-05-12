@@ -1,4 +1,5 @@
 import { marquerOnline, marquerOffline } from "./network-status";
+import { STORAGE_KEYS } from "./storage-keys";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
 
@@ -7,39 +8,60 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
   token?: string;
 }
 
-/**
- * Cle localStorage utilisee pour le refreshToken. Garde en sync avec
- * useAuth.STORAGE_REFRESH.
- */
-const STORAGE_REFRESH = "libitex_refresh";
-const STORAGE_TOKEN = "libitex_token";
+// ─── Token refresh listeners ────────────────────────────────────────────
 
 /**
- * Listeners notifies quand l'access token est rafraichi automatiquement.
- * AuthProvider s'enregistre ici pour synchroniser son state React avec
- * le nouveau token (sinon useAuth().token resterait sur l'ancien).
+ * Notifie quand l'access token est rafraichi automatiquement (succes).
+ * AuthProvider s'enregistre ici pour synchroniser son state React.
  */
 type TokenListener = (accessToken: string, refreshToken: string) => void;
-const listeners = new Set<TokenListener>();
+const tokenListeners = new Set<TokenListener>();
+
 export function onTokenRefreshed(listener: TokenListener): () => void {
-  listeners.add(listener);
+  tokenListeners.add(listener);
   return () => {
-    listeners.delete(listener);
+    tokenListeners.delete(listener);
   };
 }
 
+// ─── Auth expired listeners (logout global) ─────────────────────────────
+
+/**
+ * Notifie quand le refresh a definitivement echoue (403, refresh token
+ * invalide, expire, revoque, etc.). AuthProvider catch cet event pour
+ * deconnecter l'utilisateur + rediriger vers /connexion.
+ *
+ * Distinguer de `onTokenRefreshed` : refresh OK vs refresh KO definitif.
+ * Sans ce mecanisme, l'utilisateur restait sur l'ecran avec un token
+ * mort et des 401 en cascade (fix C4 de la revue).
+ */
+type AuthExpiredListener = () => void;
+const expiredListeners = new Set<AuthExpiredListener>();
+
+export function onAuthExpired(listener: AuthExpiredListener): () => void {
+  expiredListeners.add(listener);
+  return () => {
+    expiredListeners.delete(listener);
+  };
+}
+
+function notifierAuthExpired(): void {
+  for (const l of expiredListeners) l();
+}
+
+// ─── Refresh token (promise partagee) ───────────────────────────────────
+
 /**
  * Promise partagee : si plusieurs requetes simultanees tombent en 401,
- * on ne declenche qu'UN seul appel /auth/refresh. Toutes les requetes
- * attendent ce refresh puis retry avec le nouveau token.
+ * un seul appel /auth/refresh est lance. Toutes attendent puis retry
+ * avec le nouveau token.
+ *
+ * Pattern : on assigne `refreshInFlight` AVANT de demarrer l'async pour
+ * que la fenetre de race ne dure que le temps de l'evaluation synchrone
+ * (fix I5 — l'ancien `setTimeout(0)` etait fragile).
  */
 let refreshInFlight: Promise<string | null> | null = null;
 
-/**
- * Force un refresh hors d'un flow HTTP (utilise par le WebSocket quand il
- * recoit un connect_error d'auth). Reutilise la meme promise partagee donc
- * n'enchaine pas plusieurs refresh.
- */
 export function forcerRafraichissementToken(): Promise<string | null> {
   return rafraichirToken();
 }
@@ -47,40 +69,61 @@ export function forcerRafraichissementToken(): Promise<string | null> {
 async function rafraichirToken(): Promise<string | null> {
   if (refreshInFlight) return refreshInFlight;
 
-  refreshInFlight = (async () => {
+  refreshInFlight = (async (): Promise<string | null> => {
     try {
       const refreshToken = typeof window !== "undefined"
-        ? localStorage.getItem(STORAGE_REFRESH)
+        ? localStorage.getItem(STORAGE_KEYS.AUTH_REFRESH)
         : null;
-      if (!refreshToken) return null;
+      if (!refreshToken) {
+        // Pas de refresh dispo (premier load sans login) : ne broadcast
+        // PAS authExpired (ce n'est pas une session perdue, c'est pas
+        // de session du tout).
+        return null;
+      }
 
       const r = await fetch(`${BASE_URL}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refreshToken }),
       });
-      if (!r.ok) return null;
+
+      if (!r.ok) {
+        // 4xx/5xx : refresh definitivement KO. On notifie les listeners
+        // (AuthProvider) qui vont deconnecter + rediriger.
+        notifierAuthExpired();
+        return null;
+      }
+
       const json = await r.json();
       const data = json.data ?? json;
       const nouveauAccess = data.accessToken as string;
       const nouveauRefresh = data.refreshToken as string;
-      if (!nouveauAccess || !nouveauRefresh) return null;
+      if (!nouveauAccess || !nouveauRefresh) {
+        notifierAuthExpired();
+        return null;
+      }
 
       if (typeof window !== "undefined") {
-        localStorage.setItem(STORAGE_TOKEN, nouveauAccess);
-        localStorage.setItem(STORAGE_REFRESH, nouveauRefresh);
+        localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, nouveauAccess);
+        localStorage.setItem(STORAGE_KEYS.AUTH_REFRESH, nouveauRefresh);
       }
-      for (const l of listeners) l(nouveauAccess, nouveauRefresh);
+      for (const l of tokenListeners) l(nouveauAccess, nouveauRefresh);
       return nouveauAccess;
     } catch {
+      // Erreur reseau pendant le refresh : pas une session morte mais
+      // un probleme connectivite. On ne broadcast pas authExpired.
       return null;
     } finally {
-      // Liberer le slot pour permettre un futur refresh si encore besoin.
-      setTimeout(() => { refreshInFlight = null; }, 0);
+      // Liberer le slot SYNCHRONIQUEMENT a la fin de l'async. Le
+      // setTimeout(0) precedent n'apportait rien et masquait la logique.
+      refreshInFlight = null;
     }
   })();
+
   return refreshInFlight;
 }
+
+// ─── HTTP client ────────────────────────────────────────────────────────
 
 class HttpClient {
   private baseUrl: string;
@@ -89,7 +132,12 @@ class HttpClient {
     this.baseUrl = baseUrl;
   }
 
-  private async request<T>(method: string, path: string, opts: RequestOptions = {}, retried = false): Promise<T> {
+  private async request<T>(
+    method: string,
+    path: string,
+    opts: RequestOptions = {},
+    retried = false,
+  ): Promise<T> {
     const { token, body, ...rest } = opts;
 
     const headers: Record<string, string> = {
@@ -110,13 +158,13 @@ class HttpClient {
         ...rest,
       });
     } catch (err) {
-      // TypeError de fetch = pas de reseau ou DNS / TLS. On bascule l'app en
-      // mode offline pour que le banner + la file d'attente prennent le relais.
+      // TypeError de fetch = pas de reseau ou DNS / TLS. On bascule l'app
+      // en mode offline pour que le banner + la file d'attente prennent
+      // le relais.
       marquerOffline();
       throw err;
     }
-    // Toute reponse HTTP (meme 5xx) prouve qu'on a du reseau : on remonte
-    // l'etat online si on etait offline.
+    // Toute reponse HTTP (meme 5xx) prouve qu'on a du reseau.
     marquerOnline();
 
     // 401 + on a un token + pas deja retry + endpoint non-refresh : tenter
@@ -126,6 +174,8 @@ class HttpClient {
       if (nouveauToken) {
         return this.request<T>(method, path, { ...opts, token: nouveauToken }, true);
       }
+      // Refresh KO : on notifie deja via notifierAuthExpired() depuis
+      // rafraichirToken. On laisse l'erreur 401 remonter au caller.
     }
 
     if (!response.ok) {

@@ -7,6 +7,7 @@ import { Check, X, ArrowRight, Sparkles } from "lucide-react";
 import { useEquipeListQuery } from "@/features/equipe/queries/equipe.query";
 import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
 import { useConfigFideliteQuery } from "@/features/fidelite/queries/fidelite.query";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 interface Props {
   nombreProduits: number;
@@ -22,7 +23,7 @@ interface Etape {
   cta: string;
 }
 
-const STORAGE_KEY = "libitex.onboarding.dismissed";
+const STORAGE_KEY = STORAGE_KEYS.ONBOARDING_DISMISSED;
 
 export function CarteOnboarding({ nombreProduits, nombreEmplacements, nomBoutique }: Props) {
   const [dismissed, setDismissed] = useState(true);

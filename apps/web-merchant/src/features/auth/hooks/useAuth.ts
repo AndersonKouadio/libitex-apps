@@ -4,12 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import type { IUtilisateurSession, IBoutiqueResume } from "../types/auth.type";
 import { authAPI } from "../apis/auth.api";
 import type { ConnexionDTO } from "../schemas/auth.schema";
-
-const STORAGE_TOKEN = "libitex_token";
-const STORAGE_REFRESH = "libitex_refresh";
-const STORAGE_USER = "libitex_user";
-const STORAGE_BOUTIQUES = "libitex_boutiques";
-const STORAGE_BOUTIQUE_ACTIVE = "libitex_boutique_active";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 interface AuthContextValue {
   token: string | null;
@@ -43,6 +38,19 @@ export function useAuth(): AuthContextValue {
   return ctx;
 }
 
+/**
+ * Cles localStorage observees pour la sync entre onglets. Si une de ces
+ * cles change (logout sur autre onglet, refresh effectue sur autre
+ * onglet), on resynchronise le state React de l'onglet courant.
+ */
+const KEYS_SYNCED = new Set<string>([
+  STORAGE_KEYS.AUTH_TOKEN,
+  STORAGE_KEYS.AUTH_REFRESH,
+  STORAGE_KEYS.AUTH_USER,
+  STORAGE_KEYS.AUTH_BOUTIQUES,
+  STORAGE_KEYS.AUTH_BOUTIQUE_ACTIVE,
+]);
+
 export function useAuthState() {
   const [token, setToken] = useState<string | null>(null);
   const [utilisateur, setUtilisateur] = useState<IUtilisateurSession | null>(null);
@@ -50,19 +58,52 @@ export function useAuthState() {
   const [boutiqueActive, setBoutiqueActive] = useState<IBoutiqueResume | null>(null);
   const [enChargement, setEnChargement] = useState(true);
 
-  useEffect(() => {
-    const savedToken = localStorage.getItem(STORAGE_TOKEN);
-    const savedUser = localStorage.getItem(STORAGE_USER);
-    const savedBoutiques = localStorage.getItem(STORAGE_BOUTIQUES);
-    const savedActive = localStorage.getItem(STORAGE_BOUTIQUE_ACTIVE);
+  /**
+   * Lit le localStorage et applique au state React. Utilise au mount initial
+   * + au reveil par event 'storage' (sync entre onglets).
+   */
+  const chargerDepuisStorage = useCallback(() => {
+    const savedToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    const savedUser = localStorage.getItem(STORAGE_KEYS.AUTH_USER);
+    const savedBoutiques = localStorage.getItem(STORAGE_KEYS.AUTH_BOUTIQUES);
+    const savedActive = localStorage.getItem(STORAGE_KEYS.AUTH_BOUTIQUE_ACTIVE);
+
     if (savedToken && savedUser) {
       setToken(savedToken);
-      setUtilisateur(JSON.parse(savedUser));
-      if (savedBoutiques) setBoutiques(JSON.parse(savedBoutiques));
-      if (savedActive) setBoutiqueActive(JSON.parse(savedActive));
+      try { setUtilisateur(JSON.parse(savedUser)); } catch { setUtilisateur(null); }
+      try { setBoutiques(savedBoutiques ? JSON.parse(savedBoutiques) : []); } catch { setBoutiques([]); }
+      try { setBoutiqueActive(savedActive ? JSON.parse(savedActive) : null); } catch { setBoutiqueActive(null); }
+    } else {
+      // Logout depuis un autre onglet ou session expiree : on nettoie.
+      setToken(null);
+      setUtilisateur(null);
+      setBoutiques([]);
+      setBoutiqueActive(null);
     }
-    setEnChargement(false);
   }, []);
+
+  useEffect(() => {
+    chargerDepuisStorage();
+    setEnChargement(false);
+  }, [chargerDepuisStorage]);
+
+  /**
+   * Sync entre onglets : l'event 'storage' se declenche dans tous les
+   * onglets SAUF celui qui a modifie localStorage. Si un autre onglet
+   * a logout (a vide les cles) ou a refresh le token, on resynchronise.
+   * Fix C5 de la revue.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function handleStorage(e: StorageEvent) {
+      // null key = clear() global -> on resync tout.
+      if (e.key === null || KEYS_SYNCED.has(e.key)) {
+        chargerDepuisStorage();
+      }
+    }
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [chargerDepuisStorage]);
 
   const persister = useCallback((
     t: string,
@@ -75,11 +116,11 @@ export function useAuthState() {
     setUtilisateur(u);
     setBoutiques(b);
     setBoutiqueActive(a);
-    localStorage.setItem(STORAGE_TOKEN, t);
-    localStorage.setItem(STORAGE_REFRESH, rt);
-    localStorage.setItem(STORAGE_USER, JSON.stringify(u));
-    localStorage.setItem(STORAGE_BOUTIQUES, JSON.stringify(b));
-    localStorage.setItem(STORAGE_BOUTIQUE_ACTIVE, JSON.stringify(a));
+    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, t);
+    localStorage.setItem(STORAGE_KEYS.AUTH_REFRESH, rt);
+    localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(u));
+    localStorage.setItem(STORAGE_KEYS.AUTH_BOUTIQUES, JSON.stringify(b));
+    localStorage.setItem(STORAGE_KEYS.AUTH_BOUTIQUE_ACTIVE, JSON.stringify(a));
   }, []);
 
   const connecter = useCallback(async (data: ConnexionDTO) => {
@@ -92,26 +133,26 @@ export function useAuthState() {
     setUtilisateur(null);
     setBoutiques([]);
     setBoutiqueActive(null);
-    localStorage.removeItem(STORAGE_TOKEN);
-    localStorage.removeItem(STORAGE_REFRESH);
-    localStorage.removeItem(STORAGE_USER);
-    localStorage.removeItem(STORAGE_BOUTIQUES);
-    localStorage.removeItem(STORAGE_BOUTIQUE_ACTIVE);
+    localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.AUTH_REFRESH);
+    localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
+    localStorage.removeItem(STORAGE_KEYS.AUTH_BOUTIQUES);
+    localStorage.removeItem(STORAGE_KEYS.AUTH_BOUTIQUE_ACTIVE);
   }, []);
 
   const rafraichirTokenLocal = useCallback((accessToken: string, refreshToken: string) => {
     setToken(accessToken);
     // Le httpClient a deja ecrit dans localStorage avant de notifier, mais
     // on re-ecrit ici pour rester defensifs si l'ordre change.
-    localStorage.setItem(STORAGE_TOKEN, accessToken);
-    localStorage.setItem(STORAGE_REFRESH, refreshToken);
+    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, accessToken);
+    localStorage.setItem(STORAGE_KEYS.AUTH_REFRESH, refreshToken);
   }, []);
 
   const mettreAJourUtilisateur = useCallback((patch: Partial<IUtilisateurSession>) => {
     setUtilisateur((prev) => {
       if (!prev) return prev;
       const next = { ...prev, ...patch };
-      localStorage.setItem(STORAGE_USER, JSON.stringify(next));
+      localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(next));
       return next;
     });
   }, []);

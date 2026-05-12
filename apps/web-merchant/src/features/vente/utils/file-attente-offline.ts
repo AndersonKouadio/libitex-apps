@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 
-const STORAGE_KEY = "libitex_offline_queue";
+const STORAGE_KEY = STORAGE_KEYS.POS_OFFLINE_QUEUE;
 
 /**
  * Une vente mise en attente hors-ligne. payloadCreer contient le DTO du POST

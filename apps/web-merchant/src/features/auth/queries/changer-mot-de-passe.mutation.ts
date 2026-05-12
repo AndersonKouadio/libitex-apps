@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "@heroui/react";
 import { authAPI } from "../apis/auth.api";
 import { useAuth } from "../hooks/useAuth";
+import { STORAGE_KEYS } from "@/lib/storage-keys";
 
 export function useChangerMotDePasseMutation() {
   const { token, utilisateur, boutiques, boutiqueActive, appliquerSession } = useAuth();
@@ -12,10 +13,10 @@ export function useChangerMotDePasseMutation() {
     mutationFn: (data: { motDePasseActuel: string; nouveauMotDePasse: string }) =>
       authAPI.changerMotDePasse(token!, data),
     onSuccess: () => {
-      // Mettre a jour la session pour lever le drapeau mustChangePassword
+      // Mettre a jour la session pour lever le drapeau mustChangePassword.
       if (token && utilisateur && boutiqueActive) {
         const refreshToken = typeof window !== "undefined"
-          ? localStorage.getItem("libitex_refresh") ?? ""
+          ? localStorage.getItem(STORAGE_KEYS.AUTH_REFRESH) ?? ""
           : "";
         appliquerSession(
           token,

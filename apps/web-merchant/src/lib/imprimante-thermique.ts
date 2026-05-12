@@ -18,6 +18,7 @@
 
 import type { ITicket } from "@/features/vente/types/vente.type";
 import { formatMontant } from "@/features/vente/utils/format";
+import { STORAGE_KEYS } from "./storage-keys";
 
 // ===== Types WebUSB (le DOM lib ne les inclut pas par defaut) ============
 
@@ -128,7 +129,7 @@ class ConstructeurEscPos {
 
 // ===== Connexion USB =====================================================
 
-const STORAGE_DEVICE = "libitex_imprimante_device";
+const STORAGE_DEVICE = STORAGE_KEYS.POS_PRINTER_DEVICE;
 
 interface DevicePersiste {
   vendorId: number;

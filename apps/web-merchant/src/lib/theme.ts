@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { STORAGE_KEYS } from "./storage-keys";
 
 export type Theme = "light" | "dark";
 
-const STORAGE_KEY = "libitex_theme";
+const STORAGE_KEY = STORAGE_KEYS.THEME;
 
 type Listener = (t: Theme) => void;
 const listeners = new Set<Listener>();
