@@ -10,11 +10,26 @@ export const achatKey = (...parts: unknown[]) => ["achat", ...parts];
 
 // ─── Fournisseurs ──────────────────────────────────────────────────────
 
-export function useFournisseurListQuery(recherche?: string) {
+/**
+ * Liste les fournisseurs du tenant.
+ *
+ * Fix I3 : `actifsSeulement` filtre cote front les fournisseurs avec
+ * `actif=false`. Utile pour le select de creation de commande (on ne
+ * doit pas pouvoir creer une commande chez un fournisseur desactive),
+ * mais la page /achats/fournisseurs montre les deux.
+ */
+export function useFournisseurListQuery(
+  recherche?: string,
+  options?: { actifsSeulement?: boolean },
+) {
   const { token } = useAuth();
   return useQuery({
-    queryKey: achatKey("fournisseurs", recherche),
-    queryFn: () => achatAPI.listerFournisseurs(token!, recherche),
+    queryKey: achatKey("fournisseurs", recherche, options?.actifsSeulement ?? false),
+    queryFn: async () => {
+      const tous = await achatAPI.listerFournisseurs(token!, recherche);
+      if (options?.actifsSeulement) return tous.filter((f) => f.actif);
+      return tous;
+    },
     enabled: !!token,
     staleTime: 30_000,
   });
