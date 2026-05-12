@@ -1,9 +1,9 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { eq, and, isNull, sql, desc, ilike, or, type SQL } from "drizzle-orm";
+import { eq, and, isNull, sql, desc, ilike, or, inArray, type SQL } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
   type Database, suppliers, purchaseOrders, purchaseOrderLines,
-  stockMovements, variants, products,
+  stockMovements, variants, products, locations,
 } from "@libitex/db";
 
 @Injectable()
@@ -81,27 +81,91 @@ export class AchatRepository {
       .where(and(eq(suppliers.id, id), eq(suppliers.tenantId, tenantId)));
   }
 
+  // ─── Validations tenant ──────────────────────────────────────────────
+
+  /**
+   * Fix C3 : retourne le sous-ensemble des `variantIds` qui appartiennent
+   * au `tenantId` (via la jointure products). Les ids manquants signalent
+   * une tentative cross-tenant et le service doit rejeter.
+   */
+  async variantesDuTenant(tenantId: string, variantIds: string[]): Promise<Set<string>> {
+    if (variantIds.length === 0) return new Set();
+    const rows = await this.db
+      .select({ id: variants.id })
+      .from(variants)
+      .innerJoin(products, eq(variants.productId, products.id))
+      .where(and(
+        inArray(variants.id, variantIds),
+        eq(products.tenantId, tenantId),
+        isNull(products.deletedAt),
+      ));
+    return new Set(rows.map((r) => r.id));
+  }
+
+  /**
+   * Fix I9 : valide que `locationId` appartient bien au tenant. Renvoie
+   * null si l'emplacement n'existe pas ou n'est pas dans le tenant.
+   */
+  async emplacementDuTenant(tenantId: string, locationId: string) {
+    return this.db.query.locations.findFirst({
+      where: and(
+        eq(locations.id, locationId),
+        eq(locations.tenantId, tenantId),
+        isNull(locations.deletedAt),
+      ),
+    });
+  }
+
   // ─── Purchase Orders ──────────────────────────────────────────────────
 
   /**
-   * Numerotation sequentielle par jour : BC-YYYYMMDD-NNN. NNN compte les
-   * commandes deja creees ce jour-la pour ce tenant.
+   * Calcule le prochain numero de commande pour aujourd'hui :
+   * BC-YYYYMMDD-NNN. NNN est le MAX suffixe deja utilise + 1 (le MAX evite
+   * les trous si une commande a ete supprimee).
+   *
+   * En isolation : ne suffit PAS pour la concurrence — deux callers
+   * simultanes peuvent lire le meme max et calculer le meme next. La
+   * protection finale est faite par la contrainte UNIQUE et le pattern
+   * retry-on-conflict cote service (cf. `creerCommandeAvecRetry`).
    */
-  async genererNumeroCommande(tenantId: string): Promise<string> {
+  async prochainNumeroCommande(tenantId: string): Promise<string> {
     const now = new Date();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, "0");
     const d = String(now.getDate()).padStart(2, "0");
     const prefix = `BC-${y}${m}${d}`;
-    const [row] = await this.db
-      .select({ count: sql<number>`COUNT(*)::int` })
-      .from(purchaseOrders)
-      .where(and(
-        eq(purchaseOrders.tenantId, tenantId),
-        sql`${purchaseOrders.orderNumber} LIKE ${prefix + "-%"}`,
-      ));
-    const next = Number(row?.count ?? 0) + 1;
+
+    const result = await this.db.execute(sql`
+      SELECT COALESCE(
+        MAX(CAST(SUBSTRING("order_number" FROM ${prefix.length + 2}) AS INTEGER)),
+        0
+      ) AS max_suffix
+      FROM ${purchaseOrders}
+      WHERE "tenant_id" = ${tenantId}
+        AND "order_number" LIKE ${prefix + "-%"}
+    `);
+    const rows = result as unknown as Array<{ max_suffix: number | string | null }>;
+    const row = rows[0];
+    const next = Number(row?.max_suffix ?? 0) + 1;
     return `${prefix}-${String(next).padStart(3, "0")}`;
+  }
+
+  /** @deprecated Conserve pour compat. Utilise `prochainNumeroCommande`. */
+  async genererNumeroCommande(tenantId: string): Promise<string> {
+    return this.prochainNumeroCommande(tenantId);
+  }
+
+  /**
+   * Verifie si une erreur Postgres est une violation de contrainte UNIQUE
+   * sur orderNumber (code 23505). Permet au service de detecter le cas
+   * "deux creations simultanees ont genere le meme numero" et de retry.
+   */
+  estViolationUniqueOrderNumber(err: unknown): boolean {
+    if (typeof err !== "object" || err === null) return false;
+    const e = err as { code?: string; constraint?: string; message?: string };
+    if (e.code !== "23505") return false;
+    const id = e.constraint ?? e.message ?? "";
+    return id.includes("purchase_orders_number") || id.includes("order_number");
   }
 
   async creerCommande(data: {
@@ -249,5 +313,81 @@ export class AchatRepository {
       .update(variants)
       .set({ pricePurchase: prixAchat, updatedAt: new Date() })
       .where(eq(variants.id, variantId));
+  }
+
+  /**
+   * Fix C1 : applique une reception ATOMIQUEMENT via `db.batch()`. Tous
+   * les mouvements stock, mises a jour lignes, prix d'achat et statut
+   * commande sont commits ensemble (un seul roundtrip Neon HTTP) ou pas
+   * du tout. Evite la corruption "stock credite mais ligne non maj" si
+   * une operation echoue au milieu.
+   *
+   * Limites : neon-http n'expose pas le pattern `transaction(async tx)`
+   * (callback). On ne peut donc pas faire d'intermediate read dans la
+   * transaction. Le caller doit lire les lignes JUSTE avant, calculer
+   * les writes, puis appeler cette methode. Le risque residuel de race
+   * (deux receptions simultanees de la meme commande) est documente
+   * dans `AchatService.receptionner`.
+   */
+  async appliquerReceptionAtomique(data: {
+    tenantId: string;
+    commandeId: string;
+    orderNumber: string;
+    locationId: string;
+    userId: string;
+    mouvements: Array<{ variantId: string; quantity: string }>;
+    lignes: Array<{ ligneId: string; quantiteRecue: string }>;
+    prixAchat?: Array<{ variantId: string; prix: string }>;
+    nouveauStatut?: "PARTIAL" | "RECEIVED";
+    receivedAt?: Date;
+  }): Promise<void> {
+    const requetes: any[] = [];
+
+    // 1. Inserts mouvements de stock
+    for (const m of data.mouvements) {
+      requetes.push(this.db.insert(stockMovements).values({
+        tenantId: data.tenantId,
+        variantId: m.variantId,
+        locationId: data.locationId,
+        movementType: "STOCK_IN",
+        quantity: m.quantity,
+        userId: data.userId,
+        referenceType: "PURCHASE_ORDER",
+        referenceId: data.commandeId,
+        note: `Reception ${data.orderNumber}`,
+      }));
+    }
+
+    // 2. Update quantites recues par ligne
+    for (const l of data.lignes) {
+      requetes.push(this.db.update(purchaseOrderLines)
+        .set({ quantityReceived: l.quantiteRecue })
+        .where(eq(purchaseOrderLines.id, l.ligneId)));
+    }
+
+    // 3. Update prix d'achat variantes si demande
+    for (const p of (data.prixAchat ?? [])) {
+      requetes.push(this.db.update(variants)
+        .set({ pricePurchase: p.prix, updatedAt: new Date() })
+        .where(eq(variants.id, p.variantId)));
+    }
+
+    // 4. Update statut commande si transition (PARTIAL / RECEIVED)
+    if (data.nouveauStatut) {
+      requetes.push(this.db.update(purchaseOrders)
+        .set({
+          status: data.nouveauStatut,
+          receivedAt: data.receivedAt ?? undefined,
+          updatedAt: new Date(),
+        })
+        .where(and(
+          eq(purchaseOrders.id, data.commandeId),
+          eq(purchaseOrders.tenantId, data.tenantId),
+        )));
+    }
+
+    if (requetes.length === 0) return;
+    // db.batch envoie tout en une transaction Neon (atomique : tout ou rien).
+    await (this.db as any).batch(requetes);
   }
 }

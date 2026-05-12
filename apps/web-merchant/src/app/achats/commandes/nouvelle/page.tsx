@@ -89,11 +89,18 @@ export default function PageNouvelleCommande() {
     });
   }
 
-  function modifierQuantite(idx: number, qte: number) {
-    setLignes((prev) => prev.map((l, i) => (i === idx ? { ...l, quantite: Math.max(0, qte) } : l)));
+  /** Fix I4 : parse robuste — un input vide donne 0 au lieu de NaN. */
+  function parseNum(brut: string): number {
+    const n = Number(brut);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
   }
-  function modifierPrix(idx: number, prix: number) {
-    setLignes((prev) => prev.map((l, i) => (i === idx ? { ...l, prixUnitaire: Math.max(0, prix) } : l)));
+  function modifierQuantite(idx: number, brut: string) {
+    const qte = parseNum(brut);
+    setLignes((prev) => prev.map((l, i) => (i === idx ? { ...l, quantite: qte } : l)));
+  }
+  function modifierPrix(idx: number, brut: string) {
+    const prix = parseNum(brut);
+    setLignes((prev) => prev.map((l, i) => (i === idx ? { ...l, prixUnitaire: prix } : l)));
   }
   function retirerLigne(idx: number) {
     setLignes((prev) => prev.filter((_, i) => i !== idx));
@@ -209,8 +216,8 @@ export default function PageNouvelleCommande() {
                     </div>
                     <input
                       type="number"
-                      value={l.quantite}
-                      onChange={(e) => modifierQuantite(i, Number(e.target.value))}
+                      value={Number.isFinite(l.quantite) ? l.quantite : 0}
+                      onChange={(e) => modifierQuantite(i, e.target.value)}
                       min={0}
                       step="0.001"
                       aria-label="Quantite"
@@ -218,8 +225,8 @@ export default function PageNouvelleCommande() {
                     />
                     <input
                       type="number"
-                      value={l.prixUnitaire}
-                      onChange={(e) => modifierPrix(i, Number(e.target.value))}
+                      value={Number.isFinite(l.prixUnitaire) ? l.prixUnitaire : 0}
+                      onChange={(e) => modifierPrix(i, e.target.value)}
                       min={0}
                       step="1"
                       aria-label="Prix unitaire"

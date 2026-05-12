@@ -1,5 +1,5 @@
 import { Test } from "@nestjs/testing";
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { AchatService } from "./achat.service";
 import { AchatRepository } from "./repositories/achat.repository";
 import { RealtimeGateway } from "../realtime/realtime.gateway";
@@ -13,15 +13,17 @@ describe("AchatService", () => {
     repoMock = {
       creerFournisseur: jest.fn(),
       trouverFournisseur: jest.fn(),
+      variantesDuTenant: jest.fn(),
+      emplacementDuTenant: jest.fn(),
+      prochainNumeroCommande: jest.fn(),
       genererNumeroCommande: jest.fn(),
+      estViolationUniqueOrderNumber: jest.fn().mockReturnValue(false),
       creerCommande: jest.fn(),
       ajouterLignes: jest.fn(),
       trouverCommande: jest.fn(),
       listerLignesCommande: jest.fn(),
-      enregistrerEntreeReception: jest.fn(),
-      modifierLigneRecue: jest.fn(),
       modifierStatutCommande: jest.fn(),
-      majPrixAchatVariante: jest.fn(),
+      appliquerReceptionAtomique: jest.fn(),
     } as unknown as jest.Mocked<AchatRepository>;
 
     realtimeMock = {
@@ -50,9 +52,38 @@ describe("AchatService", () => {
       })).rejects.toThrow(BadRequestException);
     });
 
+    it("refuse si l'emplacement n'appartient pas au tenant (fix I9)", async () => {
+      repoMock.trouverFournisseur.mockResolvedValue({ id: "f1" } as any);
+      repoMock.emplacementDuTenant.mockResolvedValue(undefined as any);
+
+      await expect(service.creerCommande("t1", "u1", {
+        fournisseurId: "f1",
+        emplacementId: "e-autre-tenant",
+        lignes: [{ varianteId: "v1", quantite: 1, prixUnitaire: 100 }],
+      })).rejects.toThrow(ForbiddenException);
+    });
+
+    it("refuse si une variante n'appartient pas au tenant (fix C3 cross-tenant)", async () => {
+      repoMock.trouverFournisseur.mockResolvedValue({ id: "f1" } as any);
+      repoMock.emplacementDuTenant.mockResolvedValue({ id: "e1" } as any);
+      // v2 absente du Set retourne -> cross-tenant
+      repoMock.variantesDuTenant.mockResolvedValue(new Set(["v1"]));
+
+      await expect(service.creerCommande("t1", "u1", {
+        fournisseurId: "f1",
+        emplacementId: "e1",
+        lignes: [
+          { varianteId: "v1", quantite: 1, prixUnitaire: 100 },
+          { varianteId: "v2", quantite: 1, prixUnitaire: 100 },
+        ],
+      })).rejects.toThrow(ForbiddenException);
+    });
+
     it("calcule le total a partir des lignes", async () => {
       repoMock.trouverFournisseur.mockResolvedValue({ id: "f1" } as any);
-      repoMock.genererNumeroCommande.mockResolvedValue("BC-20260512-001");
+      repoMock.emplacementDuTenant.mockResolvedValue({ id: "e1" } as any);
+      repoMock.variantesDuTenant.mockResolvedValue(new Set(["v1", "v2"]));
+      repoMock.prochainNumeroCommande.mockResolvedValue("BC-20260512-001");
       repoMock.creerCommande.mockResolvedValue({ id: "c1" } as any);
       repoMock.trouverCommande.mockResolvedValue({
         id: "c1", supplierId: "f1", orderNumber: "BC-20260512-001",
@@ -75,6 +106,37 @@ describe("AchatService", () => {
       expect(repoMock.creerCommande).toHaveBeenCalledWith(
         expect.objectContaining({ totalAmount: "750.00" }),
       );
+    });
+
+    it("retry sur conflit UNIQUE puis succede (fix C4)", async () => {
+      repoMock.trouverFournisseur.mockResolvedValue({ id: "f1" } as any);
+      repoMock.emplacementDuTenant.mockResolvedValue({ id: "e1" } as any);
+      repoMock.variantesDuTenant.mockResolvedValue(new Set(["v1"]));
+      repoMock.prochainNumeroCommande
+        .mockResolvedValueOnce("BC-20260512-001")
+        .mockResolvedValueOnce("BC-20260512-002");
+      // 1er creerCommande throw uniqueViolation, 2e succede
+      const uniqueErr = Object.assign(new Error("unique"), { code: "23505", constraint: "idx_purchase_orders_number" });
+      repoMock.creerCommande
+        .mockRejectedValueOnce(uniqueErr)
+        .mockResolvedValueOnce({ id: "c1" } as any);
+      repoMock.estViolationUniqueOrderNumber.mockReturnValue(true);
+      repoMock.trouverCommande.mockResolvedValue({
+        id: "c1", supplierId: "f1", orderNumber: "BC-20260512-002",
+        status: "DRAFT", totalAmount: "100", locationId: "e1",
+        expectedDate: null, receivedAt: null, notes: null,
+        createdAt: new Date(),
+      } as any);
+      repoMock.listerLignesCommande.mockResolvedValue([]);
+
+      const res = await service.creerCommande("t1", "u1", {
+        fournisseurId: "f1",
+        emplacementId: "e1",
+        lignes: [{ varianteId: "v1", quantite: 1, prixUnitaire: 100 }],
+      });
+
+      expect(res.numero).toBe("BC-20260512-002");
+      expect(repoMock.prochainNumeroCommande).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -125,28 +187,28 @@ describe("AchatService", () => {
       repoMock.trouverCommande.mockResolvedValue(commandeBase as any);
       repoMock.listerLignesCommande.mockResolvedValue(lignesBase as any);
 
-      // commande 10, on tente d'en recevoir 12
       await expect(service.receptionner("t1", "u1", "c1", {
         lignes: [{ ligneId: "l1", quantite: 12 }],
       })).rejects.toThrow(/> commande/);
     });
 
-    it("bascule en PARTIAL quand on recoit une partie", async () => {
+    it("bascule en PARTIAL quand on recoit une partie (atomique via batch)", async () => {
       repoMock.trouverCommande.mockResolvedValue(commandeBase as any);
-      // 1er appel : avant reception (qtyReceived=0)
-      // 2e appel : apres reception (qtyReceived=5)
       repoMock.listerLignesCommande
         .mockResolvedValueOnce(lignesBase as any)
-        .mockResolvedValueOnce([{ ...lignesBase[0], quantityReceived: "5" }] as any)
-        // 3e appel par obtenirCommande pour la reponse finale
         .mockResolvedValueOnce([{ ...lignesBase[0], quantityReceived: "5" }] as any);
 
       await service.receptionner("t1", "u1", "c1", {
         lignes: [{ ligneId: "l1", quantite: 5 }],
       });
 
-      expect(repoMock.modifierStatutCommande).toHaveBeenCalledWith(
-        "t1", "c1", "PARTIAL", expect.any(Date),
+      // Fix C1 : un seul appel atomique qui inclut le passage en PARTIAL
+      expect(repoMock.appliquerReceptionAtomique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          nouveauStatut: "PARTIAL",
+          mouvements: [{ variantId: "v1", quantity: "5" }],
+          lignes: [{ ligneId: "l1", quantiteRecue: "5" }],
+        }),
       );
     });
 
@@ -154,23 +216,21 @@ describe("AchatService", () => {
       repoMock.trouverCommande.mockResolvedValue(commandeBase as any);
       repoMock.listerLignesCommande
         .mockResolvedValueOnce(lignesBase as any)
-        .mockResolvedValueOnce([{ ...lignesBase[0], quantityReceived: "10" }] as any)
         .mockResolvedValueOnce([{ ...lignesBase[0], quantityReceived: "10" }] as any);
 
       await service.receptionner("t1", "u1", "c1", {
         lignes: [{ ligneId: "l1", quantite: 10 }],
       });
 
-      expect(repoMock.modifierStatutCommande).toHaveBeenCalledWith(
-        "t1", "c1", "RECEIVED", expect.any(Date),
+      expect(repoMock.appliquerReceptionAtomique).toHaveBeenCalledWith(
+        expect.objectContaining({ nouveauStatut: "RECEIVED" }),
       );
     });
 
-    it("met a jour le prix d'achat si majPrixAchat=true", async () => {
+    it("met a jour le prix d'achat si majPrixAchat=true (dans le batch)", async () => {
       repoMock.trouverCommande.mockResolvedValue(commandeBase as any);
       repoMock.listerLignesCommande
         .mockResolvedValueOnce(lignesBase as any)
-        .mockResolvedValueOnce([{ ...lignesBase[0], quantityReceived: "5" }] as any)
         .mockResolvedValueOnce([{ ...lignesBase[0], quantityReceived: "5" }] as any);
 
       await service.receptionner("t1", "u1", "c1", {
@@ -178,7 +238,28 @@ describe("AchatService", () => {
         majPrixAchat: true,
       });
 
-      expect(repoMock.majPrixAchatVariante).toHaveBeenCalledWith("v1", "100");
+      expect(repoMock.appliquerReceptionAtomique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          prixAchat: [{ variantId: "v1", prix: "100" }],
+        }),
+      );
+    });
+
+    it("emit realtime avec variantIds precis (fix C5)", async () => {
+      repoMock.trouverCommande.mockResolvedValue(commandeBase as any);
+      repoMock.listerLignesCommande
+        .mockResolvedValueOnce(lignesBase as any)
+        .mockResolvedValueOnce([{ ...lignesBase[0], quantityReceived: "5" }] as any);
+
+      await service.receptionner("t1", "u1", "c1", {
+        lignes: [{ ligneId: "l1", quantite: 5 }],
+      });
+
+      expect(realtimeMock.emitToTenant).toHaveBeenCalledWith(
+        "t1",
+        "stock.updated",
+        expect.objectContaining({ variantIds: ["v1"] }),
+      );
     });
   });
 });

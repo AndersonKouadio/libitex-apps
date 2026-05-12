@@ -44,8 +44,26 @@ export function ModalReception({ ouvert, commande, onFermer }: Props) {
   );
   const aReceptionner = Object.values(quantites).some((q) => q > 0);
 
+  // Fix I2 : detecte les lignes ou la quantite saisie depasse le reste.
+  // Permet de bloquer le bouton "Valider" et d'afficher un indicateur par ligne.
+  const lignesEnDepassement = (commande.lignes ?? [])
+    .filter((l) => {
+      const reste = l.quantiteCommandee - l.quantiteRecue;
+      return (quantites[l.id] ?? 0) > reste + 0.0001;
+    })
+    .map((l) => l.id);
+
+  // Fix I12 : detecte le cas "toutes les lignes ont deja ete receptionnees"
+  const tout_recu = (commande.lignes ?? []).every(
+    (l) => l.quantiteRecue >= l.quantiteCommandee - 0.0001,
+  );
+
   async function valider() {
     if (!commande) return;
+    if (lignesEnDepassement.length > 0) {
+      toast.danger("Une ligne depasse le reste a recevoir — corrigez avant de valider");
+      return;
+    }
     const lignesAvecQte = (commande.lignes ?? [])
       .filter((l) => (quantites[l.id] ?? 0) > 0)
       .map((l) => ({ ligneId: l.id, quantite: quantites[l.id]! }));
@@ -64,6 +82,12 @@ export function ModalReception({ ouvert, commande, onFermer }: Props) {
     }
   }
 
+  /** Fix I4 : parse robuste — un input vide donne 0 au lieu de NaN. */
+  function parseQte(brut: string): number {
+    const n = Number(brut);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  }
+
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(o) => { if (!o) onFermer(); }}>
       <Modal.Container size="lg" scroll="inside">
@@ -77,11 +101,22 @@ export function ModalReception({ ouvert, commande, onFermer }: Props) {
               Saisissez la quantite reellement recue pour chaque ligne. Les mouvements de stock
               seront crees automatiquement a l&apos;emplacement de livraison.
             </p>
+            {tout_recu && (
+              <p className="text-xs text-success bg-success/5 border border-success/20 rounded-md px-3 py-2">
+                Toutes les lignes ont deja ete entierement receptionnees.
+              </p>
+            )}
             <div className="space-y-2">
               {(commande.lignes ?? []).map((l) => {
                 const reste = l.quantiteCommandee - l.quantiteRecue;
+                const enDepassement = lignesEnDepassement.includes(l.id);
                 return (
-                  <div key={l.id} className="flex items-center gap-2 p-2 border border-border rounded-lg">
+                  <div
+                    key={l.id}
+                    className={`flex items-center gap-2 p-2 border rounded-lg ${
+                      enDepassement ? "border-danger/60 bg-danger/5" : "border-border"
+                    }`}
+                  >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{l.nomProduit}</p>
                       <p className="text-xs text-muted truncate">
@@ -91,16 +126,27 @@ export function ModalReception({ ouvert, commande, onFermer }: Props) {
                         Commandé {l.quantiteCommandee} · deja recu {l.quantiteRecue}
                         {reste > 0 && <span className="text-warning"> · reste {reste.toFixed(2)}</span>}
                       </p>
+                      {enDepassement && (
+                        <p className="text-xs text-danger mt-0.5">
+                          La quantite saisie depasse le reste a recevoir
+                        </p>
+                      )}
                     </div>
                     <input
                       type="number"
-                      value={quantites[l.id] ?? 0}
-                      onChange={(e) => setQuantites((q) => ({ ...q, [l.id]: Number(e.target.value) }))}
+                      // Fix I4 : pas de NaN — un input vide donne 0
+                      value={Number.isFinite(quantites[l.id]) ? (quantites[l.id] ?? 0) : 0}
+                      onChange={(e) => setQuantites((q) => ({ ...q, [l.id]: parseQte(e.target.value) }))}
                       min={0}
                       max={reste}
                       step="0.001"
                       aria-label={`Quantite recue pour ${l.nomProduit}`}
-                      className="w-24 h-9 px-2 text-sm text-right tabular-nums rounded-md border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30"
+                      aria-invalid={enDepassement}
+                      className={`w-24 h-9 px-2 text-sm text-right tabular-nums rounded-md border bg-surface focus:outline-none focus:ring-2 ${
+                        enDepassement
+                          ? "border-danger focus:ring-danger/30"
+                          : "border-border focus:ring-accent/30"
+                      }`}
                     />
                   </div>
                 );
@@ -128,7 +174,7 @@ export function ModalReception({ ouvert, commande, onFermer }: Props) {
             <Button
               variant="primary"
               onPress={valider}
-              isDisabled={reception.isPending || !aReceptionner}
+              isDisabled={reception.isPending || !aReceptionner || lignesEnDepassement.length > 0}
             >
               {reception.isPending ? "Enregistrement..." : "Valider la reception"}
             </Button>

@@ -1,5 +1,5 @@
 import {
-  pgTable, uuid, varchar, text, numeric, integer, boolean, timestamp, pgEnum, index,
+  pgTable, uuid, varchar, text, numeric, integer, boolean, timestamp, pgEnum, index, uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
 import { variants } from "./catalog";
@@ -64,7 +64,10 @@ export const purchaseOrders = pgTable("purchase_orders", {
   index("idx_purchase_orders_tenant").on(table.tenantId),
   index("idx_purchase_orders_supplier").on(table.supplierId),
   index("idx_purchase_orders_status").on(table.tenantId, table.status),
-  index("idx_purchase_orders_number").on(table.tenantId, table.orderNumber),
+  // Fix C4 : UNIQUE par (tenantId, orderNumber) — empeche le doublon en
+  // cas de race condition a la creation. Combine avec le retry-on-conflict
+  // cote repository pour serialiser les generations simultanees.
+  uniqueIndex("idx_purchase_orders_number").on(table.tenantId, table.orderNumber),
 ]);
 
 // ─── Purchase Order Lines (Lignes de commande) ──────────────────────────
