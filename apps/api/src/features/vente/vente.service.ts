@@ -5,6 +5,7 @@ import { StockService } from "../stock/stock.service";
 import { IngredientService } from "../ingredient/ingredient.service";
 import { ProduitRepository } from "../catalogue/repositories/produit.repository";
 import { CatalogueService } from "../catalogue/catalogue.service";
+import { RealtimeGateway } from "../realtime/realtime.gateway";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 import { CashSessionRepository } from "../session-caisse/repositories/cash-session.repository";
 import {
@@ -30,6 +31,7 @@ export class VenteService {
     private readonly ingredientService: IngredientService,
     private readonly produitRepo: ProduitRepository,
     private readonly catalogueService: CatalogueService,
+    private readonly realtime: RealtimeGateway,
     private readonly audit: AuditService,
     @Inject(forwardRef(() => CashSessionRepository))
     private readonly sessionRepo: CashSessionRepository,
@@ -257,6 +259,16 @@ export class VenteService {
         methodes: dto.paiements.map((p) => p.methode),
       },
     });
+
+    // Broadcast aux autres clients du tenant : stock + disponibilites
+    // ont change (vente decremente stock variantes ou ingredients menu),
+    // et le ticket vient d'etre complete (sidebar POS + dashboard).
+    this.realtime.emitToTenant(tenantId, "ticket.completed", {
+      ticketId: ticket.id,
+      emplacementId: ticket.locationId,
+    });
+    this.realtime.emitToTenant(tenantId, "stock.updated", { emplacementId: ticket.locationId });
+    this.realtime.emitToTenant(tenantId, "disponibilites.changed", { emplacementId: ticket.locationId });
 
     const paiements = await this.ticketRepo.obtenirPaiements(ticket.id);
     const response = this.mapTicket(complete, lignes.map(this.mapLigne), paiements.map(this.mapPaiement));

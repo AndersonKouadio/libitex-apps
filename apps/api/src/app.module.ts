@@ -14,6 +14,7 @@ import { UploadModule } from "./features/upload/upload.module";
 import { IngredientModule } from "./features/ingredient/ingredient.module";
 import { EquipeModule } from "./features/equipe/equipe.module";
 import { ClientModule } from "./features/client/client.module";
+import { RealtimeModule } from "./features/realtime/realtime.module";
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ClientModule } from "./features/client/client.module";
     DatabaseModule,
     AuditModule,
     EmailModule,
+    RealtimeModule,
     AuthModule,
     CatalogueModule,
     StockModule,

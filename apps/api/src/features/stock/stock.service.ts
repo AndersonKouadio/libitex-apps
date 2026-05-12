@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException } from "@nestjs/comm
 import { StockRepository } from "./repositories/stock.repository";
 import { StockInsuffisantException } from "../../common/exceptions/metier.exception";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
+import { RealtimeGateway } from "../realtime/realtime.gateway";
 import {
   CreerEmplacementDto, ModifierEmplacementDto, EntreeStockDto,
   AjustementStockDto, TransfertStockDto, AppliquerInventaireDto, InventaireResultatDto,
@@ -13,7 +14,14 @@ export class StockService {
   constructor(
     private readonly stockRepo: StockRepository,
     private readonly audit: AuditService,
+    private readonly realtime: RealtimeGateway,
   ) {}
+
+  /** Helper : broadcast stock.updated + disponibilites.changed pour un emplacement. */
+  private notifierChangementStock(tenantId: string, locationId: string): void {
+    this.realtime.emitToTenant(tenantId, "stock.updated", { emplacementId: locationId });
+    this.realtime.emitToTenant(tenantId, "disponibilites.changed", { emplacementId: locationId });
+  }
 
   async creerEmplacement(tenantId: string, dto: CreerEmplacementDto): Promise<EmplacementResponseDto> {
     const emp = await this.stockRepo.creerEmplacement(tenantId, {
@@ -104,6 +112,7 @@ export class StockService {
         ...(batchId ? { numeroLot: dto.numeroLot, dateExpiration: dto.dateExpiration } : {}),
       },
     });
+    this.notifierChangementStock(tenantId, dto.emplacementId);
     return this.mapMouvement(mvt);
   }
 
@@ -143,6 +152,7 @@ export class StockService {
         note: dto.note,
       },
     });
+    this.notifierChangementStock(tenantId, dto.emplacementId);
     return this.mapMouvement(mvt);
   }
 
@@ -173,6 +183,9 @@ export class StockService {
         note: dto.note,
       },
     });
+    // 2 emplacements impactes par le transfert
+    this.notifierChangementStock(tenantId, dto.depuisEmplacementId);
+    this.notifierChangementStock(tenantId, dto.versEmplacementId);
   }
 
   async obtenirStockActuel(
@@ -242,6 +255,7 @@ export class StockService {
       },
     });
 
+    if (ajustements > 0) this.notifierChangementStock(tenantId, dto.emplacementId);
     return { ajustements, inchanges, total: dto.lignes.length };
   }
 
