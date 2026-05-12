@@ -75,22 +75,22 @@ export function ModalFournisseur({ ouvert, fournisseur, onFermer }: Props) {
           <Modal.Body className="space-y-3">
             <TextField value={etat.nom} onChange={set("nom")} isRequired>
               <Label>Nom de l&apos;entreprise</Label>
-              <Input placeholder="Ets ABC SARL" />
+              <Input placeholder="Ets ABC SARL" autoCapitalize="words" />
               <FieldError />
             </TextField>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <TextField value={etat.nomContact ?? ""} onChange={set("nomContact")}>
                 <Label>Nom du contact</Label>
-                <Input placeholder="M. Kouame" />
+                <Input placeholder="M. Kouame" autoComplete="name" autoCapitalize="words" />
               </TextField>
               <TextField value={etat.telephone ?? ""} onChange={set("telephone")}>
                 <Label>Telephone</Label>
-                <Input placeholder="+225 ..." />
+                <Input placeholder="+225 ..." type="tel" inputMode="tel" autoComplete="tel" />
               </TextField>
             </div>
             <TextField value={etat.email ?? ""} onChange={set("email")}>
               <Label>Email</Label>
-              <Input placeholder="contact@fournisseur.ci" type="email" />
+              <Input placeholder="contact@fournisseur.ci" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" />
             </TextField>
             <TextField value={etat.adresse ?? ""} onChange={set("adresse")}>
               <Label>Adresse</Label>

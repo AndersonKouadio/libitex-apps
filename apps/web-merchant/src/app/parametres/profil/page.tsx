@@ -113,24 +113,24 @@ export default function PageProfilBoutique() {
                 <ChampDevise valeur={devise} onChange={setDevise} />
                 <TextField type="email" value={email} onChange={setEmail}>
                   <Label>Email de contact</Label>
-                  <Input placeholder="contact@boutique.sn" />
+                  <Input placeholder="contact@boutique.sn" inputMode="email" autoComplete="email" autoCapitalize="none" />
                 </TextField>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <TextField value={telephone} onChange={setTelephone}>
                   <Label>Téléphone</Label>
-                  <Input placeholder="+221 77 000 12 34" type="tel" />
+                  <Input placeholder="+221 77 000 12 34" type="tel" inputMode="tel" autoComplete="tel" />
                 </TextField>
                 <TextField value={adresse} onChange={setAdresse}>
                   <Label>Adresse</Label>
-                  <Input placeholder="Plateau, Dakar" />
+                  <Input placeholder="Plateau, Dakar" autoComplete="street-address" autoCapitalize="words" />
                 </TextField>
               </div>
 
               <TextField type="number" value={tauxTva} onChange={setTauxTva}>
                 <Label>Taux de TVA par défaut (%)</Label>
-                <Input placeholder="18" min="0" max="100" step="0.1" />
+                <Input placeholder="18" min="0" max="100" step="0.1" inputMode="decimal" />
                 <p className="text-xs text-muted mt-1">
                   Appliqué aux nouveaux produits. En Côte d'Ivoire, le taux standard est 18%. Mettre 0 pour exonéré.
                 </p>

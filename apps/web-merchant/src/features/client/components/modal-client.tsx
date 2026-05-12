@@ -96,12 +96,12 @@ export function ModalClient({ ouvert, onFermer, client }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <TextField isRequired value={form.prenom} onChange={(v) => maj("prenom", v)}>
                 <Label>Prénom</Label>
-                <Input placeholder="Aminata" autoFocus />
+                <Input placeholder="Aminata" autoFocus autoComplete="given-name" autoCapitalize="words" />
                 <FieldError />
               </TextField>
               <TextField value={form.nomFamille ?? ""} onChange={(v) => maj("nomFamille", v)}>
                 <Label>Nom de famille</Label>
-                <Input placeholder="Diallo" />
+                <Input placeholder="Diallo" autoComplete="family-name" autoCapitalize="words" />
                 <FieldError />
               </TextField>
             </div>
@@ -109,19 +109,19 @@ export function ModalClient({ ouvert, onFermer, client }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <TextField value={form.telephone ?? ""} onChange={(v) => maj("telephone", v)}>
                 <Label>Téléphone</Label>
-                <Input placeholder="+221 77 000 12 34" type="tel" />
+                <Input placeholder="+221 77 000 12 34" type="tel" inputMode="tel" autoComplete="tel" />
                 <FieldError />
               </TextField>
               <TextField type="email" value={form.email ?? ""} onChange={(v) => maj("email", v)}>
                 <Label>Email</Label>
-                <Input placeholder="aminata@example.com" />
+                <Input placeholder="aminata@example.com" inputMode="email" autoComplete="email" autoCapitalize="none" />
                 <FieldError />
               </TextField>
             </div>
 
             <TextField value={form.adresse ?? ""} onChange={(v) => maj("adresse", v)}>
               <Label>Adresse</Label>
-              <Input placeholder="Plateau, Dakar" />
+              <Input placeholder="Plateau, Dakar" autoComplete="street-address" autoCapitalize="words" />
               <FieldError />
             </TextField>
 
