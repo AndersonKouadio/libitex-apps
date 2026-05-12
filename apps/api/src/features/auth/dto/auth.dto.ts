@@ -1,6 +1,21 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsEnum } from "class-validator";
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsEnum, Matches, MaxLength } from "class-validator";
+import { Transform } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { ActivitySector } from "@libitex/shared";
+
+/**
+ * Regex slug kebab-case strict : minuscules + chiffres + tirets, 2-50 chars,
+ * pas de tiret en debut/fin, pas de double-tiret.
+ * Fix I4 Module 7 : evite les URL incoherentes (MAJUSCULES, espaces) ou
+ * dangereuses (caracteres non-ASCII potentiellement encodes URL).
+ */
+const SLUG_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const SLUG_MESSAGE =
+  "Slug invalide : minuscules + chiffres + tirets uniquement, 2-50 caracteres, pas de tiret en debut/fin";
+
+/** Normalise une saisie slug : lower + trim. La validation @Matches fera le reste. */
+const normaliserSlug = (v: unknown): unknown =>
+  typeof v === "string" ? v.trim().toLowerCase() : v;
 
 export class ConnexionDto {
   @ApiProperty({ example: "amadou@boutique-dakar.sn" })
@@ -19,9 +34,13 @@ export class InscriptionDto {
   @IsNotEmpty({ message: "Le nom de la boutique est requis" })
   nomBoutique!: string;
 
-  @ApiProperty({ example: "boutique-dakar" })
+  @ApiProperty({ example: "boutique-dakar", description: "Identifiant URL public (kebab-case)" })
+  @Transform(({ value }) => normaliserSlug(value))
   @IsString()
   @IsNotEmpty({ message: "L'identifiant boutique est requis" })
+  @MinLength(2, { message: "Slug : au moins 2 caracteres" })
+  @MaxLength(50, { message: "Slug : 50 caracteres maximum" })
+  @Matches(SLUG_REGEX, { message: SLUG_MESSAGE })
   slugBoutique!: string;
 
   @ApiProperty({ example: "amadou@boutique-dakar.sn" })
@@ -75,9 +94,13 @@ export class CreerBoutiqueDto {
   @IsNotEmpty({ message: "Le nom de la boutique est requis" })
   nomBoutique!: string;
 
-  @ApiProperty({ example: "ma-seconde-boutique" })
+  @ApiProperty({ example: "ma-seconde-boutique", description: "Identifiant URL public (kebab-case)" })
+  @Transform(({ value }) => normaliserSlug(value))
   @IsString()
   @IsNotEmpty({ message: "L'identifiant boutique est requis" })
+  @MinLength(2, { message: "Slug : au moins 2 caracteres" })
+  @MaxLength(50, { message: "Slug : 50 caracteres maximum" })
+  @Matches(SLUG_REGEX, { message: SLUG_MESSAGE })
   slugBoutique!: string;
 
   @ApiPropertyOptional({ example: "XOF" })

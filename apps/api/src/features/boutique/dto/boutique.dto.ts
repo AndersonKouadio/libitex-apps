@@ -1,20 +1,24 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
-  IsString, IsOptional, IsEmail, IsEnum, IsArray, IsNumber, Min, Max,
+  IsString, IsOptional, IsEmail, IsEnum, IsArray, IsNumber, Min, Max, MaxLength,
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ActivitySector, ProductType } from "@libitex/shared";
+import { SanitizeHtmlString } from "../../../common/sanitize/strip-html";
 
 const METHODES_PAIEMENT = ["CASH", "CARD", "MOBILE_MONEY", "BANK_TRANSFER", "CREDIT"] as const;
 
 export class ModifierBoutiqueDto {
   @ApiPropertyOptional()
+  @SanitizeHtmlString()
   @IsString()
+  @MaxLength(255)
   @IsOptional()
   nom?: string;
 
   @ApiPropertyOptional()
   @IsString()
+  @MaxLength(10)
   @IsOptional()
   devise?: string;
 
@@ -35,12 +39,16 @@ export class ModifierBoutiqueDto {
   email?: string;
 
   @ApiPropertyOptional()
+  @SanitizeHtmlString()
   @IsString()
+  @MaxLength(50)
   @IsOptional()
   telephone?: string;
 
   @ApiPropertyOptional()
+  @SanitizeHtmlString()
   @IsString()
+  @MaxLength(500)
   @IsOptional()
   adresse?: string;
 
