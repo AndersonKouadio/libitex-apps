@@ -2,6 +2,9 @@ import type { ITicket } from "../types/vente.type";
 import { formatMontant } from "./format";
 import { formaterQuantite } from "@/features/unite/types/unite.type";
 import type { UniteMesure } from "@/features/unite/types/unite.type";
+import {
+  retrouverImprimante, envoyerCommandes, genererTicketEscPos, supporteWebUsb,
+} from "@/lib/imprimante-thermique";
 
 interface InfosBoutique {
   nom: string;
@@ -24,15 +27,41 @@ const LIBELLE_PAIEMENT: Record<string, string> = {
 };
 
 /**
- * Genere le HTML d'un ticket prêt à imprimer (format ~80mm), ouvre une fenêtre
- * dédiée et déclenche le dialogue d'impression. Compatible avec une imprimante
- * thermique (via le navigateur) ou une impression A4.
+ * Imprime un ticket. Strategie :
+ * 1) Si WebUSB supporte ET imprimante thermique appairee : envoi direct
+ *    ESC/POS, sans dialog, ~0.5s. Renvoie true.
+ * 2) Sinon : fallback popup HTML 80mm + window.print(). Renvoie true.
+ * 3) Erreur USB (cable debranche, papier...) : on bascule sur le fallback
+ *    HTML pour ne pas perdre l'impression.
  */
-export function imprimerTicket(
+export async function imprimerTicket(
   ticket: ITicket,
   boutique: InfosBoutique,
   monnaie = 0,
   contexte: InfosContexte = {},
+): Promise<void> {
+  if (supporteWebUsb()) {
+    try {
+      const device = await retrouverImprimante();
+      if (device) {
+        const data = genererTicketEscPos(ticket, boutique, monnaie, contexte);
+        await envoyerCommandes(device, data);
+        return;
+      }
+    } catch (err) {
+      // L'erreur USB n'est pas bloquante : on retombe sur la popup HTML
+      // pour que le caissier ait quand meme son ticket.
+      console.warn("Impression USB echouee, fallback HTML :", err);
+    }
+  }
+  imprimerViaPopup(ticket, boutique, monnaie, contexte);
+}
+
+function imprimerViaPopup(
+  ticket: ITicket,
+  boutique: InfosBoutique,
+  monnaie: number,
+  contexte: InfosContexte,
 ): void {
   const html = construireHtml(ticket, boutique, monnaie, contexte);
   const fenetre = window.open("", "_blank", "width=380,height=600");

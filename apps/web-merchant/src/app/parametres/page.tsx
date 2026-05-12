@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Card } from "@heroui/react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { Store, Users, ChevronRight, Building2, User, MapPin, Wallet } from "lucide-react";
+import { Store, Users, ChevronRight, Building2, User, MapPin, Wallet, Printer } from "lucide-react";
 
 interface SectionConfig {
   href: string;
@@ -49,6 +49,13 @@ const SECTIONS: SectionConfig[] = [
     titre: "Méthodes de paiement",
     description: "Activer / désactiver les méthodes proposées à l'encaissement (Espèces, Mobile Money, Carte...).",
     classes: "bg-success/10 text-success",
+  },
+  {
+    href: "/parametres/imprimante",
+    icone: Printer,
+    titre: "Imprimante de tickets",
+    description: "Connecter une imprimante thermique 80mm (USB) pour impression directe sans dialog.",
+    classes: "bg-accent/10 text-accent",
   },
   {
     href: "/parametres/mon-compte",

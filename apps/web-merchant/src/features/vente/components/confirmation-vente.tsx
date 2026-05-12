@@ -1,11 +1,13 @@
 "use client";
 
-import { Modal } from "@heroui/react";
+import { useEffect, useRef } from "react";
+import { Modal, toast } from "@heroui/react";
 import { CheckCircle2, Printer } from "lucide-react";
 import { formatMontant } from "../utils/format";
 import { imprimerTicket } from "../utils/imprimer-ticket";
 import { BoutonPOS } from "./bouton-pos";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { usePreferencesPOS } from "@/lib/preferences-pos";
 import type { ITicket } from "../types/vente.type";
 
 interface Props {
@@ -22,17 +24,36 @@ export function ConfirmationVente({
   numeroTicket, total, monnaie, ticket, numeroSession, onNouvelle,
 }: Props) {
   const { boutiqueActive, utilisateur } = useAuth();
+  const prefs = usePreferencesPOS();
+  // Garde anti-double-print : l'effet pourrait re-fire (StrictMode, re-render).
+  const dejaImprimeRef = useRef(false);
 
-  function handleImprimer() {
+  async function handleImprimer() {
     if (!ticket || !boutiqueActive) return;
     const caissier = `${utilisateur?.prenom ?? ""} ${utilisateur?.nomFamille ?? ""}`.trim();
-    imprimerTicket(
-      ticket,
-      { nom: boutiqueActive.nom, devise: boutiqueActive.devise },
-      monnaie,
-      { caissier: caissier || undefined, numeroSession },
-    );
+    try {
+      await imprimerTicket(
+        ticket,
+        { nom: boutiqueActive.nom, devise: boutiqueActive.devise },
+        monnaie,
+        { caissier: caissier || undefined, numeroSession },
+      );
+    } catch (err) {
+      toast.danger(err instanceof Error ? err.message : "Erreur a l'impression");
+    }
   }
+
+  // Auto-print : si la preference est active et qu'on a un ticket reel,
+  // declenche l'impression direct au montage de la confirmation. Le caissier
+  // n'a rien a cliquer.
+  useEffect(() => {
+    if (!prefs.imprimerAuto) return;
+    if (!ticket || !boutiqueActive) return;
+    if (dejaImprimeRef.current) return;
+    dejaImprimeRef.current = true;
+    handleImprimer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <Modal.Backdrop isOpen onOpenChange={(open) => { if (!open) onNouvelle(); }}>

@@ -36,7 +36,7 @@ export function ModalApercuTicket({
   const aRemise = !!remiseGlobale && remiseGlobale.montant > 0;
   const maintenant = new Date().toISOString();
 
-  function imprimerApercu() {
+  async function imprimerApercu() {
     if (!boutiqueActive) return;
     // Construit un "ticket fictif" depuis l'etat du panier pour reutiliser
     // imprimerTicket(). Pas de paiements car la vente n'est pas encore validee.
@@ -71,7 +71,7 @@ export function ModalApercuTicket({
       paiements: [],
       creeLe: maintenant,
     };
-    imprimerTicket(
+    await imprimerTicket(
       ticketFictif,
       { nom: emplacementNom || boutiqueActive.nom, devise: boutiqueActive.devise },
       0,
