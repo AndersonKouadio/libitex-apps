@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { showcaseAPI } from "../apis/showcase.api";
+import { showcaseAPI, type ListerProduitsPublicsOptions } from "../apis/showcase.api";
 
 export const showcaseKey = (...parts: unknown[]) => ["showcase", ...parts];
 
@@ -14,10 +14,14 @@ export function useBoutiquePubliqueQuery(slug: string) {
   });
 }
 
-export function useProduitsPublicsQuery(slug: string, categorieId?: string) {
+/**
+ * Liste paginee + filtres (recherche, categorie, limit/offset).
+ * Renvoie `{ data, total, limit, offset }` pour permettre la pagination.
+ */
+export function useProduitsPublicsQuery(slug: string, opts: ListerProduitsPublicsOptions = {}) {
   return useQuery({
-    queryKey: showcaseKey("produits", slug, categorieId),
-    queryFn: () => showcaseAPI.listerProduits(slug, categorieId),
+    queryKey: showcaseKey("produits", slug, opts.categorieId, opts.recherche, opts.limit, opts.offset),
+    queryFn: () => showcaseAPI.listerProduits(slug, opts),
     enabled: !!slug,
     staleTime: 60_000,
   });

@@ -1,117 +1,86 @@
-"use client";
-
-import { use, useState } from "react";
-import { Spinner } from "@heroui/react";
-import { Search, Store } from "lucide-react";
-import {
-  useBoutiquePubliqueQuery, useProduitsPublicsQuery, useCategoriesPubliquesQuery,
-} from "@/features/showcase/queries/showcase.query";
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { showcaseAPI } from "@/features/showcase/apis/showcase.api";
 import { HeaderBoutique } from "@/features/showcase/components/header-boutique";
-import { CarteProduitPublic } from "@/features/showcase/components/carte-produit-public";
+import { ShowcaseClient } from "@/features/showcase/components/showcase-client";
 
-export default function PageBoutiquePublic({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params);
-  const { data: boutique, isLoading: chBoutique, error } = useBoutiquePubliqueQuery(slug);
-  const { data: categories } = useCategoriesPubliquesQuery(slug);
-  const [categorieId, setCategorieId] = useState<string>("");
-  const { data: produits } = useProduitsPublicsQuery(slug, categorieId || undefined);
-  const [recherche, setRecherche] = useState("");
+interface PageParams {
+  params: Promise<{ slug: string }>;
+}
 
-  if (chBoutique) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Spinner />
-      </div>
-    );
+/**
+ * Pre-fetch SSR : la boutique + la 1ere page de produits + les categories
+ * sont chargees cote serveur, ce qui permet :
+ * - Indexation moteurs de recherche (le HTML contient les produits)
+ * - Partage social avec preview (OpenGraph)
+ * - Affichage immediat sans spinner pour le visiteur
+ *
+ * Fix C5 + I1 + I6 : SSR + generateMetadata + notFound() pour 404 propre.
+ *
+ * Revalidate 60s : Next.js cache la page generee pendant 1 min, ce qui
+ * combine avec le Cache-Control du backend donne un excellent throughput
+ * meme avec une seule instance API.
+ */
+export const revalidate = 60;
+
+async function chargerBoutique(slug: string) {
+  try {
+    return await showcaseAPI.obtenirBoutique(slug, { next: { revalidate: 60 } });
+  } catch {
+    return null;
   }
+}
 
-  if (error || !boutique) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center p-8">
-          <Store size={32} className="mx-auto mb-3 text-muted opacity-50" />
-          <p className="text-sm text-foreground">Boutique introuvable</p>
-          <p className="text-xs text-muted mt-1">Verifiez l&apos;URL ou contactez le commercant.</p>
-        </div>
-      </div>
-    );
+export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
+  const { slug } = await params;
+  const boutique = await chargerBoutique(slug);
+  if (!boutique) {
+    return { title: "Boutique introuvable", robots: { index: false } };
   }
+  const title = `${boutique.nom} — Boutique en ligne`;
+  const description = boutique.adresse
+    ? `${boutique.nom}, ${boutique.adresse}. Commandez directement par WhatsApp ou telephone.`
+    : `${boutique.nom} — catalogue en ligne. Commandez directement par WhatsApp.`;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      siteName: boutique.nom,
+      images: boutique.logoUrl ? [{ url: boutique.logoUrl }] : undefined,
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+      images: boutique.logoUrl ? [boutique.logoUrl] : undefined,
+    },
+  };
+}
 
-  const filtres = produits ?? [];
-  const visibles = recherche
-    ? filtres.filter((p) => p.nom.toLowerCase().includes(recherche.toLowerCase())
-        || (p.marque ?? "").toLowerCase().includes(recherche.toLowerCase()))
-    : filtres;
+export default async function PageBoutiquePublic({ params }: PageParams) {
+  const { slug } = await params;
+  const boutique = await chargerBoutique(slug);
+
+  // Fix I6 : 404 propre au lieu d'un message custom (meilleur SEO).
+  if (!boutique) notFound();
+
+  // Pre-fetch initial : 1ere page produits + categories en parallele
+  const [produitsInitiaux, categoriesInitiales] = await Promise.all([
+    showcaseAPI.listerProduits(slug, { limit: 24, offset: 0 }, { next: { revalidate: 60 } }),
+    showcaseAPI.listerCategories(slug, { next: { revalidate: 300 } }),
+  ]);
 
   return (
     <>
       <HeaderBoutique boutique={boutique} />
-
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="mb-4 flex flex-wrap gap-3 items-center">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
-            <input
-              type="text"
-              value={recherche}
-              onChange={(e) => setRecherche(e.target.value)}
-              placeholder="Rechercher un produit"
-              className="w-full h-10 pl-8 pr-3 text-sm rounded-md border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30"
-            />
-          </div>
-        </div>
-
-        {(categories?.length ?? 0) > 0 && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setCategorieId("")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                !categorieId
-                  ? "bg-accent text-accent-foreground"
-                  : "bg-surface text-foreground border border-border hover:border-accent/40"
-              }`}
-            >
-              Tout
-            </button>
-            {(categories ?? []).map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setCategorieId(c.id)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
-                  categorieId === c.id
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-surface text-foreground border border-border hover:border-accent/40"
-                }`}
-              >
-                {c.nom}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {visibles.length === 0 ? (
-          <div className="text-center py-16">
-            <Store size={32} className="mx-auto mb-3 text-muted opacity-30" />
-            <p className="text-sm text-muted">
-              {recherche ? "Aucun resultat" : "Aucun produit pour le moment"}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {visibles.map((p) => (
-              <CarteProduitPublic
-                key={p.id}
-                slug={boutique.slug}
-                produit={p}
-                devise={boutique.devise}
-              />
-            ))}
-          </div>
-        )}
-      </main>
-
+      <ShowcaseClient
+        boutique={boutique}
+        produitsInitiaux={produitsInitiaux}
+        categoriesInitiales={categoriesInitiales}
+      />
       <footer className="max-w-6xl mx-auto px-4 py-8 text-center text-xs text-muted">
         Propulse par <span className="font-semibold text-foreground">LIBITEX</span>
       </footer>
