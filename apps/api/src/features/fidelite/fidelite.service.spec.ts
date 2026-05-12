@@ -2,26 +2,40 @@ import { Test } from "@nestjs/testing";
 import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { FideliteService } from "./fidelite.service";
 import { FideliteRepository } from "./repositories/fidelite.repository";
+import { AuditService } from "../../common/audit/audit.service";
+import { RealtimeGateway } from "../realtime/realtime.gateway";
 
 describe("FideliteService", () => {
   let service: FideliteService;
   let repoMock: jest.Mocked<FideliteRepository>;
+  let auditMock: jest.Mocked<AuditService>;
+  let realtimeMock: jest.Mocked<RealtimeGateway>;
 
   beforeEach(async () => {
     repoMock = {
       obtenirOuCreerConfig: jest.fn(),
       modifierConfig: jest.fn(),
-      ajouterTransaction: jest.fn(),
-      solde: jest.fn(),
+      ajouterTransaction: jest.fn().mockResolvedValue({ id: "tx-1" }),
+      solde: jest.fn().mockResolvedValue(0),
       historique: jest.fn(),
       clientAppartientTenant: jest.fn().mockResolvedValue(true),
       estViolationUniqueLoyalty: jest.fn().mockReturnValue(false),
     } as unknown as jest.Mocked<FideliteRepository>;
 
+    auditMock = {
+      log: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<AuditService>;
+
+    realtimeMock = {
+      emitToTenant: jest.fn(),
+    } as unknown as jest.Mocked<RealtimeGateway>;
+
     const moduleRef = await Test.createTestingModule({
       providers: [
         FideliteService,
         { provide: FideliteRepository, useValue: repoMock },
+        { provide: AuditService, useValue: auditMock },
+        { provide: RealtimeGateway, useValue: realtimeMock },
       ],
     }).compile();
 
@@ -205,6 +219,111 @@ describe("FideliteService", () => {
 
       await expect(service.ajusterPointsDepuisTicket("t1", "c1", "tk1", -50))
         .resolves.toBeUndefined();
+    });
+  });
+
+  describe("D3 - Audit + Realtime + Coherence ratios", () => {
+    it("audit log apres ajusterPoints manuel (fix I1)", async () => {
+      repoMock.clientAppartientTenant.mockResolvedValue(true);
+      repoMock.solde.mockResolvedValue(100);
+      repoMock.ajouterTransaction.mockResolvedValue({ id: "tx-1" } as any);
+
+      await service.ajusterPoints("t1", "u1", "c1", { points: 50, note: "bonus" });
+
+      expect(auditMock.log).toHaveBeenCalledWith(expect.objectContaining({
+        tenantId: "t1",
+        userId: "u1",
+        action: "FIDELITE_POINTS_ADJUSTED",
+        entityType: "CUSTOMER",
+        entityId: "c1",
+        after: expect.objectContaining({
+          points: 50,
+          soldeAvant: 100,
+          soldeApres: 150,
+          note: "bonus",
+        }),
+      }));
+    });
+
+    it("realtime emit fidelite.changed balance apres ajustement", async () => {
+      repoMock.clientAppartientTenant.mockResolvedValue(true);
+      repoMock.solde.mockResolvedValue(100);
+      repoMock.ajouterTransaction.mockResolvedValue({ id: "tx-1" } as any);
+
+      await service.ajusterPoints("t1", "u1", "c1", { points: 50 });
+
+      expect(realtimeMock.emitToTenant).toHaveBeenCalledWith(
+        "t1", "fidelite.changed",
+        expect.objectContaining({ type: "balance", customerId: "c1" }),
+      );
+    });
+
+    it("realtime emit apres EARN (credit ticket)", async () => {
+      repoMock.obtenirOuCreerConfig.mockResolvedValue({
+        isActive: true, earnAmount: "100",
+      } as any);
+
+      await service.crediterDepuisTicket("t1", "c1", "tk1", 10000);
+
+      expect(realtimeMock.emitToTenant).toHaveBeenCalledWith(
+        "t1", "fidelite.changed",
+        expect.objectContaining({ type: "balance", customerId: "c1" }),
+      );
+    });
+
+    it("realtime emit apres REDEEM (debit ticket)", async () => {
+      repoMock.solde.mockResolvedValue(100);
+
+      await service.ajusterPointsDepuisTicket("t1", "c1", "tk1", -50);
+
+      expect(realtimeMock.emitToTenant).toHaveBeenCalledWith(
+        "t1", "fidelite.changed",
+        expect.objectContaining({ type: "balance", customerId: "c1" }),
+      );
+    });
+
+    it("rejette config si valeurPoint > ratioGain (fix I7 abuse)", async () => {
+      repoMock.obtenirOuCreerConfig.mockResolvedValue({
+        earnAmount: "100", redeemValue: "5",
+      } as any);
+
+      // valeur point 200 > ratio gain 100 -> rejet
+      await expect(service.modifierConfig("t1", "u1", {
+        ratioGain: 100, valeurPoint: 200,
+      })).rejects.toThrow(/suspecte/i);
+    });
+
+    it("accepte config si valeurPoint <= ratioGain (cas normal)", async () => {
+      repoMock.obtenirOuCreerConfig.mockResolvedValue({
+        id: "cfg1", isActive: true, programName: "P", earnAmount: "100",
+        redeemValue: "5", minRedeemPoints: 100,
+      } as any);
+      repoMock.modifierConfig.mockResolvedValue({
+        id: "cfg1", isActive: true, programName: "P", earnAmount: "100",
+        redeemValue: "5", minRedeemPoints: 100,
+      } as any);
+
+      await expect(service.modifierConfig("t1", "u1", {
+        ratioGain: 100, valeurPoint: 5,
+      })).resolves.toBeDefined();
+    });
+
+    it("audit log apres modifierConfig (fix I1)", async () => {
+      repoMock.obtenirOuCreerConfig.mockResolvedValue({
+        id: "cfg1", isActive: false, programName: "Old", earnAmount: "100",
+        redeemValue: "5", minRedeemPoints: 100,
+      } as any);
+      repoMock.modifierConfig.mockResolvedValue({
+        id: "cfg1", isActive: true, programName: "New", earnAmount: "100",
+        redeemValue: "5", minRedeemPoints: 100,
+      } as any);
+
+      await service.modifierConfig("t1", "u1", { actif: true, nomProgramme: "New" });
+
+      expect(auditMock.log).toHaveBeenCalledWith(expect.objectContaining({
+        action: "FIDELITE_CONFIG_UPDATED",
+        entityType: "FIDELITE_CONFIG",
+      }));
     });
   });
 });
