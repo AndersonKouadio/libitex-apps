@@ -79,7 +79,7 @@ export default function PageMotDePasseOublie() {
 
                 <TextField isRequired type="email" value={email} onChange={setEmail}>
                   <Label>Adresse email</Label>
-                  <Input placeholder="nom@boutique.sn" autoComplete="email" autoFocus />
+                  <Input placeholder="nom@boutique.sn" inputMode="email" autoComplete="email" autoCapitalize="none" autoFocus />
                   <FieldError />
                 </TextField>
 

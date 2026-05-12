@@ -71,7 +71,7 @@ export default function PageConnexion() {
               onChange={(v) => setForm({ ...form, email: v })}
             >
               <Label>Adresse email</Label>
-              <Input placeholder="nom@boutique.sn" autoComplete="email" />
+              <Input placeholder="nom@boutique.sn" inputMode="email" autoComplete="email" autoCapitalize="none" autoFocus />
               <FieldError />
             </TextField>
 

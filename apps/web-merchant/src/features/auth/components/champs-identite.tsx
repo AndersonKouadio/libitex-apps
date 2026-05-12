@@ -19,11 +19,11 @@ export function ChampsIdentite({ prenom, nomFamille, email, telephone, onChange 
         <div className="grid grid-cols-2 gap-3">
           <TextField isRequired name="prenom" value={prenom} onChange={(v) => onChange("prenom", v)}>
             <Label>Prénom</Label>
-            <Input placeholder="Amadou" />
+            <Input placeholder="Amadou" autoComplete="given-name" autoCapitalize="words" />
           </TextField>
           <TextField isRequired name="nomFamille" value={nomFamille} onChange={(v) => onChange("nomFamille", v)}>
             <Label>Nom</Label>
-            <Input placeholder="Diallo" />
+            <Input placeholder="Diallo" autoComplete="family-name" autoCapitalize="words" />
           </TextField>
         </div>
       </div>
@@ -31,11 +31,11 @@ export function ChampsIdentite({ prenom, nomFamille, email, telephone, onChange 
       <div className="space-y-3">
         <TextField isRequired name="email" type="email" value={email} onChange={(v) => onChange("email", v)}>
           <Label>Adresse email</Label>
-          <Input placeholder="amadou@boutique.sn" />
+          <Input placeholder="amadou@boutique.sn" inputMode="email" autoComplete="email" autoCapitalize="none" />
         </TextField>
         <TextField name="telephone" type="tel" value={telephone} onChange={(v) => onChange("telephone", v)}>
           <Label>Téléphone</Label>
-          <Input placeholder="+221 77 000 12 34" />
+          <Input placeholder="+221 77 000 12 34" inputMode="tel" autoComplete="tel" />
         </TextField>
       </div>
     </>

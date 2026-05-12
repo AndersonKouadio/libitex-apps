@@ -45,6 +45,15 @@ export function AppShell({ children, pleinEcran = false }: Props) {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Module 9 D3 : skip link a11y. Cache visuellement mais visible
+          au focus clavier — premier élément focusable, sans souris. */}
+      <a
+        href="#contenu-principal"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-3 focus:py-2 focus:rounded-md focus:bg-accent focus:text-accent-foreground focus:shadow-md focus:outline-none focus:ring-2 focus:ring-accent/30"
+      >
+        Aller au contenu
+      </a>
+
       {/* Overlay mobile (clic en dehors pour fermer) */}
       {tiroirOuvert && (
         <button
@@ -67,7 +76,7 @@ export function AppShell({ children, pleinEcran = false }: Props) {
       {/* Contenu principal : Topbar (avec breadcrumbs) + page */}
       <div className={`min-h-screen flex flex-col lg:ml-[256px] ${pleinEcran ? "" : "pb-20 lg:pb-0"}`}>
         {!pleinEcran && <Topbar />}
-        <main className="flex-1">{children}</main>
+        <main id="contenu-principal" className="flex-1" tabIndex={-1}>{children}</main>
       </div>
 
       {/* Bottom nav mobile (sauf POS) */}
