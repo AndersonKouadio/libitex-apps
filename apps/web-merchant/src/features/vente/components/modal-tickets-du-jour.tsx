@@ -74,7 +74,7 @@ export function ModalTicketsDuJour({ ouvert, onFermer, numeroSession }: Props) {
 
   return (
     <Modal.Backdrop isOpen={ouvert} onOpenChange={(o) => { if (!o) onFermer(); }}>
-      <Modal.Container size="md" scroll="inside">
+      <Modal.Container size="lg" scroll="inside">
         <Modal.Dialog>
           <Modal.CloseTrigger />
           <Modal.Header>
@@ -142,7 +142,9 @@ export function ModalTicketsDuJour({ ouvert, onFermer, numeroSession }: Props) {
             {tickets.length > 0 && (
               <p className="text-[11px] text-muted text-center mt-3 flex items-center justify-center gap-1.5">
                 <AlertCircle size={11} />
-                {tickets.length} ticket{tickets.length > 1 ? "s" : ""} du jour. L&apos;historique complet est dans Rapports.
+                <span>
+                  {`${tickets.length} ticket${tickets.length > 1 ? "s" : ""} du jour. L'historique complet est dans Rapports.`}
+                </span>
               </p>
             )}
           </Modal.Body>
