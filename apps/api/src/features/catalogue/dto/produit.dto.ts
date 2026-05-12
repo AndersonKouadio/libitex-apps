@@ -6,6 +6,7 @@ import { Type, Transform } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { UniteMesure } from "@libitex/shared";
 import { PaginationDto } from "../../../common/dto/pagination.dto";
+import { SanitizeHtmlString } from "../../../common/sanitize/strip-html";
 
 export class ListerProduitsQueryDto extends PaginationDto {
   @ApiPropertyOptional({ description: "Recherche dans nom et marque" })
@@ -131,11 +132,13 @@ export class CreerVarianteDto {
 
 export class CreerProduitDto {
   @ApiProperty({ example: "Samsung Galaxy A15" })
+  @SanitizeHtmlString()
   @IsString()
   @IsNotEmpty()
   nom!: string;
 
   @ApiPropertyOptional({ example: "Smartphone 4G, écran 6.5 pouces" })
+  @SanitizeHtmlString()
   @IsString()
   @IsOptional()
   description?: string;
@@ -150,6 +153,7 @@ export class CreerProduitDto {
   categorieId?: string;
 
   @ApiPropertyOptional({ example: "Samsung" })
+  @SanitizeHtmlString()
   @IsString()
   @IsOptional()
   marque?: string;
@@ -251,11 +255,13 @@ export class CreerProduitDto {
 
 export class ModifierProduitDto {
   @ApiPropertyOptional()
+  @SanitizeHtmlString()
   @IsString()
   @IsOptional()
   nom?: string;
 
   @ApiPropertyOptional()
+  @SanitizeHtmlString()
   @IsString()
   @IsOptional()
   description?: string;
