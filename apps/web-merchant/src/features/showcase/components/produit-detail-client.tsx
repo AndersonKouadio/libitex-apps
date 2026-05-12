@@ -2,9 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Package, MessageCircle, Phone } from "lucide-react";
-import { formatMontant } from "@/features/vente/utils/format";
-import type { IBoutiquePublic, IProduitPublic } from "../types/showcase.type";
+import Image from "next/image";
+import { toast } from "@heroui/react";
+import { ArrowLeft, Package, MessageCircle, Phone, Share2 } from "lucide-react";
+import { formatPrix } from "../utils/format-prix";
+import type { IBoutiquePublic, IProduitPublic, IVariantePublic } from "../types/showcase.type";
+
+/**
+ * Libelle d'une variante : preference au nom, sinon "Standard" pour eviter
+ * d'afficher des SKU bruts comme "SKU-CAF-001" cote client.
+ * Fix I7 Module 7.
+ */
+function libelleVariante(v: IVariantePublic): string {
+  return v.nom?.trim() || "Standard";
+}
 
 interface Props {
   boutique: IBoutiquePublic;
@@ -31,6 +42,30 @@ export function ProduitDetailClient({ boutique, produit }: Props) {
   const numero = boutique.telephone?.replace(/[^\d]/g, "");
   const whatsapp = numero ? `https://wa.me/${numero}?text=${message}` : null;
 
+  /**
+   * Fix m3 Module 7 : Web Share API mobile, fallback clipboard desktop.
+   * Permet au client de partager le lien produit en 1 clic (engagement).
+   */
+  async function partager() {
+    if (typeof window === "undefined") return;
+    const url = window.location.href;
+    const titre = `${produit.nom} — ${boutique.nom}`;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: titre, url });
+        return;
+      } catch {
+        // utilisateur annule -> on tombe sur la copie clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Lien copie !");
+    } catch {
+      toast.danger("Copie impossible — copiez manuellement l'URL");
+    }
+  }
+
   return (
     <main className="max-w-6xl mx-auto px-4 py-6">
       <Link href={`/boutique/${boutique.slug}`} className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-accent mb-4">
@@ -39,10 +74,16 @@ export function ProduitDetailClient({ boutique, produit }: Props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
-          <div className="aspect-square bg-surface-secondary rounded-xl overflow-hidden flex items-center justify-center">
+          <div className="aspect-square bg-surface-secondary rounded-xl overflow-hidden relative flex items-center justify-center">
             {produit.images[imageActive] ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={produit.images[imageActive]} alt={produit.nom} className="w-full h-full object-cover" />
+              <Image
+                src={produit.images[imageActive]}
+                alt={produit.nom}
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover"
+                priority
+              />
             ) : (
               <Package size={48} className="text-muted opacity-30" />
             )}
@@ -54,12 +95,17 @@ export function ProduitDetailClient({ boutique, produit }: Props) {
                   key={img}
                   type="button"
                   onClick={() => setImageActive(i)}
-                  className={`aspect-square rounded-lg overflow-hidden border-2 ${
+                  className={`aspect-square rounded-lg overflow-hidden border-2 relative ${
                     imageActive === i ? "border-accent" : "border-transparent"
                   }`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={img} alt={`${produit.nom} ${i + 1}`} className="w-full h-full object-cover" />
+                  <Image
+                    src={img}
+                    alt={`${produit.nom} ${i + 1}`}
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                  />
                 </button>
               ))}
             </div>
@@ -76,17 +122,15 @@ export function ProduitDetailClient({ boutique, produit }: Props) {
             {prixPromo ? (
               <>
                 <span className="text-3xl font-bold text-danger tabular-nums">
-                  {formatMontant(prixPromo)}
-                  <span className="text-base font-normal ml-1.5">{boutique.devise}</span>
+                  {formatPrix(prixPromo, boutique.devise)}
                 </span>
                 <span className="text-base text-muted line-through tabular-nums">
-                  {formatMontant(prix)}
+                  {formatPrix(prix, boutique.devise)}
                 </span>
               </>
             ) : (
               <span className="text-3xl font-bold text-foreground tabular-nums">
-                {formatMontant(prix)}
-                <span className="text-base font-normal text-muted ml-1.5">{boutique.devise}</span>
+                {formatPrix(prix, boutique.devise)}
               </span>
             )}
           </div>
@@ -118,7 +162,7 @@ export function ProduitDetailClient({ boutique, produit }: Props) {
                         : "bg-surface border-border hover:border-accent/40"
                     }`}
                   >
-                    {v.nom || v.sku} — {formatMontant(v.prixDetail)} {boutique.devise}
+                    {libelleVariante(v)} — {formatPrix(v.prixDetail, boutique.devise)}
                   </button>
                 ))}
               </div>
@@ -144,6 +188,15 @@ export function ProduitDetailClient({ boutique, produit }: Props) {
                 <Phone size={16} /> Appeler {boutique.telephone}
               </a>
             )}
+            {/* Fix m3 Module 7 : bouton Partager (Web Share API mobile,
+                clipboard fallback desktop). */}
+            <button
+              type="button"
+              onClick={partager}
+              className="flex items-center justify-center gap-2 w-full py-3 text-sm font-semibold rounded-lg bg-surface border border-border text-foreground hover:border-accent/40"
+            >
+              <Share2 size={16} /> Partager ce produit
+            </button>
           </div>
         </div>
       </div>
