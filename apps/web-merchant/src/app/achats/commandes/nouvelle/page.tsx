@@ -2,32 +2,30 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Button, TextField, Label, Input, TextArea, NumberField, SearchField,
-  Select, ListBox, Card, toast, Skeleton,
-} from "@heroui/react";
-import { ArrowLeft, Trash2, Plus } from "lucide-react";
+import { Button, toast } from "@heroui/react";
+import { ArrowLeft } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { ChampDate } from "@/components/forms/champ-date";
 import { useFournisseurListQuery, useCreerCommandeMutation } from "@/features/achat/queries/achat.query";
+import { commandeSchema } from "@/features/achat/schemas/achat.schema";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import { useProduitListQuery } from "@/features/catalogue/queries/produit-list.query";
-import { formatMontant } from "@/features/vente/utils/format";
+import { FormulaireInfosCommande } from "@/features/achat/components/formulaire-infos-commande";
+import {
+  LignesCommandeEdition,
+  type LigneEdition,
+  type VarianteDispo,
+} from "@/features/achat/components/lignes-commande-edition";
 
-interface Ligne {
-  varianteId: string;
-  produitId: string;
-  nomProduit: string;
-  nomVariante: string | null;
-  sku: string;
-  quantite: number;
-  prixUnitaire: number;
-}
+/** Types de produits a stock (commandables aupres d'un fournisseur).
+ *  MENU est exclu : les recettes ne s'achetent pas, ce sont leurs
+ *  ingredients qui sont commandes. */
+const TYPES_AVEC_STOCK = new Set(["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE"]);
 
 export default function PageNouvelleCommande() {
   const router = useRouter();
-  const { data: fournisseurs } = useFournisseurListQuery();
+  // Fix I3 : on ne propose que les fournisseurs actifs.
+  const { data: fournisseurs } = useFournisseurListQuery(undefined, { actifsSeulement: true });
   const { data: emplacements } = useEmplacementListQuery();
   const { data: produitsData, isLoading: chargementProduits } = useProduitListQuery(
     1, undefined, { isSupplement: null, actif: true },
@@ -39,25 +37,13 @@ export default function PageNouvelleCommande() {
   const [dateAttendue, setDateAttendue] = useState("");
   const [notes, setNotes] = useState("");
   const [recherche, setRecherche] = useState("");
-  const [lignes, setLignes] = useState<Ligne[]>([]);
+  const [lignes, setLignes] = useState<LigneEdition[]>([]);
 
   const produits = produitsData?.data ?? [];
 
-  /**
-   * Produits commandables aupres d'un fournisseur = produits a stock.
-   * On exclut :
-   * - MENU : recettes composees d'ingredients. On commande les ingredients,
-   *   pas la recette elle-meme (qui n'a pas de cout d'achat propre).
-   *
-   * On garde :
-   * - SIMPLE / VARIANT / SERIALIZED / PERISHABLE : tous tracent du stock
-   * - isSupplement : true ou false (les supplements sont eux-memes des
-   *   produits a commander : sauce piquante, sucre, etc.)
-   */
-  const TYPES_AVEC_STOCK = new Set(["SIMPLE", "VARIANT", "SERIALIZED", "PERISHABLE"]);
-
-  const variantesDispo = useMemo(() => {
-    const flat: Array<{ produitId: string; varianteId: string; nomProduit: string; nomVariante: string | null; sku: string; prixAchat: number }> = [];
+  /** Liste plate des variantes commandables, filtrees par recherche. */
+  const variantesDispo = useMemo<VarianteDispo[]>(() => {
+    const flat: VarianteDispo[] = [];
     for (const p of produits) {
       if (!TYPES_AVEC_STOCK.has(p.typeProduit)) continue;
       for (const v of p.variantes) {
@@ -80,7 +66,7 @@ export default function PageNouvelleCommande() {
     ).slice(0, 30);
   }, [produits, recherche]);
 
-  function ajouterLigne(v: typeof variantesDispo[number]) {
+  function ajouterLigne(v: VarianteDispo) {
     setLignes((prev) => {
       const exist = prev.find((l) => l.varianteId === v.varianteId);
       if (exist) {
@@ -100,11 +86,6 @@ export default function PageNouvelleCommande() {
     });
   }
 
-  /**
-   * Fix I4 : NumberField (HeroUI v3) garantit deja une valeur numerique
-   * valide via son onChange (jamais NaN). On ne fait que clamper a 0+
-   * pour eviter les nombres negatifs en cas de saisie clavier directe.
-   */
   function modifierQuantite(idx: number, qte: number) {
     const val = Number.isFinite(qte) && qte >= 0 ? qte : 0;
     setLignes((prev) => prev.map((l, i) => (i === idx ? { ...l, quantite: val } : l)));
@@ -117,26 +98,33 @@ export default function PageNouvelleCommande() {
     setLignes((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  const total = lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire, 0);
-
   async function valider() {
     if (!fournisseurId) { toast.danger("Choisissez un fournisseur"); return; }
     if (!emplacementId) { toast.danger("Choisissez un emplacement de livraison"); return; }
     if (lignes.length === 0) { toast.danger("Ajoutez au moins une ligne"); return; }
     const valides = lignes.filter((l) => l.quantite > 0);
     if (valides.length === 0) { toast.danger("Toutes les quantites sont a 0"); return; }
+
+    // Fix m5 + m6 : validation Zod complete (dateAttendue >= today,
+    // notes <= 500 chars).
+    const parsed = commandeSchema.safeParse({
+      fournisseurId,
+      emplacementId,
+      dateAttendue: dateAttendue || undefined,
+      notes: notes || undefined,
+      lignes: valides.map((l) => ({
+        varianteId: l.varianteId,
+        quantite: l.quantite,
+        prixUnitaire: l.prixUnitaire,
+      })),
+    });
+    if (!parsed.success) {
+      toast.danger(parsed.error.issues[0]?.message ?? "Donnees invalides");
+      return;
+    }
+
     try {
-      const commande = await creer.mutateAsync({
-        fournisseurId,
-        emplacementId,
-        dateAttendue: dateAttendue || undefined,
-        notes: notes || undefined,
-        lignes: valides.map((l) => ({
-          varianteId: l.varianteId,
-          quantite: l.quantite,
-          prixUnitaire: l.prixUnitaire,
-        })),
-      });
+      const commande = await creer.mutateAsync(parsed.data);
       router.push(`/achats/commandes/${commande.id}`);
     } catch {
       // toast deja affiche par la mutation
@@ -156,174 +144,29 @@ export default function PageNouvelleCommande() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-1">
-          <Card.Content className="p-4 space-y-3">
-            <p className="text-sm font-semibold text-foreground">Informations</p>
-            <Select
-              selectedKey={fournisseurId || undefined}
-              onSelectionChange={(k) => setFournisseurId(String(k))}
-              aria-label="Fournisseur"
-            >
-              <Label>Fournisseur</Label>
-              <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
-              <Select.Popover>
-                <ListBox>
-                  {(fournisseurs ?? []).map((f) => (
-                    <ListBox.Item key={f.id} id={f.id} textValue={f.nom}>{f.nom}</ListBox.Item>
-                  ))}
-                </ListBox>
-              </Select.Popover>
-            </Select>
-            <Select
-              selectedKey={emplacementId || undefined}
-              onSelectionChange={(k) => setEmplacementId(String(k))}
-              aria-label="Emplacement de livraison"
-            >
-              <Label>Emplacement de livraison</Label>
-              <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
-              <Select.Popover>
-                <ListBox>
-                  {(emplacements ?? []).map((e) => (
-                    <ListBox.Item key={e.id} id={e.id} textValue={e.nom}>{e.nom}</ListBox.Item>
-                  ))}
-                </ListBox>
-              </Select.Popover>
-            </Select>
-            <ChampDate
-              label="Date de livraison attendue"
-              value={dateAttendue}
-              onChange={setDateAttendue}
-            />
-            <TextField value={notes} onChange={setNotes}>
-              <Label>Notes</Label>
-              <TextArea rows={2} placeholder="Reference du fournisseur, instructions..." />
-            </TextField>
-          </Card.Content>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <Card.Content className="p-4 space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-foreground">
-                Lignes ({lignes.length})
-              </p>
-              <p className="text-sm font-bold tabular-nums">
-                Total : {formatMontant(total)} F
-              </p>
-            </div>
-
-            {lignes.length === 0 ? (
-              <p className="text-xs text-muted text-center py-4">
-                Aucune ligne. Recherchez un produit ci-dessous pour ajouter.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {lignes.map((l, i) => (
-                  <div key={`${l.varianteId}-${i}`} className="flex items-center gap-2 p-2 border border-border rounded-lg">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{l.nomProduit}</p>
-                      <p className="text-xs text-muted truncate">
-                        {l.nomVariante ? `${l.nomVariante} · ` : ""}{l.sku}
-                      </p>
-                    </div>
-                    <NumberField
-                      value={Number.isFinite(l.quantite) ? l.quantite : 0}
-                      onChange={(v) => modifierQuantite(i, v)}
-                      minValue={0}
-                      step={0.001}
-                      aria-label="Quantite a commander"
-                      className="w-24"
-                    >
-                      <NumberField.Group>
-                        <NumberField.Input
-                          placeholder="Quantite"
-                          className="text-right tabular-nums"
-                        />
-                      </NumberField.Group>
-                    </NumberField>
-                    <NumberField
-                      value={Number.isFinite(l.prixUnitaire) ? l.prixUnitaire : 0}
-                      onChange={(v) => modifierPrix(i, v)}
-                      minValue={0}
-                      step={1}
-                      aria-label="Prix unitaire d'achat"
-                      className="w-28"
-                    >
-                      <NumberField.Group>
-                        <NumberField.Input
-                          placeholder="Prix unitaire"
-                          className="text-right tabular-nums"
-                        />
-                      </NumberField.Group>
-                    </NumberField>
-                    <span className="w-24 text-right text-sm font-semibold tabular-nums shrink-0">
-                      {formatMontant(l.quantite * l.prixUnitaire)} F
-                    </span>
-                    <Button
-                      variant="ghost"
-                      className="h-8 w-8 p-0 min-w-0 text-danger"
-                      aria-label="Retirer"
-                      onPress={() => retirerLigne(i)}
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="border-t border-border pt-3">
-              <p className="text-xs font-semibold text-muted mb-2">Ajouter un produit</p>
-              <SearchField
-                value={recherche}
-                onChange={setRecherche}
-                aria-label="Rechercher un produit a ajouter"
-                className="mb-2 w-full"
-              >
-                <SearchField.Group>
-                  <SearchField.SearchIcon />
-                  <SearchField.Input placeholder="Rechercher par nom, variante ou SKU" />
-                  <SearchField.ClearButton />
-                </SearchField.Group>
-              </SearchField>
-              {chargementProduits ? (
-                // Skeleton plutot qu'un loader : occupe l'espace exact
-                // attendu, evite le saut visuel quand les vraies lignes arrivent.
-                <div className="max-h-60 overflow-y-auto space-y-1">
-                  {[...Array(6)].map((_, i) => (
-                    <Skeleton key={i} className="h-8 w-full rounded" />
-                  ))}
-                </div>
-              ) : (
-                <div className="max-h-60 overflow-y-auto space-y-1">
-                  {variantesDispo.length === 0 ? (
-                    <p className="text-xs text-muted text-center py-3">Aucun resultat</p>
-                  ) : (
-                    variantesDispo.map((v) => (
-                      <button
-                        key={v.varianteId}
-                        type="button"
-                        onClick={() => ajouterLigne(v)}
-                        className="w-full flex items-center justify-between gap-2 px-2 py-1.5 text-left rounded hover:bg-surface-secondary"
-                      >
-                        <span className="flex-1 min-w-0">
-                          <span className="text-sm font-medium block truncate">{v.nomProduit}</span>
-                          <span className="text-xs text-muted block truncate">
-                            {v.nomVariante ? `${v.nomVariante} · ` : ""}{v.sku}
-                          </span>
-                        </span>
-                        <span className="text-xs text-muted tabular-nums shrink-0">
-                          {formatMontant(v.prixAchat)} F
-                        </span>
-                        <Plus size={14} className="text-accent shrink-0" />
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          </Card.Content>
-        </Card>
+        <FormulaireInfosCommande
+          fournisseurs={fournisseurs ?? []}
+          emplacements={emplacements ?? []}
+          fournisseurId={fournisseurId}
+          emplacementId={emplacementId}
+          dateAttendue={dateAttendue}
+          notes={notes}
+          onFournisseur={setFournisseurId}
+          onEmplacement={setEmplacementId}
+          onDate={setDateAttendue}
+          onNotes={setNotes}
+        />
+        <LignesCommandeEdition
+          lignes={lignes}
+          recherche={recherche}
+          variantesDispo={variantesDispo}
+          chargementProduits={chargementProduits}
+          onAjouter={ajouterLigne}
+          onQuantite={modifierQuantite}
+          onPrix={modifierPrix}
+          onRetirer={retirerLigne}
+          onRecherche={setRecherche}
+        />
       </div>
 
       <div className="mt-4 flex justify-end gap-2">

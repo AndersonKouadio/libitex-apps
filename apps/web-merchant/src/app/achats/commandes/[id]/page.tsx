@@ -11,23 +11,11 @@ import {
 } from "@/features/achat/queries/achat.query";
 import { ModalReception } from "@/features/achat/components/modal-reception";
 import { formatMontant } from "@/features/vente/utils/format";
-import type { StatutCommande } from "@/features/achat/types/achat.type";
+import {
+  LIBELLE_STATUT_COMMANDE as LIBELLE_STATUT,
+  CLASSES_STATUT_COMMANDE as CLASSES_STATUT,
+} from "@/features/achat/utils/statut";
 import { useConfirmation } from "@/providers/confirmation-provider";
-
-const LIBELLE_STATUT: Record<StatutCommande, string> = {
-  DRAFT: "Brouillon",
-  SENT: "Envoyee",
-  PARTIAL: "Partielle",
-  RECEIVED: "Recue",
-  CANCELLED: "Annulee",
-};
-const CLASSES_STATUT: Record<StatutCommande, string> = {
-  DRAFT: "bg-muted/10 text-muted",
-  SENT: "bg-accent/10 text-accent",
-  PARTIAL: "bg-warning/10 text-warning",
-  RECEIVED: "bg-success/10 text-success",
-  CANCELLED: "bg-danger/10 text-danger",
-};
 
 export default function PageDetailCommande({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);

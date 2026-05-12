@@ -10,13 +10,17 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useFournisseurListQuery, useSupprimerFournisseurMutation } from "@/features/achat/queries/achat.query";
 import { ModalFournisseur } from "@/features/achat/components/modal-fournisseur";
 import { useConfirmation } from "@/providers/confirmation-provider";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import type { IFournisseur } from "@/features/achat/types/achat.type";
 
 export default function PageFournisseurs() {
   const [recherche, setRecherche] = useState("");
+  // Fix m2 : debounce 300ms pour eviter un refetch a chaque keystroke
+  // (sur 3G, ~500ms par requete = friction visible).
+  const rechercheDebounced = useDebouncedValue(recherche, 300);
   const [modalOuvert, setModalOuvert] = useState(false);
   const [enEdition, setEnEdition] = useState<IFournisseur | null>(null);
-  const { data: fournisseurs, isLoading } = useFournisseurListQuery(recherche || undefined);
+  const { data: fournisseurs, isLoading } = useFournisseurListQuery(rechercheDebounced || undefined);
   const supprimer = useSupprimerFournisseurMutation();
   const confirmer = useConfirmation();
 

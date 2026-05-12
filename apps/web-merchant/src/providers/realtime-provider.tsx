@@ -124,6 +124,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["reservation"] });
     });
 
+    // Achats : nouvelle commande creee sur un autre poste -> rafraichit
+    // la liste pour que tous les acheteurs voient le BC immediatement
+    // (fix I8 Module 5).
+    socket.on("commande.creee", () => {
+      queryClient.invalidateQueries({ queryKey: ["achat", "commandes"] });
+    });
+
     return () => {
       socket.disconnect();
       socketRef.current = null;
