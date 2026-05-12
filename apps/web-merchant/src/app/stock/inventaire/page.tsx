@@ -6,6 +6,7 @@ import {
   Card, Tabs, Select, ListBox, Label, Button, TextField, Input, Skeleton,
 } from "@heroui/react";
 import { ArrowLeft, ClipboardCheck, Package, Wheat, MapPin, AlertCircle } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
@@ -134,12 +135,10 @@ export default function PageInventaire() {
       </Card>
 
       {!emplacementId ? (
-        <Card>
-          <Card.Content className="py-16 text-center">
-            <ClipboardCheck size={28} className="text-muted/30 mx-auto mb-3" />
-            <p className="text-sm text-foreground">Sélectionnez un emplacement pour commencer</p>
-          </Card.Content>
-        </Card>
+        <EmptyState
+          icone={ClipboardCheck}
+          titre="Sélectionnez un emplacement pour commencer"
+        />
       ) : (
         <>
           <Tabs selectedKey={onglet} onSelectionChange={(k) => setOnglet(k as Onglet)} aria-label="Type d'inventaire">

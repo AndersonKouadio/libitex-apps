@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button, Table, Chip, Card, Skeleton } from "@heroui/react";
 import { Plus, Wheat, Pencil, Trash2, ArrowUpRight } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import Link from "next/link";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
@@ -100,19 +101,17 @@ export default function PageIngredients() {
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
         </div>
       ) : (ingredients ?? []).length === 0 ? (
-        <Card>
-          <Card.Content className="py-16 text-center">
-            <Wheat size={32} className="text-muted/30 mx-auto mb-3" />
-            <p className="text-sm font-medium text-foreground">Aucun ingrédient</p>
-            <p className="text-sm text-muted mt-1 mb-4">
-              Commencez par déclarer vos matières premières (farine, huile, viandes, légumes...)
-            </p>
+        <EmptyState
+          icone={Wheat}
+          titre="Aucun ingrédient"
+          description="Commencez par déclarer vos matières premières (farine, huile, viandes, légumes...)"
+          action={
             <Button variant="primary" className="gap-1.5" onPress={() => ouvrirCreation()}>
               <Plus size={16} />
               Créer un ingrédient
             </Button>
-          </Card.Content>
-        </Card>
+          }
+        />
       ) : (
         <Table>
           <Table.ScrollContainer>

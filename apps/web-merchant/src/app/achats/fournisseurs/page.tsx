@@ -5,6 +5,7 @@ import {
   Button, SearchField, Card, Skeleton,
 } from "@heroui/react";
 import { Plus, Pencil, Trash2, Phone, Mail, Building2 } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { useFournisseurListQuery, useSupprimerFournisseurMutation } from "@/features/achat/queries/achat.query";
@@ -77,15 +78,23 @@ export default function PageFournisseurs() {
           ))}
         </div>
       ) : (fournisseurs?.length ?? 0) === 0 ? (
-        <Card>
-          <Card.Content className="p-10 text-center">
-            <Building2 size={32} className="mx-auto mb-3 text-muted opacity-50" />
-            <p className="text-sm text-foreground font-medium">Aucun fournisseur</p>
-            <p className="text-xs text-muted mt-1">
-              Ajoutez vos fournisseurs habituels pour creer rapidement des bons de commande.
-            </p>
-          </Card.Content>
-        </Card>
+        <EmptyState
+          icone={Building2}
+          titre={recherche ? "Aucun fournisseur ne correspond" : "Aucun fournisseur"}
+          description={
+            recherche
+              ? "Modifiez ou effacez votre recherche."
+              : "Ajoutez vos fournisseurs habituels pour creer rapidement des bons de commande."
+          }
+          action={
+            !recherche ? (
+              <Button variant="primary" className="gap-1.5" onPress={ouvrirCreation}>
+                <Plus size={16} />
+                Nouveau fournisseur
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {(fournisseurs ?? []).map((f) => (

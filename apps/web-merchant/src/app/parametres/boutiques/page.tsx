@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button, Skeleton } from "@heroui/react";
 import { Plus, Store } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -66,17 +67,17 @@ export default function PageBoutiques() {
             ))}
           </div>
         ) : boutiques.length === 0 ? (
-          <div className="bg-surface rounded-xl border border-border py-16 text-center">
-            <Store size={32} className="text-muted/30 mx-auto mb-3" />
-            <p className="text-sm font-medium text-foreground">Aucune boutique</p>
-            <p className="text-sm text-muted mt-1 mb-4">
-              Créez votre première boutique pour commencer
-            </p>
-            <Button variant="primary" className="gap-1.5" onPress={() => setModalCreationOuvert(true)}>
-              <Plus size={16} />
-              Créer une boutique
-            </Button>
-          </div>
+          <EmptyState
+            icone={Store}
+            titre="Aucune boutique"
+            description="Créez votre première boutique pour commencer."
+            action={
+              <Button variant="primary" className="gap-1.5" onPress={() => setModalCreationOuvert(true)}>
+                <Plus size={16} />
+                Créer une boutique
+              </Button>
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {boutiques.map((b) => (

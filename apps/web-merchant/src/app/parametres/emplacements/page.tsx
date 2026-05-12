@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button, Card, Skeleton } from "@heroui/react";
 import { MapPin, Plus, Pencil, Trash2 } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
@@ -63,19 +64,18 @@ export default function PageEmplacements() {
           {[1, 2].map((i) => <Skeleton key={i} className="h-[80px] rounded-xl" />)}
         </div>
       ) : (emplacements ?? []).length === 0 ? (
-        <Card>
-          <Card.Content className="py-16 text-center">
-            <MapPin size={32} className="text-muted/30 mx-auto mb-3" />
-            <p className="text-sm font-medium text-foreground">Aucun emplacement</p>
-            <p className="text-sm text-muted mt-1 mb-4">
-              Créez votre premier point de vente, entrepôt ou camion.
-            </p>
+        <EmptyState
+          icone={MapPin}
+          tonalite="warning"
+          titre="Aucun emplacement"
+          description="Créez votre premier point de vente, entrepôt ou camion."
+          action={
             <Button variant="primary" className="gap-1.5" onPress={ouvrirCreation}>
               <Plus size={16} />
               Créer un emplacement
             </Button>
-          </Card.Content>
-        </Card>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {(emplacements ?? []).map((emp) => (

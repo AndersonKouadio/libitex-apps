@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Modal, Button, Spinner, Chip, toast } from "@heroui/react";
+import { Modal, Button, Spinner, Skeleton, Chip, toast } from "@heroui/react";
 import { PauseCircle, RotateCcw, Trash2, Receipt, ShoppingCart } from "lucide-react";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { useTicketListQuery } from "../queries/ticket-list.query";
 import { useAnnulerTicketMutation } from "../queries/ticket-annuler.mutation";
 import { venteAPI } from "../apis/vente.api";
@@ -103,15 +104,18 @@ export function ModalTicketsAttente({ ouvert, onFermer, emplacementId, produits,
           </Modal.Header>
           <Modal.Body className="space-y-2">
             {isLoading ? (
-              <div className="py-12 flex justify-center"><Spinner /></div>
-            ) : tickets.length === 0 ? (
-              <div className="py-12 text-center">
-                <Receipt size={32} strokeWidth={2} className="text-muted/30 mx-auto mb-3" />
-                <p className="text-sm text-foreground">Aucun ticket en cours</p>
-                <p className="text-xs text-muted mt-1">
-                  Les paniers parqués ou ouverts apparaîtront ici
-                </p>
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-20 rounded-xl" />
+                ))}
               </div>
+            ) : tickets.length === 0 ? (
+              <EmptyState
+                variante="subtle"
+                icone={Receipt}
+                titre="Aucun ticket en cours"
+                description="Les paniers parqués ou ouverts apparaîtront ici."
+              />
             ) : (
               <ul className="space-y-2">
                 {tickets.map((t) => {

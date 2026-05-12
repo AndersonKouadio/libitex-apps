@@ -8,6 +8,7 @@ import {
 import { Plus, ClipboardList } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
+import { EmptyState } from "@/components/empty-states/empty-state";
 import { useCommandeListQuery } from "@/features/achat/queries/achat.query";
 import { formatMontant } from "@/features/vente/utils/format";
 import {
@@ -63,15 +64,19 @@ export default function PageCommandes() {
           {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 rounded" />)}
         </div>
       ) : (commandes?.length ?? 0) === 0 ? (
-        <Card>
-          <Card.Content className="p-10 text-center">
-            <ClipboardList size={32} className="mx-auto mb-3 text-muted opacity-50" />
-            <p className="text-sm text-foreground font-medium">Aucune commande</p>
-            <p className="text-xs text-muted mt-1">
-              Creez votre premier bon de commande pour reapprovisionner votre stock.
-            </p>
-          </Card.Content>
-        </Card>
+        <EmptyState
+          icone={ClipboardList}
+          titre="Aucune commande"
+          description="Creez votre premier bon de commande pour reapprovisionner votre stock."
+          action={
+            <Link href="/achats/commandes/nouvelle">
+              <Button variant="primary" className="gap-1.5">
+                <Plus size={16} />
+                Nouvelle commande
+              </Button>
+            </Link>
+          }
+        />
       ) : (
         <Card>
           <Table>
