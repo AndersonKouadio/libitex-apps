@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
 import { tenants } from "./tenants";
 
 /**
@@ -15,6 +15,12 @@ export const customers = pgTable("customers", {
   email: varchar("email", { length: 255 }),
   address: text("address"),
   notes: text("notes"),
+  /**
+   * Module 10 D1 : opt-in WhatsApp. Default true = opt-out (le client a
+   * fourni son numero explicitement = consentement implicite). Bascule a
+   * false pour respecter une demande de desabonnement.
+   */
+  whatsappOptIn: boolean("whatsapp_opt_in").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
