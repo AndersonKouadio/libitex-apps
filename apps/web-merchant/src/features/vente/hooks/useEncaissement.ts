@@ -8,6 +8,7 @@ import { useInvalidateVenteQuery } from "../queries/index.query";
 import { useNetworkStatus } from "@/lib/network-status";
 import { fileOffline, QueuePleineException } from "../stores/file-attente-offline.store";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { useConfigFideliteQuery } from "@/features/fidelite/queries/fidelite.query";
 import type { ArticlePanier, Remise, ClientPanier } from "./usePanier";
 import type { ITicket } from "../types/vente.type";
 
@@ -101,6 +102,7 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
   const invalidateVente = useInvalidateVenteQuery();
   const enLigne = useNetworkStatus();
   const { utilisateur } = useAuth();
+  const { data: configFidelite } = useConfigFideliteQuery();
   const tenantId = utilisateur?.tenantId ?? null;
   // Garde anti-double-clic via ref : le state enCours n'est pas frais dans la
   // closure si l'utilisateur tape deux fois avant le prochain re-render.
@@ -203,6 +205,21 @@ export function useEncaissement(panier: PanierActions, empId: string, token: str
         ticket: resultat,
         origineOffline: false,
       });
+
+      // Fix m5 : feedback positif au caissier sur les points gagnes par le
+      // client. Conditionnel : client lie + programme actif + au moins 1
+      // point gagne (sur le montant paye hors LOYALTY).
+      if (resultat.clientId && configFidelite?.actif && configFidelite.ratioGain > 0) {
+        const loyaltyUtilise = paiementsSaisis
+          .filter((p) => p.methode === "LOYALTY")
+          .reduce((s, p) => s + p.montant, 0);
+        const baseGain = Math.max(0, resultat.total - loyaltyUtilise);
+        const pointsGagnes = Math.floor(baseGain / configFidelite.ratioGain);
+        if (pointsGagnes > 0) {
+          toast.success(`+${pointsGagnes} point${pointsGagnes > 1 ? "s" : ""} gagne${pointsGagnes > 1 ? "s" : ""} !`);
+        }
+      }
+
       panier.vider();
       invalidateVente();
     } catch (err: unknown) {

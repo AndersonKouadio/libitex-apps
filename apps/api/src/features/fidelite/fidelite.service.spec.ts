@@ -110,12 +110,21 @@ describe("FideliteService", () => {
     });
   });
 
-  describe("historique + tenant check (fix C3)", () => {
+  describe("historique + tenant check (fix C3) + pagination (fix I8)", () => {
     it("rejette le cross-tenant", async () => {
       repoMock.clientAppartientTenant.mockResolvedValue(false);
 
       await expect(service.historique("t1", "c-autre-tenant"))
         .rejects.toThrow(ForbiddenException);
+    });
+
+    it("propage les options limit/offset au repo (fix I8)", async () => {
+      repoMock.clientAppartientTenant.mockResolvedValue(true);
+      repoMock.historique.mockResolvedValue([]);
+
+      await service.historique("t1", "c1", { limit: 10, offset: 30 });
+
+      expect(repoMock.historique).toHaveBeenCalledWith("t1", "c1", { limit: 10, offset: 30 });
     });
   });
 

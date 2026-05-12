@@ -1,19 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Card, Button, Modal, TextField, Label, Input } from "@heroui/react";
-import { Sparkles, Plus, Minus } from "lucide-react";
+import { Card, Button, Modal, TextField, Label, Input, NumberField } from "@heroui/react";
+import { Sparkles, Plus } from "lucide-react";
 import {
   useConfigFideliteQuery, useSoldeFideliteQuery,
   useHistoriqueFideliteQuery, useAjusterPointsMutation,
 } from "../queries/fidelite.query";
+import { LIBELLE_TYPE_FIDELITE, CLASSES_TYPE_FIDELITE } from "../utils/libelles";
 import { formatMontant } from "@/features/vente/utils/format";
-
-const LIBELLE_TYPE: Record<string, string> = {
-  EARN: "Gagne",
-  REDEEM: "Utilise",
-  ADJUST: "Ajustement",
-};
 
 interface Props {
   customerId: string;
@@ -69,10 +64,8 @@ export function CarteFideliteClient({ customerId }: Props) {
                 {(historique ?? []).slice(0, 8).map((t) => (
                   <div key={t.id} className="flex items-center justify-between gap-2 text-sm">
                     <span className="flex-1 min-w-0">
-                      <span className={`text-xs font-medium ${
-                        t.type === "EARN" ? "text-success" : t.type === "REDEEM" ? "text-danger" : "text-muted"
-                      }`}>
-                        {LIBELLE_TYPE[t.type]}
+                      <span className={`text-xs font-medium ${CLASSES_TYPE_FIDELITE[t.type]}`}>
+                        {LIBELLE_TYPE_FIDELITE[t.type]}
                       </span>
                       {t.ticketNumero && (
                         <span className="text-xs text-muted ml-1">{t.ticketNumero}</span>
@@ -112,14 +105,13 @@ function ModalAjustement({ ouvert, customerId, onFermer }: {
   onFermer: () => void;
 }) {
   const ajuster = useAjusterPointsMutation(customerId);
-  const [points, setPoints] = useState("");
+  const [points, setPoints] = useState<number>(0);
   const [note, setNote] = useState("");
 
   async function valider() {
-    const n = Number(points);
-    if (!Number.isFinite(n) || n === 0) return;
-    await ajuster.mutateAsync({ points: n, note: note || undefined });
-    setPoints("");
+    if (!Number.isFinite(points) || points === 0) return;
+    await ajuster.mutateAsync({ points, note: note || undefined });
+    setPoints(0);
     setNote("");
     onFermer();
   }
@@ -135,20 +127,31 @@ function ModalAjustement({ ouvert, customerId, onFermer }: {
           <Modal.Body className="space-y-3">
             <p className="text-xs text-muted">
               Saisissez un nombre positif pour crediter (cadeau, bonus), negatif pour debiter
-              (correction, expiration manuelle).
+              (correction, expiration manuelle). Borne : -100 000 a +100 000 points.
             </p>
-            <TextField value={points} onChange={setPoints}>
+            <NumberField
+              value={points}
+              onChange={(v) => setPoints(Number.isFinite(v) ? v : 0)}
+              minValue={-100000}
+              maxValue={100000}
+              step={1}
+              aria-label="Ajustement de points"
+            >
               <Label>Points (+/-)</Label>
-              <Input type="number" placeholder="+50 ou -100" />
-            </TextField>
-            <TextField value={note} onChange={setNote}>
+              <NumberField.Group>
+                <NumberField.DecrementButton />
+                <NumberField.Input placeholder="+50 ou -100" className="text-center tabular-nums" />
+                <NumberField.IncrementButton />
+              </NumberField.Group>
+            </NumberField>
+            <TextField value={note} onChange={setNote} maxLength={500}>
               <Label>Note (optionnel)</Label>
               <Input placeholder="Raison de l'ajustement" />
             </TextField>
           </Modal.Body>
           <Modal.Footer>
             <Button variant="ghost" onPress={onFermer}>Annuler</Button>
-            <Button variant="primary" onPress={valider} isDisabled={ajuster.isPending || !points}>
+            <Button variant="primary" onPress={valider} isDisabled={ajuster.isPending || points === 0}>
               {ajuster.isPending ? "..." : "Valider"}
             </Button>
           </Modal.Footer>

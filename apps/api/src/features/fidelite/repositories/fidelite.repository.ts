@@ -99,7 +99,19 @@ export class FideliteRepository {
     return Number(row?.total ?? 0);
   }
 
-  async historique(tenantId: string, customerId: string, limit = 50) {
+  /**
+   * Historique des transactions d'un client. Pagine via limit/offset.
+   * Fix I8 : avant, limit=50 hardcode -> les clients fideles avaient
+   * leurs anciennes transactions invisibles. Maintenant le caller passe
+   * la pagination explicitement.
+   */
+  async historique(
+    tenantId: string,
+    customerId: string,
+    opts: { limit?: number; offset?: number } = {},
+  ) {
+    const limit = Math.min(Math.max(opts.limit ?? 20, 1), 100);
+    const offset = Math.max(opts.offset ?? 0, 0);
     return this.db
       .select({
         id: loyaltyTransactions.id,
@@ -117,7 +129,8 @@ export class FideliteRepository {
         eq(loyaltyTransactions.customerId, customerId),
       ))
       .orderBy(desc(loyaltyTransactions.createdAt))
-      .limit(limit);
+      .limit(limit)
+      .offset(offset);
   }
 
   /**

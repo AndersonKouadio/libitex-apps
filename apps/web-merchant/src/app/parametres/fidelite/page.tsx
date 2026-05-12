@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  Button, Card, Switch, TextField, Label, Input, FieldError, Skeleton,
+  Button, Card, Switch, TextField, Label, Input, FieldError, Skeleton, NumberField,
 } from "@heroui/react";
 import { Sparkles, Save } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
@@ -18,9 +18,9 @@ export default function PageFidelite() {
   const [etat, setEtat] = useState({
     actif: false,
     nomProgramme: "",
-    ratioGain: "100",
-    valeurPoint: "5",
-    seuilUtilisation: "100",
+    ratioGain: 100,
+    valeurPoint: 5,
+    seuilUtilisation: 100,
   });
 
   useEffect(() => {
@@ -28,9 +28,9 @@ export default function PageFidelite() {
     setEtat({
       actif: config.actif,
       nomProgramme: config.nomProgramme,
-      ratioGain: String(config.ratioGain),
-      valeurPoint: String(config.valeurPoint),
-      seuilUtilisation: String(config.seuilUtilisation),
+      ratioGain: config.ratioGain,
+      valeurPoint: config.valeurPoint,
+      seuilUtilisation: config.seuilUtilisation,
     });
   }, [config]);
 
@@ -38,18 +38,23 @@ export default function PageFidelite() {
     await modifier.mutateAsync({
       actif: etat.actif,
       nomProgramme: etat.nomProgramme,
-      ratioGain: Number(etat.ratioGain),
-      valeurPoint: Number(etat.valeurPoint),
-      seuilUtilisation: Number(etat.seuilUtilisation),
+      ratioGain: etat.ratioGain,
+      valeurPoint: etat.valeurPoint,
+      seuilUtilisation: etat.seuilUtilisation,
     });
   }
 
   // Apercu : pour une vente de 10 000 F, le client gagne X points = Y F
   const ventes = 10000;
-  const pointsGagnes = Number(etat.ratioGain) > 0
-    ? Math.floor(ventes / Number(etat.ratioGain))
+  const pointsGagnes = etat.ratioGain > 0
+    ? Math.floor(ventes / etat.ratioGain)
     : 0;
-  const valeurGagnee = pointsGagnes * Number(etat.valeurPoint || 0);
+  const valeurGagnee = pointsGagnes * (etat.valeurPoint || 0);
+
+  // Helpers de sanitization des NumberField (jamais NaN, jamais negatif)
+  const setNum = (k: "ratioGain" | "valeurPoint" | "seuilUtilisation", min: number) => (v: number) => {
+    setEtat((e) => ({ ...e, [k]: Number.isFinite(v) && v >= min ? v : min }));
+  };
 
   return (
     <PageContainer>
@@ -94,21 +99,48 @@ export default function PageFidelite() {
                 </TextField>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <TextField value={etat.ratioGain} onChange={(v) => setEtat((e) => ({ ...e, ratioGain: v }))}>
+                  <NumberField
+                    value={etat.ratioGain}
+                    onChange={setNum("ratioGain", 1)}
+                    minValue={1}
+                    step={1}
+                  >
                     <Label>Ratio de gain (F par point)</Label>
-                    <Input type="number" inputMode="numeric" min="1" />
+                    <NumberField.Group>
+                      <NumberField.DecrementButton />
+                      <NumberField.Input placeholder="100" className="text-center tabular-nums" />
+                      <NumberField.IncrementButton />
+                    </NumberField.Group>
                     <FieldError />
-                  </TextField>
-                  <TextField value={etat.valeurPoint} onChange={(v) => setEtat((e) => ({ ...e, valeurPoint: v }))}>
+                  </NumberField>
+                  <NumberField
+                    value={etat.valeurPoint}
+                    onChange={setNum("valeurPoint", 0)}
+                    minValue={0}
+                    step={0.5}
+                  >
                     <Label>Valeur d&apos;1 point (F)</Label>
-                    <Input type="number" inputMode="numeric" min="0" step="0.5" />
+                    <NumberField.Group>
+                      <NumberField.DecrementButton />
+                      <NumberField.Input placeholder="5" className="text-center tabular-nums" />
+                      <NumberField.IncrementButton />
+                    </NumberField.Group>
                     <FieldError />
-                  </TextField>
-                  <TextField value={etat.seuilUtilisation} onChange={(v) => setEtat((e) => ({ ...e, seuilUtilisation: v }))}>
+                  </NumberField>
+                  <NumberField
+                    value={etat.seuilUtilisation}
+                    onChange={setNum("seuilUtilisation", 0)}
+                    minValue={0}
+                    step={1}
+                  >
                     <Label>Seuil minimum (points)</Label>
-                    <Input type="number" inputMode="numeric" min="0" />
+                    <NumberField.Group>
+                      <NumberField.DecrementButton />
+                      <NumberField.Input placeholder="100" className="text-center tabular-nums" />
+                      <NumberField.IncrementButton />
+                    </NumberField.Group>
                     <FieldError />
-                  </TextField>
+                  </NumberField>
                 </div>
               </div>
 
