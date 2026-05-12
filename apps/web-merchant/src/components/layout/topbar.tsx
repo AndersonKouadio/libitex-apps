@@ -9,6 +9,7 @@ import { SECTEUR_LABELS } from "@/features/auth/utils/secteur-activite";
 import type { SecteurActivite } from "@/features/auth/types/auth.type";
 import { Breadcrumbs } from "./breadcrumbs";
 import { obtenirTitre } from "./route-meta";
+import { ToggleTheme } from "./toggle-theme";
 
 interface Props {
   /** Surcharge le titre auto-resolu depuis la route. */
@@ -36,6 +37,8 @@ export function Topbar({ titre: titreManuel }: Props = {}) {
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          <ToggleTheme />
+
           <Button
             variant="ghost"
             className="w-9 h-9 min-w-0 p-0 text-muted hover:text-foreground"

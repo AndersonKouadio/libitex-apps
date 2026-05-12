@@ -83,6 +83,12 @@ export class StockController {
     return this.stockService.obtenirStockActuel(user.tenantId, varianteId, emplacementId);
   }
 
+  @Get("alertes/resume")
+  @ApiOperation({ summary: "Resume des alertes stock globales (badge sidebar)" })
+  resumeAlertes(@CurrentUser() user: CurrentUserData) {
+    return this.stockService.resumeAlertes(user.tenantId);
+  }
+
   @Get("emplacement/:emplacementId")
   @ApiOperation({ summary: "Stock complet d'un emplacement" })
   stockParEmplacement(

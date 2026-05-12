@@ -182,6 +182,28 @@ export class StockRepository {
       );
   }
 
+  /**
+   * Agrege le stock par variante sur tous les emplacements du tenant.
+   * Utilise pour calculer le nombre d'alertes global (badge sidebar).
+   * Filtre MENU (n'ont pas de stock propre) et supplements en option.
+   */
+  async stockAgregeTenant(tenantId: string) {
+    return this.db
+      .select({
+        variantId: stockMovements.variantId,
+        quantite: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+        typeProduit: products.productType,
+      })
+      .from(stockMovements)
+      .innerJoin(variants, eq(stockMovements.variantId, variants.id))
+      .innerJoin(products, eq(variants.productId, products.id))
+      .where(and(
+        eq(stockMovements.tenantId, tenantId),
+        eq(products.isActive, true),
+      ))
+      .groupBy(stockMovements.variantId, products.productType);
+  }
+
   async creerLot(data: {
     variantId: string;
     batchNumber: string;

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { SwitcherBoutique } from "@/features/boutique/components/switcher-boutique";
+import { useAlertesResumeQuery } from "@/features/stock/queries/alertes-resume.query";
 import { SidebarPOS } from "./sidebar-pos";
 
 interface ItemNav {
@@ -82,6 +83,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
   const router = useRouter();
   const { deconnecter, utilisateur, boutiqueActive } = useAuth();
   const [replie, setReplie] = useState(false);
+  const { data: alertes } = useAlertesResumeQuery();
+  // Total = ruptures + alertes. Si > 0, on affiche le badge sur l'entree
+  // Stock. Permet au gestionnaire de voir d'un coup d'œil qu'il y a a
+  // faire sans devoir naviguer.
+  const nbAlertesStock = (alertes?.nbAlertes ?? 0) + (alertes?.nbRuptures ?? 0);
 
   const modePOS = pathname === "/pos" || pathname.startsWith("/pos/");
 
@@ -135,7 +141,17 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
                   <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-[var(--color-accent-400)]" />
                 )}
                 <Icone size={18} strokeWidth={actif ? 1.8 : 1.5} />
-                {!replie && <span>{item.libelle}</span>}
+                {!replie && <span className="flex-1">{item.libelle}</span>}
+                {!replie && item.href === "/stock" && nbAlertesStock > 0 && (
+                  <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-warning text-warning-foreground text-[10px] font-bold flex items-center justify-center tabular-nums">
+                    {nbAlertesStock > 99 ? "99+" : nbAlertesStock}
+                  </span>
+                )}
+                {replie && item.href === "/stock" && nbAlertesStock > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-warning text-warning-foreground text-[9px] font-bold flex items-center justify-center tabular-nums">
+                    {nbAlertesStock > 9 ? "9+" : nbAlertesStock}
+                  </span>
+                )}
               </Link>
             );
           })}

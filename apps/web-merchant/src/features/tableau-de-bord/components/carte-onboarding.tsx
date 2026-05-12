@@ -6,6 +6,7 @@ import { Card, Button } from "@heroui/react";
 import { Check, X, ArrowRight, Sparkles } from "lucide-react";
 import { useEquipeListQuery } from "@/features/equipe/queries/equipe.query";
 import { useTicketListQuery } from "@/features/vente/queries/ticket-list.query";
+import { useConfigFideliteQuery } from "@/features/fidelite/queries/fidelite.query";
 
 interface Props {
   nombreProduits: number;
@@ -27,6 +28,7 @@ export function CarteOnboarding({ nombreProduits, nombreEmplacements, nomBoutiqu
   const [dismissed, setDismissed] = useState(true);
   const { data: equipe } = useEquipeListQuery();
   const { data: tickets } = useTicketListQuery({ statut: "COMPLETED", page: 1 });
+  const { data: fidelite } = useConfigFideliteQuery();
 
   useEffect(() => {
     setDismissed(localStorage.getItem(STORAGE_KEY) === "1");
@@ -34,6 +36,7 @@ export function CarteOnboarding({ nombreProduits, nombreEmplacements, nomBoutiqu
 
   const aFaitVente = (tickets?.data?.length ?? 0) > 0;
   const aEquipe = (equipe?.length ?? 0) > 1;
+  const aFidelite = fidelite?.actif ?? false;
 
   const etapes: Etape[] = [
     {
@@ -63,6 +66,13 @@ export function CarteOnboarding({ nombreProduits, nombreEmplacements, nomBoutiqu
       description: "Invitez vendeurs et gestionnaires avec leurs propres accès.",
       href: "/parametres/equipe",
       cta: "Inviter un membre",
+    },
+    {
+      fait: aFidelite,
+      titre: "Activer le programme fidelite",
+      description: "Recompensez vos clients reguliers en points sur leurs achats.",
+      href: "/parametres/fidelite",
+      cta: "Configurer la fidelite",
     },
   ];
 

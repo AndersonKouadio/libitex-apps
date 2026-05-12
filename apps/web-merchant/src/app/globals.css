@@ -67,6 +67,47 @@
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
+   Mode sombre — override des variables HeroUI v3 + des couleurs LIBITEX.
+   Toggle via lib/theme.ts (data-theme="dark" sur <html>).
+   ──────────────────────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Couleurs HeroUI v3 (oklch) — invertees pour fond sombre */
+  --background: oklch(0.18 0.02 257);
+  --foreground: oklch(0.95 0.01 257);
+  --surface: oklch(0.22 0.02 257);
+  --surface-secondary: oklch(0.26 0.02 257);
+  --muted: oklch(0.65 0.02 257);
+  --muted-foreground: oklch(0.55 0.02 257);
+  --border: oklch(0.32 0.02 257);
+  --input: oklch(0.26 0.02 257);
+
+  /* Accent reste teal mais leg legerement plus lumineux pour contraste */
+  --accent: oklch(0.65 0.14 180);
+  --accent-foreground: oklch(0.12 0.02 257);
+
+  /* Couleurs semantiques HeroUI */
+  --success: oklch(0.65 0.18 145);
+  --warning: oklch(0.78 0.15 75);
+  --danger: oklch(0.68 0.22 26);
+
+  /* POS dedie */
+  --pos-bg: oklch(0.16 0.02 257);
+  --pos-card: oklch(0.22 0.02 257);
+
+  /* Scrollbar sombre */
+  --scrollbar-thumb: oklch(0.4 0.02 257);
+  --scrollbar-thumb-hover: oklch(0.5 0.02 257);
+}
+
+/* Light mode (defaut) — variables explicites pour scrollbar */
+:root {
+  --scrollbar-thumb: oklch(0.8 0 0);
+  --scrollbar-thumb-hover: oklch(0.7 0 0);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
    Exposition Tailwind v4 via @theme inline.
    Permet l'override par [data-theme="dark"] grace au var() conserve a runtime.
    ──────────────────────────────────────────────────────────────────────────── */
@@ -206,11 +247,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.8 0 0);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.7 0 0);
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* ─── Impression du rapport Z ─── */

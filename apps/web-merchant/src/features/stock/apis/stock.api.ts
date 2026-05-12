@@ -14,6 +14,9 @@ export const stockAPI = {
   listerEmplacements: (token: string) =>
     httpClient.get<IEmplacement[]>(`${BASE}/emplacements`, { token }),
 
+  resumeAlertes: (token: string) =>
+    httpClient.get<{ nbAlertes: number; nbRuptures: number }>(`${BASE}/alertes/resume`, { token }),
+
   creerEmplacement: (token: string, data: { nom: string; type?: string; adresse?: string }) =>
     httpClient.post<IEmplacement>(`${BASE}/emplacements`, data, { token }),
 

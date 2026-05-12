@@ -8,6 +8,7 @@ import { SyncOfflineProvider } from "@/providers/sync-offline-provider";
 import { ToastProvider } from "@/providers/toast-provider";
 import { ConfirmationProvider } from "@/providers/confirmation-provider";
 import { SWRegister } from "@/providers/sw-register";
+import { SCRIPT_INIT_THEME } from "@/lib/theme";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -62,7 +63,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${inter.variable} ${jetbrainsMono.variable} light`} data-theme="light" suppressHydrationWarning>
+    <html lang="fr" className={`${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Applique le theme AVANT hydration React pour eviter le flash
+            light -> dark quand le user a active le sombre. */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_INIT_THEME }} />
+      </head>
       <body className="bg-background text-foreground antialiased" suppressHydrationWarning>
         <QueryProvider>
           <AuthProvider>

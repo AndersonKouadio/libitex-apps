@@ -209,6 +209,30 @@ export class StockService {
   }
 
   /**
+   * Resume du stock global tous emplacements confondus : compte les
+   * variantes en rupture (qte <= 0) et en alerte (qte <= seuil). Sert au
+   * badge sidebar pour signaler les alertes a traiter.
+   *
+   * Exclut les MENU (n'ont pas de stock propre, leur dispo depend des
+   * ingredients) car nbRuptures n'a pas de sens.
+   */
+  async resumeAlertes(tenantId: string, seuilAlerte = 10): Promise<{
+    nbAlertes: number;
+    nbRuptures: number;
+  }> {
+    const rows = await this.stockRepo.stockAgregeTenant(tenantId);
+    let nbAlertes = 0;
+    let nbRuptures = 0;
+    for (const r of rows) {
+      if (r.typeProduit === "MENU") continue;
+      const q = Number(r.quantite);
+      if (q <= 0) nbRuptures += 1;
+      else if (q <= seuilAlerte) nbAlertes += 1;
+    }
+    return { nbAlertes, nbRuptures };
+  }
+
+  /**
    * Applique un inventaire complet sur un emplacement : pour chaque ligne
    * comptee, calcule l'ecart vs le stock theorique et cree un mouvement
    * ADJUSTMENT si delta != 0. Les lignes a delta=0 sont comptees comme
