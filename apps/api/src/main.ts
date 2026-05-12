@@ -1,6 +1,10 @@
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, Logger } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
+import { initSentryServer } from "./common/sentry/sentry";
+// Sentry doit s'initialiser AVANT l'import du AppModule pour que les
+// instrumentations Node (http, undici...) hookent correctement.
+initSentryServer();
 import { AppModule } from "./app.module";
 import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";

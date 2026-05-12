@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "@heroui/react";
 import { achatAPI } from "../apis/achat.api";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -82,7 +82,8 @@ export function useCommandeListQuery(filtres?: {
     queryKey: achatKey("commandes", filtres),
     queryFn: () => achatAPI.listerCommandes(token!, filtres),
     enabled: !!token,
-    staleTime: 15_000,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
 }
 

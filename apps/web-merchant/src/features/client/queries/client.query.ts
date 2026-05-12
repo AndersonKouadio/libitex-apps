@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "@heroui/react";
 import { clientAPI } from "../apis/client.api";
 import { clientKeyQuery, useInvalidateClientQuery } from "./index.query";
@@ -13,6 +13,10 @@ export function useClientListQuery(page = 1, recherche?: string, segment?: strin
     queryKey: clientKeyQuery("list", page, recherche ?? "", segment ?? ""),
     queryFn: () => clientAPI.lister(token!, { page, recherche, segment }),
     enabled: !!token,
+    // Pagination/recherche : on garde l'ancien dataset pendant que le nouveau
+    // charge -> pas de flicker, pas de retour a "Aucun client" entre 2 pages.
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   });
 }
 
@@ -22,6 +26,7 @@ export function useClientDetailQuery(id: string | undefined) {
     queryKey: clientKeyQuery("detail", id),
     queryFn: () => clientAPI.obtenir(token!, id!),
     enabled: !!token && !!id,
+    staleTime: 60_000,
   });
 }
 
@@ -31,6 +36,7 @@ export function useKpisClientQuery(id: string | undefined) {
     queryKey: clientKeyQuery("kpis", id),
     queryFn: () => clientAPI.kpis(token!, id!),
     enabled: !!token && !!id,
+    staleTime: 60_000,
   });
 }
 

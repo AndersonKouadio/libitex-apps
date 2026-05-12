@@ -3,6 +3,7 @@ import {
   HttpException, HttpStatus, Logger,
 } from "@nestjs/common";
 import { Request, Response } from "express";
+import { Sentry } from "../sentry/sentry";
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -33,6 +34,14 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         `Erreur non gérée: ${request.method} ${request.url}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
+    }
+
+    // Sentry : seulement les erreurs 5xx (4xx = erreurs metier client,
+    // pas des bugs). Sentry no-op si pas de DSN configure.
+    if (status >= 500) {
+      Sentry.captureException(exception, {
+        tags: { method: request.method, path: request.url, status: String(status) },
+      });
     }
 
     response.status(status).json({

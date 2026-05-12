@@ -11,6 +11,9 @@ export function useBoutiqueActiveQuery() {
     queryKey: boutiqueKeyQuery("active", boutiqueActive?.id),
     queryFn: () => boutiqueAPI.obtenirActive(token!),
     enabled: !!token && !!boutiqueActive,
-    staleTime: 60_000,
+    // Profil boutique change tres rarement (param admin) — cache 5 min.
+    // L'invalidate sur modifierBoutique force le refresh quand il faut.
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
   });
 }
