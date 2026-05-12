@@ -1,8 +1,8 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, isNull } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
-  type Database, loyaltyConfig, loyaltyTransactions, tickets,
+  type Database, loyaltyConfig, loyaltyTransactions, tickets, customers,
 } from "@libitex/db";
 
 @Injectable()
@@ -11,16 +11,32 @@ export class FideliteRepository {
 
   // ─── Config ───────────────────────────────────────────────────────────
 
+  /**
+   * Recupere la config fidelite du tenant ou la cree avec les defauts.
+   *
+   * Fix C5 : utilise INSERT ... ON CONFLICT DO NOTHING pour eviter la
+   * race condition "find then insert" (2 callers simultanes pouvaient
+   * passer le find et tenter 2 inserts, l'un echouait sur la contrainte
+   * UNIQUE(tenantId)). Le ON CONFLICT degrade silencieusement et on
+   * relit la ligne existante.
+   */
   async obtenirOuCreerConfig(tenantId: string) {
+    // Tente l'insert ; si conflit, on retombe sur le SELECT.
+    const [insere] = await this.db
+      .insert(loyaltyConfig)
+      .values({ tenantId })
+      .onConflictDoNothing({ target: loyaltyConfig.tenantId })
+      .returning();
+    if (insere) return insere;
     const existant = await this.db.query.loyaltyConfig.findFirst({
       where: eq(loyaltyConfig.tenantId, tenantId),
     });
-    if (existant) return existant;
-    const [cree] = await this.db
-      .insert(loyaltyConfig)
-      .values({ tenantId })
-      .returning();
-    return cree;
+    if (!existant) {
+      // Ne devrait jamais arriver (ON CONFLICT garantit l'existence),
+      // mais defense en profondeur.
+      throw new Error(`Config fidelite introuvable pour tenant ${tenantId}`);
+    }
+    return existant;
   }
 
   async modifierConfig(tenantId: string, data: Partial<{
@@ -37,6 +53,24 @@ export class FideliteRepository {
       .where(eq(loyaltyConfig.tenantId, tenantId))
       .returning();
     return row;
+  }
+
+  // ─── Validations tenant ───────────────────────────────────────────────
+
+  /**
+   * Fix C3 + I2 : verifie que `customerId` appartient au `tenantId`.
+   * Retourne true si ok. Permet au service de rejeter les attaques
+   * cross-tenant (un attaquant qui devine un UUID d'un autre tenant).
+   */
+  async clientAppartientTenant(tenantId: string, customerId: string): Promise<boolean> {
+    const row = await this.db.query.customers.findFirst({
+      where: and(
+        eq(customers.id, customerId),
+        eq(customers.tenantId, tenantId),
+        isNull(customers.deletedAt),
+      ),
+    });
+    return !!row;
   }
 
   // ─── Transactions ─────────────────────────────────────────────────────
@@ -84,5 +118,19 @@ export class FideliteRepository {
       ))
       .orderBy(desc(loyaltyTransactions.createdAt))
       .limit(limit);
+  }
+
+  /**
+   * Fix C4 : detecte les violations de la contrainte UNIQUE sur
+   * (tenantId, customerId, ticketId, transactionType). Permet au caller
+   * de degrader proprement (idempotence : la transaction existe deja,
+   * pas besoin de retry).
+   */
+  estViolationUniqueLoyalty(err: unknown): boolean {
+    if (typeof err !== "object" || err === null) return false;
+    const e = err as { code?: string; constraint?: string; message?: string };
+    if (e.code !== "23505") return false;
+    const id = e.constraint ?? e.message ?? "";
+    return id.includes("loyalty_tx_unique") || id.includes("loyalty_transactions");
   }
 }
