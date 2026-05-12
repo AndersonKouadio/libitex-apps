@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "@heroui/react";
 import type { IProduit, IVariante } from "@/features/catalogue/types/produit.type";
 import { catalogueAPI } from "@/features/catalogue/apis/catalogue.api";
@@ -40,8 +40,34 @@ export function validerEan13(code: string): boolean | null {
 }
 
 /**
+ * Construit un index `Map<code, {produit, variante}>` pour resoudre un
+ * scan en O(1) au lieu de O(n*m) (n produits, m variantes chacun).
+ *
+ * Fix I7 : sur un catalogue de 5000 produits x 3 variantes = 15k
+ * comparaisons par scan avec le find() en boucle precedent. Avec la Map,
+ * le scan est instantane quel que soit la taille du catalogue.
+ *
+ * Les variantes peuvent avoir 2 cles distinctes (codeBarres + sku), on
+ * indexe les deux. En cas de collision (peu probable), la derniere ecrite
+ * gagne — comportement acceptable car le caissier voit le produit choisi
+ * et peut corriger.
+ *
+ * Exporte pour permettre les tests unitaires.
+ */
+export function construireIndexScan(produits: IProduit[]): Map<string, { produit: IProduit; variante: IVariante }> {
+  const map = new Map<string, { produit: IProduit; variante: IVariante }>();
+  for (const p of produits) {
+    for (const v of (p.variantes ?? [])) {
+      if (v.codeBarres) map.set(v.codeBarres, { produit: p, variante: v });
+      if (v.sku) map.set(v.sku, { produit: p, variante: v });
+    }
+  }
+  return map;
+}
+
+/**
  * Hook scan POS. Strategie de resolution :
- * 1) Cherche dans le cache produits (douchette : ~0ms, offline-compatible)
+ * 1) Cherche dans l'index Map du cache produits (O(1), offline-compatible)
  * 2) Sinon, appel API /catalogue/produits/par-code/:code
  *
  * Anti-rebond : un scan douchette peut envoyer plusieurs ENTER successifs
@@ -57,9 +83,12 @@ export function useScanProduit({
 }: Options) {
   const { token } = useAuth();
   const dernierScan = useRef<{ code: string; ts: number } | null>(null);
-  // Fix m4 : expose un etat de chargement pour que BarreScan affiche un
-  // spinner pendant l'appel API fallback (3G lente = 500ms+).
   const [scanEnCours, setScanEnCours] = useState(false);
+
+  // Fix I7 : index Map memoizee. Recalculee uniquement quand la liste
+  // produits change (filtres POS, refetch). Construction O(n*m) une seule
+  // fois, lookups en O(1).
+  const indexScan = useMemo(() => construireIndexScan(produits), [produits]);
 
   const scanner = useCallback(async (codeBrut: string) => {
     const code = codeBrut.trim();
@@ -79,30 +108,23 @@ export function useScanProduit({
       toast.warning(`Code ${code} : checksum EAN-13 invalide (douchette mal calibree ?)`);
     }
 
-    // 1) Recherche front-side dans le cache
-    for (const p of produits) {
-      const v = (p.variantes ?? []).find(
-        (variante) => variante.codeBarres === code || variante.sku === code,
-      );
-      if (v) {
-        // Fix I10 : toasts distincts pour rupture (transitoire, sur cet
-        // emplacement) vs indisponibilite globale (produit/ingredients KO).
-        if (indisponiblesVariantes?.has(v.id)) {
-          toast.warning(`${p.nom} en rupture sur cet emplacement — re-essayez apres reapprovisionnement`);
-          return;
-        }
-        if (indisponiblesProduits?.has(p.id)) {
-          toast.warning(`${p.nom} indisponible — un ou plusieurs ingredients sont epuises`);
-          return;
-        }
-        onProduitTrouve(p, v);
+    // 1) Lookup O(1) dans l'index. Fix I7.
+    const hit = indexScan.get(code);
+    if (hit) {
+      const { produit: p, variante: v } = hit;
+      if (indisponiblesVariantes?.has(v.id)) {
+        toast.warning(`${p.nom} en rupture sur cet emplacement — re-essayez apres reapprovisionnement`);
         return;
       }
+      if (indisponiblesProduits?.has(p.id)) {
+        toast.warning(`${p.nom} indisponible — un ou plusieurs ingredients sont epuises`);
+        return;
+      }
+      onProduitTrouve(p, v);
+      return;
     }
 
-    // 2) Fallback API. Fix C3 : si offline, ne pas tenter. Si 404, produit
-    // absent. Si erreur reseau/5xx, distinct du "introuvable" pour ne pas
-    // perdre la vente.
+    // 2) Fallback API. Fix C3 : distingue offline, 404, erreur reseau.
     if (!token) return;
     if (!estEnLigne()) {
       toast.warning(`Code ${code} introuvable hors-ligne — re-essayez au retour reseau`);
@@ -130,7 +152,7 @@ export function useScanProduit({
     } finally {
       setScanEnCours(false);
     }
-  }, [produits, indisponiblesVariantes, indisponiblesProduits, onProduitTrouve, token]);
+  }, [indexScan, indisponiblesVariantes, indisponiblesProduits, onProduitTrouve, token]);
 
   return { scanner, scanEnCours };
 }
