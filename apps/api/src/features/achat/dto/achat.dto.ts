@@ -143,10 +143,79 @@ export class CommandeResponseDto {
   @ApiProperty() emplacementId!: string;
   @ApiProperty() statut!: string;
   @ApiProperty() montantTotal!: number;
+  /** Phase A.2 : somme des frais d'approche en devise tenant. */
+  @ApiProperty({ description: "Total frais d'approche (landed cost)" })
+  fraisTotal!: number;
+  /** Phase A.2 : montantTotal + fraisTotal. */
+  @ApiProperty({ description: "Cout debarque total = total + frais" })
+  totalDebarque!: number;
+  /** Phase A.2 : methode de ventilation des frais sur les lignes. */
+  @ApiProperty({ enum: ["QUANTITY", "WEIGHT", "VALUE"] })
+  methodeAllocation!: "QUANTITY" | "WEIGHT" | "VALUE";
   @ApiProperty({ nullable: true }) dateAttendue!: string | null;
   @ApiProperty({ nullable: true }) dateReception!: string | null;
   @ApiProperty({ nullable: true }) notes!: string | null;
   @ApiProperty() creeLe!: string;
   @ApiProperty({ type: [LigneCommandeResponseDto], required: false })
   lignes?: LigneCommandeResponseDto[];
+}
+
+// ─── Phase A.2 : Frais d'approche (Landed Cost) ───
+
+export const CATEGORIES_FRAIS = [
+  "TRANSPORT", "CUSTOMS", "TRANSIT", "INSURANCE", "HANDLING", "OTHER",
+] as const;
+export type CategorieFrais = typeof CATEGORIES_FRAIS[number];
+
+export class CreerFraisDto {
+  @ApiProperty({ enum: CATEGORIES_FRAIS })
+  @IsIn(CATEGORIES_FRAIS as readonly string[])
+  categorie!: CategorieFrais;
+
+  @ApiProperty({ example: "Transitaire Maersk" })
+  @IsString() @MaxLength(255)
+  libelle!: string;
+
+  @ApiProperty({ example: 1500.00, description: "Montant dans la devise de saisie" })
+  @Type(() => Number) @IsNumber() @Min(0)
+  montant!: number;
+
+  @ApiProperty({ example: "EUR", description: "ISO 4217 (XOF, USD, EUR, CNY...)" })
+  @IsString() @MaxLength(3)
+  devise!: string;
+
+  @ApiProperty({
+    example: 655.957,
+    description: "Taux conversion devise saisie -> devise tenant. 1.0 si meme devise.",
+  })
+  @Type(() => Number) @IsNumber() @Min(0)
+  tauxChange!: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional() @IsString() @MaxLength(500)
+  notes?: string;
+}
+
+export class ModifierFraisDto {
+  @ApiProperty({ enum: CATEGORIES_FRAIS, required: false })
+  @IsOptional() @IsIn(CATEGORIES_FRAIS as readonly string[])
+  categorie?: CategorieFrais;
+  @IsOptional() @IsString() @MaxLength(255) libelle?: string;
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(0) montant?: number;
+  @IsOptional() @IsString() @MaxLength(3) devise?: string;
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(0) tauxChange?: number;
+  @IsOptional() @IsString() @MaxLength(500) notes?: string | null;
+}
+
+export class FraisResponseDto {
+  @ApiProperty() id!: string;
+  @ApiProperty({ enum: CATEGORIES_FRAIS }) categorie!: CategorieFrais;
+  @ApiProperty() libelle!: string;
+  @ApiProperty() montant!: number;
+  @ApiProperty() devise!: string;
+  @ApiProperty() tauxChange!: number;
+  @ApiProperty({ description: "Montant converti en devise tenant" })
+  montantEnBase!: number;
+  @ApiProperty({ nullable: true }) notes!: string | null;
+  @ApiProperty() creeLe!: string;
 }

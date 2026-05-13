@@ -8,6 +8,7 @@ import { AchatService } from "./achat.service";
 import {
   CreerFournisseurDto, ModifierFournisseurDto,
   CreerCommandeDto, ReceptionCommandeDto, ModifierStatutCommandeDto,
+  CreerFraisDto, ModifierFraisDto,
 } from "./dto/achat.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
@@ -136,5 +137,51 @@ export class AchatController {
     @Param("id") id: string,
   ) {
     return this.achatService.envoyerAuFournisseur(user.tenantId, id);
+  }
+
+  // ─── Phase A.2 : frais d'approche (Landed Cost) ─────────────────────
+
+  @Get("commandes/:id/frais")
+  @ApiOperation({ summary: "Phase A.2 : lister les frais d'approche d'une commande" })
+  listerFrais(
+    @CurrentUser() user: CurrentUserData,
+    @Param("id") id: string,
+  ) {
+    return this.achatService.listerFrais(user.tenantId, id);
+  }
+
+  @Post("commandes/:id/frais")
+  @ApiOperation({ summary: "Phase A.2 : ajouter un frais d'approche (transport, douane, etc.)" })
+  @Roles("ADMIN", "MANAGER", "WAREHOUSE")
+  ajouterFrais(
+    @CurrentUser() user: CurrentUserData,
+    @Param("id") id: string,
+    @Body() dto: CreerFraisDto,
+  ) {
+    return this.achatService.ajouterFrais(user.tenantId, user.userId, id, dto);
+  }
+
+  @Patch("commandes/:commandeId/frais/:fraisId")
+  @ApiOperation({ summary: "Phase A.2 : modifier un frais d'approche" })
+  @Roles("ADMIN", "MANAGER", "WAREHOUSE")
+  modifierFrais(
+    @CurrentUser() user: CurrentUserData,
+    @Param("commandeId") commandeId: string,
+    @Param("fraisId") fraisId: string,
+    @Body() dto: ModifierFraisDto,
+  ) {
+    return this.achatService.modifierFrais(user.tenantId, commandeId, fraisId, dto);
+  }
+
+  @Delete("commandes/:commandeId/frais/:fraisId")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Phase A.2 : supprimer un frais d'approche" })
+  @Roles("ADMIN", "MANAGER", "WAREHOUSE")
+  supprimerFrais(
+    @CurrentUser() user: CurrentUserData,
+    @Param("commandeId") commandeId: string,
+    @Param("fraisId") fraisId: string,
+  ) {
+    return this.achatService.supprimerFrais(user.tenantId, commandeId, fraisId);
   }
 }
