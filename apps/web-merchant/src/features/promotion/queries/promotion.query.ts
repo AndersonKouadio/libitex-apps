@@ -56,3 +56,14 @@ export function useSupprimerPromotionMutation() {
     onError: (err: Error) => toast.danger(err.message || "Erreur"),
   });
 }
+
+/** Module 11 D3 : stats consolidees d'un code promo. */
+export function useStatsPromotionQuery(id: string | null) {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: promotionKey("stats", id),
+    queryFn: () => promotionAPI.obtenirStats(token!, id!),
+    enabled: !!token && !!id,
+    staleTime: 60_000,
+  });
+}

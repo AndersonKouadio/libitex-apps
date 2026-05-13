@@ -23,3 +23,16 @@ export interface IResultatValidation {
   remise: number;
   promotion?: IPromotion;
 }
+
+/** Module 11 D3 : statistiques consolidees d'un code promo. */
+export interface IStatsPromotion {
+  nbUsages: number;
+  totalRemise: number;
+  caGenere: number;
+  topClients: Array<{
+    customerId: string;
+    nomComplet: string;
+    nbUsages: number;
+    totalRemise: number;
+  }>;
+}

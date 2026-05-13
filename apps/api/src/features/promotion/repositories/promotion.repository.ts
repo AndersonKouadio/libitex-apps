@@ -2,7 +2,7 @@ import { Injectable, Inject } from "@nestjs/common";
 import { eq, and, isNull, sql, desc, type SQL } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
-  type Database, promotions, promotionUsages,
+  type Database, promotions, promotionUsages, tickets, customers,
 } from "@libitex/db";
 
 @Injectable()
@@ -174,5 +174,57 @@ export class PromotionRepository {
     await this.db
       .delete(promotionUsages)
       .where(eq(promotionUsages.ticketId, ticketId));
+  }
+
+  /**
+   * Module 11 D3 : stats consolidees pour un code promo.
+   * Une seule query : nb_usages, total_remise distribue, CA genere
+   * (somme des ticket.total APRES remise — montant reellement encaisse).
+   *
+   * Pour aller plus loin, on pourrait calculer le CA avant remise = total + discountAmount
+   * mais total apres remise est plus pertinent (volume de business directement attribuable).
+   */
+  async obtenirStats(tenantId: string, promotionId: string) {
+    const [row] = await this.db
+      .select({
+        nbUsages: sql<number>`COUNT(*)::int`,
+        totalRemise: sql<number>`COALESCE(SUM(CAST(${promotionUsages.discountAmount} AS NUMERIC)), 0)`,
+        caGenere: sql<number>`COALESCE(SUM(CAST(${tickets.total} AS NUMERIC)), 0)`,
+      })
+      .from(promotionUsages)
+      .leftJoin(tickets, eq(promotionUsages.ticketId, tickets.id))
+      .where(and(
+        eq(promotionUsages.tenantId, tenantId),
+        eq(promotionUsages.promotionId, promotionId),
+      ));
+    return {
+      nbUsages: Number(row?.nbUsages ?? 0),
+      totalRemise: Number(row?.totalRemise ?? 0),
+      caGenere: Number(row?.caGenere ?? 0),
+    };
+  }
+
+  /**
+   * Module 11 D3 : top 5 clients ayant utilise le code (par nombre d'usages).
+   * Joint avec customers pour avoir le nom. Exclut les usages sans client lie.
+   */
+  async obtenirTopClients(tenantId: string, promotionId: string, limit = 5) {
+    return this.db
+      .select({
+        customerId: promotionUsages.customerId,
+        nom: customers.firstName,
+        prenom: customers.lastName,
+        nbUsages: sql<number>`COUNT(*)::int`,
+        totalRemise: sql<number>`COALESCE(SUM(CAST(${promotionUsages.discountAmount} AS NUMERIC)), 0)`,
+      })
+      .from(promotionUsages)
+      .innerJoin(customers, eq(promotionUsages.customerId, customers.id))
+      .where(and(
+        eq(promotionUsages.tenantId, tenantId),
+        eq(promotionUsages.promotionId, promotionId),
+      ))
+      .groupBy(promotionUsages.customerId, customers.firstName, customers.lastName)
+      .orderBy(desc(sql`COUNT(*)`))
+      .limit(limit);
   }
 }

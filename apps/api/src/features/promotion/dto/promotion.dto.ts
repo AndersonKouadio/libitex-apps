@@ -100,3 +100,21 @@ export class ValidationResultDto {
   remise!: number;
   @ApiProperty({ required: false }) promotion?: PromotionResponseDto;
 }
+
+/**
+ * Module 11 D3 : statistiques consolidees pour un code promo.
+ */
+export class StatsPromotionDto {
+  @ApiProperty() nbUsages!: number;
+  @ApiProperty({ description: "Total des remises distribuees (F CFA)" })
+  totalRemise!: number;
+  @ApiProperty({ description: "CA genere = somme des tickets utilisant le code" })
+  caGenere!: number;
+  @ApiProperty({ type: [Object], description: "Top 5 clients utilisateurs" })
+  topClients!: Array<{
+    customerId: string;
+    nomComplet: string;
+    nbUsages: number;
+    totalRemise: number;
+  }>;
+}

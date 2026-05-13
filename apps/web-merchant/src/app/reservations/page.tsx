@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { Button, Card, Chip, Skeleton, Select, ListBox, Label } from "@heroui/react";
 import {
   Plus, Calendar, Users, Phone, MapPin, Clock, Pencil, Trash2, Check, X, Ban,
+  ChevronLeft, ChevronRight, CalendarDays, List, CalendarRange,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
@@ -14,6 +15,7 @@ import {
   useModifierReservationMutation, useSupprimerReservationMutation,
 } from "@/features/reservation/queries/reservation.query";
 import { ModalReservation } from "@/features/reservation/components/modal-reservation";
+import { VueSemaineReservations } from "@/features/reservation/components/vue-semaine-reservations";
 import { useConfirmation } from "@/providers/confirmation-provider";
 import type { IReservation, StatutReservation } from "@/features/reservation/types/reservation.type";
 
@@ -35,13 +37,44 @@ const CLASSES_STATUT: Record<StatutReservation, string> = {
   NO_SHOW: "bg-danger/10 text-danger",
 };
 
+type ModeVue = "jour" | "semaine";
+
+function aujourdhuiISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function decalerJour(iso: string, delta: number): string {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function PageReservations() {
-  const [dateFiltre, setDateFiltre] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [dateFiltre, setDateFiltre] = useState<string>(aujourdhuiISO);
   const [statutFiltre, setStatutFiltre] = useState<string>("");
   const [modalOuvert, setModalOuvert] = useState(false);
   const [enEdition, setEnEdition] = useState<IReservation | null>(null);
+  const [modeVue, setModeVue] = useState<ModeVue>("jour");
+  const estAujourdhui = dateFiltre === aujourdhuiISO();
 
+  // Module 12 D3 : filtre la query selon mode jour (1 jour) ou semaine (7 jours).
+  // Le lundi de la semaine en cours = date - (jourSemaine - 1).
   const filtres = useMemo(() => {
+    if (modeVue === "semaine") {
+      const ref = new Date(`${dateFiltre}T12:00:00`);
+      const decalLundi = (ref.getDay() + 6) % 7; // 0 si lundi, 6 si dimanche
+      const lundi = new Date(ref);
+      lundi.setDate(ref.getDate() - decalLundi);
+      lundi.setHours(0, 0, 0, 0);
+      const dimanche = new Date(lundi);
+      dimanche.setDate(lundi.getDate() + 6);
+      dimanche.setHours(23, 59, 59, 999);
+      return {
+        dateDebut: lundi.toISOString(),
+        dateFin: dimanche.toISOString(),
+        statut: statutFiltre || undefined,
+      };
+    }
     const debut = new Date(`${dateFiltre}T00:00:00`).toISOString();
     const fin = new Date(`${dateFiltre}T23:59:59`).toISOString();
     return {
@@ -49,7 +82,7 @@ export default function PageReservations() {
       dateFin: fin,
       statut: statutFiltre || undefined,
     };
-  }, [dateFiltre, statutFiltre]);
+  }, [dateFiltre, statutFiltre, modeVue]);
 
   const { data: reservations, isLoading } = useReservationsQuery(filtres);
   const { data: resume } = useResumeJourQuery(dateFiltre);
@@ -103,8 +136,8 @@ export default function PageReservations() {
         }
       />
 
-      {/* Résumé du jour */}
-      {resume && (
+      {/* Résumé du jour — uniquement en mode jour, vue semaine = agrega different */}
+      {modeVue === "jour" && resume && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
           <Card><Card.Content className="p-3">
             <p className="text-xs text-muted">Reservations</p>
@@ -128,6 +161,60 @@ export default function PageReservations() {
           </Card.Content></Card>
         </div>
       )}
+
+      {/* Module 12 D3 : navigation jour + toggle vue jour/semaine */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="flex items-center rounded-md border border-border bg-surface overflow-hidden">
+          <Button
+            variant="ghost"
+            className="h-9 w-9 p-0 min-w-0 rounded-none"
+            aria-label="Jour precedent"
+            onPress={() => setDateFiltre(decalerJour(dateFiltre, modeVue === "semaine" ? -7 : -1))}
+          >
+            <ChevronLeft size={14} />
+          </Button>
+          <Button
+            variant="ghost"
+            className="h-9 px-3 text-xs min-w-0 rounded-none border-x border-border"
+            aria-label="Aujourd'hui"
+            onPress={() => setDateFiltre(aujourdhuiISO())}
+            isDisabled={estAujourdhui}
+          >
+            Aujourd&apos;hui
+          </Button>
+          <Button
+            variant="ghost"
+            className="h-9 w-9 p-0 min-w-0 rounded-none"
+            aria-label="Jour suivant"
+            onPress={() => setDateFiltre(decalerJour(dateFiltre, modeVue === "semaine" ? 7 : 1))}
+          >
+            <ChevronRight size={14} />
+          </Button>
+        </div>
+
+        <div className="flex items-center rounded-md border border-border bg-surface overflow-hidden">
+          <Button
+            variant="ghost"
+            className={`h-9 px-3 text-xs gap-1.5 min-w-0 rounded-none ${
+              modeVue === "jour" ? "bg-accent/10 text-accent" : "text-muted"
+            }`}
+            onPress={() => setModeVue("jour")}
+            aria-pressed={modeVue === "jour"}
+          >
+            <List size={12} /> Jour
+          </Button>
+          <Button
+            variant="ghost"
+            className={`h-9 px-3 text-xs gap-1.5 min-w-0 rounded-none border-l border-border ${
+              modeVue === "semaine" ? "bg-accent/10 text-accent" : "text-muted"
+            }`}
+            onPress={() => setModeVue("semaine")}
+            aria-pressed={modeVue === "semaine"}
+          >
+            <CalendarRange size={12} /> Semaine
+          </Button>
+        </div>
+      </div>
 
       <div className="mb-4 flex flex-wrap gap-3 items-end">
         <ChampDate label="Date" value={dateFiltre} onChange={setDateFiltre} />
@@ -157,6 +244,13 @@ export default function PageReservations() {
         <div className="space-y-2">
           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 rounded" />)}
         </div>
+      ) : modeVue === "semaine" ? (
+        // Module 12 D3 : vue calendrier hebdo
+        <VueSemaineReservations
+          reservations={reservations ?? []}
+          dateReference={dateFiltre}
+          onSelect={ouvrirEdition}
+        />
       ) : (reservations?.length ?? 0) === 0 ? (
         <EmptyState
           icone={Calendar}

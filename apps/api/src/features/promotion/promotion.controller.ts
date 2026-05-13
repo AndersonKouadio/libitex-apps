@@ -55,4 +55,11 @@ export class PromotionController {
   valider(@CurrentUser() user: CurrentUserData, @Body() dto: ValiderCodeDto) {
     return this.service.valider(user.tenantId, dto);
   }
+
+  @Get(":id/stats")
+  @ApiOperation({ summary: "Module 11 D3 : statistiques d'un code promo" })
+  @Roles("ADMIN", "MANAGER")
+  obtenirStats(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
+    return this.service.obtenirStats(user.tenantId, id);
+  }
 }
