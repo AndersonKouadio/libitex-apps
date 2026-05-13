@@ -7,6 +7,9 @@ import type { UniteMesure } from "@/features/unite/types/unite.type";
 import {
   retrouverImprimante, envoyerCommandes, genererTicketEscPos, supporteWebUsb,
   verifierPapier,
+  supporteWebBluetooth, appairerImprimanteBT, envoyerCommandesBT,
+  imprimanteBTConnue,
+  type DeviceBluetooth,
 } from "@/lib/escpos";
 
 interface InfosBoutique {
@@ -29,8 +32,10 @@ interface InfosContexte {
  * Mode d'impression utilise par `imprimerTicket`. Permet aux callers
  * d'afficher un toast contextuel ("Imprimante non detectee, ticket
  * ouvert dans le navigateur") ou de signaler une erreur.
+ *
+ * Module 13 D2 : ajout du mode BLUETOOTH pour les imprimantes mobiles.
  */
-export type ModeImpression = "USB" | "HTML" | "ERREUR";
+export type ModeImpression = "USB" | "BLUETOOTH" | "HTML" | "ERREUR";
 
 export interface ResultatImpression {
   mode: ModeImpression;
@@ -58,31 +63,33 @@ const LIBELLE_PAIEMENT = LABELS_METHODE_PAIEMENT;
  *
  * Le caller peut afficher un toast contextuel selon `mode` + `fallback`.
  */
+// Module 13 D2 : cache memoire du device BT pour ne pas redemander
+// le picker a chaque vente. Tant que la page n'est pas rechargee,
+// le device reste valide.
+let deviceBTEnMemoire: DeviceBluetooth | null = null;
+
 export async function imprimerTicket(
   ticket: ITicket,
   boutique: InfosBoutique,
   monnaie = 0,
   contexte: InfosContexte = {},
 ): Promise<ResultatImpression> {
+  const data = genererTicketEscPos(ticket, boutique, monnaie, contexte);
+
+  // 1. USB en priorite (boutique fixe)
   if (supporteWebUsb()) {
     try {
       const device = await retrouverImprimante();
       if (device) {
-        // Verifie le papier AVANT d'envoyer pour eviter d'imprimer
-        // dans le vide. Si l'imprimante ne supporte pas le statut (null),
-        // on continue sans bloquer.
         const etat = await verifierPapier(device);
         if (etat?.vide) {
           throw new Error("Rouleau de papier epuise — remplacez le rouleau avant de continuer");
         }
-        const data = genererTicketEscPos(ticket, boutique, monnaie, contexte);
         await envoyerCommandes(device, data);
         return { mode: "USB", fallback: false };
       }
     } catch (err) {
-      // L'erreur USB n'est pas bloquante : on retombe sur la popup HTML
-      // pour que le caissier ait quand meme son ticket. On capture sur
-      // Sentry pour suivre le taux d'echec en prod.
+      // Erreur USB : on tente BT puis HTML
       const message = err instanceof Error ? err.message : String(err);
       Sentry.captureException(err instanceof Error ? err : new Error(message), {
         tags: { module: "impression", mode: "usb-fallback" },
@@ -92,12 +99,64 @@ export async function imprimerTicket(
           origineOffline: contexte.origineOffline ?? false,
         },
       });
+      // Tenter BT avant le fallback HTML
+      const resBT = await tenterImpressionBT(ticket, boutique, data, contexte);
+      if (resBT) return { ...resBT, fallback: true, message };
       imprimerViaPopup(ticket, boutique, monnaie, contexte);
       return { mode: "HTML", fallback: true, message };
     }
   }
+
+  // 2. Bluetooth si dispo et appairage connu (camion / mobile)
+  const resBT = await tenterImpressionBT(ticket, boutique, data, contexte);
+  if (resBT) return resBT;
+
+  // 3. Fallback HTML
   imprimerViaPopup(ticket, boutique, monnaie, contexte);
   return { mode: "HTML", fallback: false };
+}
+
+/**
+ * Module 13 D2 : tente l'impression Bluetooth si supporte et appairage
+ * connu. Renvoie null si BT indisponible, sinon le ResultatImpression
+ * (succes ou echec avec fallback).
+ *
+ * Subtilite Web Bluetooth : pas de getDevices() sans permission persistente,
+ * donc on doit redemander l'appairage si on a perdu la reference. Pour
+ * eviter le picker a chaque vente, on cache le device en memoire pendant
+ * la session navigateur.
+ */
+async function tenterImpressionBT(
+  ticket: ITicket,
+  boutique: InfosBoutique,
+  data: Uint8Array,
+  contexte: InfosContexte,
+): Promise<ResultatImpression | null> {
+  if (!supporteWebBluetooth() || !imprimanteBTConnue()) return null;
+  try {
+    // Si on n'a pas de device en memoire, on doit appairer
+    // (le navigateur va re-demander la confirmation, comportement Web BT).
+    // Pour eviter d'imposer ce dialog a chaque ticket, le caller front
+    // peut faire un appairage explicite au demarrage de session.
+    if (!deviceBTEnMemoire) {
+      deviceBTEnMemoire = await appairerImprimanteBT(false);
+    }
+    await envoyerCommandesBT(deviceBTEnMemoire, data);
+    return { mode: "BLUETOOTH", fallback: false };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    Sentry.captureException(err instanceof Error ? err : new Error(message), {
+      tags: { module: "impression", mode: "bt-fallback" },
+      extra: {
+        ticketId: ticket.id,
+        numeroTicket: ticket.numeroTicket,
+        origineOffline: contexte.origineOffline ?? false,
+      },
+    });
+    // Reset cache device pour forcer une re-tentative propre la prochaine fois
+    deviceBTEnMemoire = null;
+    return null;
+  }
 }
 
 function imprimerViaPopup(

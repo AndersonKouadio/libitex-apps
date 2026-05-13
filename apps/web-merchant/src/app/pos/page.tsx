@@ -30,6 +30,7 @@ import { useSaisieQuantite } from "@/features/vente/hooks/useSaisieQuantite";
 import { useEncaissement } from "@/features/vente/hooks/useEncaissement";
 import { useScanProduit } from "@/features/vente/hooks/useScanProduit";
 import { BarreScan, type BarreScanHandle } from "@/features/vente/components/barre-scan";
+import { BanniereCompatMateriel } from "@/features/vente/components/banniere-compat-materiel";
 import { ModalScannerCamera } from "@/features/vente/components/modal-scanner-camera";
 import { formatMontant } from "@/features/vente/utils/format";
 import { useSessionActiveQuery } from "@/features/session-caisse/queries/session-active.query";
@@ -272,6 +273,9 @@ export default function PagePOS() {
             )}
           </div>
         </header>
+
+        {/* Module 13 D3 : alerte si ni WebUSB ni WebBluetooth disponibles */}
+        <BanniereCompatMateriel />
 
         <div className="px-3 sm:px-4 py-2 border-b border-border bg-surface">
           <BarreScan

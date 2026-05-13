@@ -23,6 +23,10 @@ export const STORAGE_KEYS = {
   /** Brouillon du panier (persiste entre reload/offline). Fix I3 du Module 2. */
   POS_PANIER_DRAFT: "libitex_panier_draft",
   POS_PRINTER_DEVICE: "libitex_imprimante_device",
+  /** Module 13 D2 : imprimante Bluetooth appairee (mobile/camion). */
+  POS_PRINTER_BT: "libitex_imprimante_bt",
+  /** Module 13 D2 : transport prefere (usb | bluetooth | auto). */
+  POS_PRINTER_TRANSPORT: "libitex_imprimante_transport",
 
   // Onboarding
   ONBOARDING_DISMISSED: "libitex.onboarding.dismissed",
