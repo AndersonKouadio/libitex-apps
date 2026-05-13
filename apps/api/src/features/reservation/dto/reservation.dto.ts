@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import {
-  IsString, IsOptional, IsUUID, IsInt, IsIn, IsDateString, Min, MaxLength,
+  IsString, IsOptional, IsUUID, IsInt, IsIn, IsDateString, Min, Max, MaxLength,
 } from "class-validator";
 
 export type StatutReservation =
@@ -15,7 +15,9 @@ export class CreerReservationDto {
   @ApiProperty({ example: "2026-05-15T19:30:00.000Z" })
   @IsDateString()
   dateReservation!: string;
-  @ApiProperty({ minimum: 1 }) @IsInt() @Min(1) nombrePersonnes!: number;
+  @ApiProperty({ minimum: 1, maximum: 200 })
+  @IsInt() @Min(1) @Max(200, { message: "Maximum 200 couverts par reservation" })
+  nombrePersonnes!: number;
   @ApiProperty({ required: false }) @IsOptional() @IsString() notes?: string;
 }
 
@@ -25,7 +27,8 @@ export class ModifierReservationDto {
   @IsOptional() @IsString() @MaxLength(50) telephone?: string | null;
   @IsOptional() @IsString() @MaxLength(50) numeroTable?: string | null;
   @IsOptional() @IsDateString() dateReservation?: string;
-  @IsOptional() @IsInt() @Min(1) nombrePersonnes?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(200, { message: "Maximum 200 couverts par reservation" })
+  nombrePersonnes?: number;
   @IsOptional() @IsString() notes?: string | null;
   @IsOptional() @IsIn(["PENDING", "CONFIRMED", "SEATED", "COMPLETED", "CANCELLED", "NO_SHOW"])
   statut?: StatutReservation;
