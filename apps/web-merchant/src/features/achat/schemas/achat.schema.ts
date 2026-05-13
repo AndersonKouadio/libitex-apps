@@ -49,3 +49,32 @@ export const receptionSchema = z.object({
 });
 
 export type ReceptionDTO = z.infer<typeof receptionSchema>;
+
+// ─── Phase A.2 : Frais d'approche (Landed Cost) ───
+
+const CATEGORIES_FRAIS_TUPLE = [
+  "TRANSPORT",
+  "CUSTOMS",
+  "TRANSIT",
+  "INSURANCE",
+  "HANDLING",
+  "OTHER",
+] as const;
+
+const DEVISES_FREQUENTES_TUPLE = [
+  "XOF", "EUR", "USD", "CNY", "GBP", "MAD", "GHS", "NGN",
+] as const;
+
+export const fraisSchema = z.object({
+  categorie: z.enum(CATEGORIES_FRAIS_TUPLE),
+  libelle: z.string().min(1, "Libelle requis").max(255, "Libelle trop long"),
+  montant: z.coerce.number().nonnegative("Montant invalide"),
+  devise: z.string().min(3, "Devise requise (ex: XOF)").max(3, "Code ISO 3 lettres"),
+  tauxChange: z.coerce.number().positive("Taux > 0 requis"),
+  notes: z.string().max(500, "Notes : 500 caracteres maximum").optional(),
+});
+
+export type FraisDTO = z.infer<typeof fraisSchema>;
+
+/** Liste des devises proposees dans le Select (saisie libre 3 lettres acceptee aussi). */
+export const DEVISES_FREQUENTES: readonly string[] = DEVISES_FREQUENTES_TUPLE;

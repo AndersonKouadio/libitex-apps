@@ -4,7 +4,12 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tansta
 import { toast } from "@heroui/react";
 import { achatAPI } from "../apis/achat.api";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import type { CommandeDTO, FournisseurDTO, ReceptionDTO } from "../schemas/achat.schema";
+import type {
+  CommandeDTO,
+  FournisseurDTO,
+  ReceptionDTO,
+  FraisDTO,
+} from "../schemas/achat.schema";
 
 export const achatKey = (...parts: unknown[]) => ["achat", ...parts];
 
@@ -149,6 +154,70 @@ export function useReceptionMutation() {
       qc.invalidateQueries({ queryKey: achatKey("commande") });
       qc.invalidateQueries({ queryKey: ["stock"] });
       toast.success("Reception enregistree");
+    },
+    onError: (err: Error) => toast.danger(err.message || "Erreur"),
+  });
+}
+
+// ─── Phase A.2 : Frais d'approche ──────────────────────────────────────
+
+/**
+ * Liste les frais d'approche d'une commande.
+ * Invalide automatiquement quand on cree/modifie/supprime un frais.
+ */
+export function useFraisListQuery(commandeId: string) {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: achatKey("frais", commandeId),
+    queryFn: () => achatAPI.listerFrais(token!, commandeId),
+    enabled: !!token && !!commandeId,
+    staleTime: 30_000,
+  });
+}
+
+export function useAjouterFraisMutation(commandeId: string) {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: FraisDTO) => achatAPI.ajouterFrais(token!, commandeId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: achatKey("frais", commandeId) });
+      // La commande expose fraisTotal / totalDebarque, donc on rafraichit aussi.
+      qc.invalidateQueries({ queryKey: achatKey("commande") });
+      qc.invalidateQueries({ queryKey: achatKey("commandes") });
+      toast.success("Frais ajoute");
+    },
+    onError: (err: Error) => toast.danger(err.message || "Erreur"),
+  });
+}
+
+export function useModifierFraisMutation(commandeId: string) {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ fraisId, data }: { fraisId: string; data: Partial<FraisDTO> }) =>
+      achatAPI.modifierFrais(token!, commandeId, fraisId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: achatKey("frais", commandeId) });
+      qc.invalidateQueries({ queryKey: achatKey("commande") });
+      qc.invalidateQueries({ queryKey: achatKey("commandes") });
+      toast.success("Frais modifie");
+    },
+    onError: (err: Error) => toast.danger(err.message || "Erreur"),
+  });
+}
+
+export function useSupprimerFraisMutation(commandeId: string) {
+  const { token } = useAuth();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (fraisId: string) =>
+      achatAPI.supprimerFrais(token!, commandeId, fraisId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: achatKey("frais", commandeId) });
+      qc.invalidateQueries({ queryKey: achatKey("commande") });
+      qc.invalidateQueries({ queryKey: achatKey("commandes") });
+      toast.success("Frais supprime");
     },
     onError: (err: Error) => toast.danger(err.message || "Erreur"),
   });

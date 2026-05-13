@@ -1,6 +1,11 @@
 import { httpClient } from "@/lib/http";
-import type { IFournisseur, ICommande } from "../types/achat.type";
-import type { CommandeDTO, FournisseurDTO, ReceptionDTO } from "../schemas/achat.schema";
+import type { IFournisseur, ICommande, IFrais } from "../types/achat.type";
+import type {
+  CommandeDTO,
+  FournisseurDTO,
+  ReceptionDTO,
+  FraisDTO,
+} from "../schemas/achat.schema";
 
 const BASE = "/achats";
 
@@ -57,4 +62,30 @@ export const achatAPI = {
 
   recevoir: (token: string, id: string, data: ReceptionDTO) =>
     httpClient.post<ICommande>(`${BASE}/commandes/${id}/recevoir`, data, { token }),
+
+  // ─── Frais d'approche (Phase A.2) ───────────────────────────────────
+
+  listerFrais: (token: string, commandeId: string) =>
+    httpClient.get<IFrais[]>(`${BASE}/commandes/${commandeId}/frais`, { token }),
+
+  ajouterFrais: (token: string, commandeId: string, data: FraisDTO) =>
+    httpClient.post<IFrais>(`${BASE}/commandes/${commandeId}/frais`, data, { token }),
+
+  modifierFrais: (
+    token: string,
+    commandeId: string,
+    fraisId: string,
+    data: Partial<FraisDTO>,
+  ) =>
+    httpClient.patch<IFrais>(
+      `${BASE}/commandes/${commandeId}/frais/${fraisId}`,
+      data,
+      { token },
+    ),
+
+  supprimerFrais: (token: string, commandeId: string, fraisId: string) =>
+    httpClient.delete<void>(
+      `${BASE}/commandes/${commandeId}/frais/${fraisId}`,
+      { token },
+    ),
 };
