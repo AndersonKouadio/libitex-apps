@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Modal, Button } from "@heroui/react";
 import { ScanLine, X, AlertCircle, Zap, ZapOff, RotateCcw } from "lucide-react";
 import {
-  creerBarcodeDetector, supporteBarcodeDetector,
+  creerDetecteur, nomMoteurDetection,
   type BarcodeDetectorInstance,
 } from "@/lib/scan/barcode-detector";
 import { bipScanReussi } from "@/lib/scan/audio-beep";
@@ -51,12 +51,15 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
 
     setErreur(null);
 
-    if (!supporteBarcodeDetector() || !supporteMediaDevices()) {
+    // Module 13 D1 : on ne refuse plus si BarcodeDetector natif absent —
+    // creerDetecteur() retourne automatiquement le fallback ZXing
+    // (iOS Safari, Firefox, Samsung Internet, Opera). Seul getUserMedia
+    // reste indispensable (toujours present sur les navigateurs modernes).
+    if (!supporteMediaDevices()) {
       setSupporte(false);
       return;
     }
     setSupporte(true);
-    detectorRef.current = creerBarcodeDetector();
     dejaTrouveRef.current = false;
     setTorchDispo(false);
     setTorchActif(false);
@@ -64,6 +67,13 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
     let arrete = false;
 
     (async () => {
+      // Module 13 D1 : factory async qui choisit natif vs ZXing.
+      detectorRef.current = await creerDetecteur();
+      if (arrete) return;
+      if (process.env.NODE_ENV !== "production") {
+        console.info(`[scan] moteur : ${nomMoteurDetection()}`);
+      }
+
       // Detecte si plusieurs cameras sont disponibles (active le switch).
       const nb = await compterCameras();
       setPlusieursCameras(nb >= 2);
@@ -154,10 +164,11 @@ export function ModalScannerCamera({ ouvert, onFermer, onScan }: Props) {
               <div className="p-8 flex flex-col items-center text-center gap-3">
                 <AlertCircle size={32} className="text-warning" />
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Camera non supportee</p>
+                  <p className="text-sm font-semibold text-foreground">Camera indisponible</p>
                   <p className="text-xs text-muted mt-1 leading-relaxed">
-                    Le scan camera est disponible sur Chrome, Edge ou Brave en HTTPS.
-                    Sur Safari, Firefox ou en HTTP, utilisez une douchette USB ou saisissez le code manuellement.
+                    L&apos;acces a la camera necessite HTTPS et une autorisation
+                    dans votre navigateur. Verifiez les permissions ou
+                    utilisez une douchette USB / saisissez le code manuellement.
                   </p>
                 </div>
               </div>

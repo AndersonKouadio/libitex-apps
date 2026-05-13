@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
-  IsString, IsOptional, IsEmail, IsEnum, IsArray, IsNumber, Min, Max, MaxLength,
+  IsString, IsOptional, IsEmail, IsEnum, IsArray, IsNumber, IsUrl,
+  Min, Max, MaxLength,
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ActivitySector, ProductType } from "@libitex/shared";
@@ -71,6 +72,19 @@ export class ModifierBoutiqueDto {
   @IsEnum(METHODES_PAIEMENT, { each: true })
   @IsOptional()
   methodesPaiement?: typeof METHODES_PAIEMENT[number][];
+
+  /**
+   * Module 14 D1 : URL du logo de la boutique. Uploade prealablement via
+   * POST /api/v1/uploads/image/boutiques qui retourne l'URL publique
+   * (MinIO ou S3). Envoyer null pour retirer le logo.
+   */
+  @ApiPropertyOptional({
+    description: "URL du logo (issue de l'endpoint upload boutiques)",
+    nullable: true, example: "https://storage.libitex.app/boutiques/abc.png",
+  })
+  @IsOptional()
+  @IsUrl({ require_tld: false }, { message: "logoUrl doit etre une URL valide" })
+  logoUrl?: string | null;
 }
 
 export class BoutiqueDetailDto {
@@ -106,4 +120,8 @@ export class BoutiqueDetailDto {
 
   @ApiProperty({ enum: METHODES_PAIEMENT, isArray: true })
   methodesPaiement!: typeof METHODES_PAIEMENT[number][];
+
+  /** Module 14 D1 : URL du logo, null si pas encore configure. */
+  @ApiProperty({ required: false, nullable: true })
+  logoUrl!: string | null;
 }

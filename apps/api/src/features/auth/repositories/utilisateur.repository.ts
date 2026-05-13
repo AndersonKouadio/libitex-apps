@@ -155,6 +155,8 @@ export class UtilisateurRepository {
     address: string;
     taxRate: string;
     paymentMethods: Array<"CASH" | "CARD" | "MOBILE_MONEY" | "BANK_TRANSFER" | "CREDIT">;
+    /** Module 14 D1 : null efface le logo, undefined ne touche pas. */
+    logoUrl: string | null;
   }>) {
     const cleaned = Object.fromEntries(
       Object.entries(data).filter(([, v]) => v !== undefined),

@@ -15,6 +15,8 @@ export interface ModifierBoutiqueDTO {
   adresse?: string;
   tauxTva?: number;
   methodesPaiement?: Array<"CASH" | "CARD" | "MOBILE_MONEY" | "BANK_TRANSFER" | "CREDIT">;
+  /** Module 14 D1 : URL du logo. null efface, undefined ne touche pas. */
+  logoUrl?: string | null;
 }
 
 export const boutiqueAPI = {
