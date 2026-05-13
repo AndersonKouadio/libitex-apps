@@ -185,13 +185,32 @@ export class VenteService {
       lignesCrees.push(ligneCree);
     }
 
-    // Remise globale : montant calcule cote front, plafonne au sous-total
-    // pour eviter un total negatif. La raison (libre ou pre-selectionnee) est
-    // tracee dans le champ note du ticket prefixee par "Remise:".
-    const remiseGlobale = Math.min(
+    // Module 11 D1 (fix I2) : si la raison est "PROMO:CODE", on RE-CALCULE
+    // la remise cote serveur depuis la promotion en base (ne fait pas
+    // confiance au montant envoye par le front qui peut etre falsifie).
+    // Sinon (remise manuelle libre), on garde la valeur envoyee mais
+    // plafonnee au sous-total.
+    let remiseGlobale = Math.min(
       Math.max(0, dto.remiseGlobale ?? 0),
       sousTotal + totalTva,
     );
+    if (dto.raisonRemise?.startsWith("PROMO:") && dto.remiseGlobale && dto.remiseGlobale > 0) {
+      const code = dto.raisonRemise.slice("PROMO:".length).trim();
+      if (code) {
+        const verdict = await this.promotion.valider(tenantId, {
+          code, montantTicket: sousTotal + totalTva, clientId: dto.clientId,
+        });
+        if (verdict.valide && verdict.remise > 0) {
+          // Force le serveur a utiliser SA propre valeur calculee,
+          // pas ce que le front pretend.
+          remiseGlobale = Math.min(verdict.remise, sousTotal + totalTva);
+        } else {
+          // Code invalide a la creation -> ignorer la remise (ne pas
+          // creer le ticket avec une remise non justifiee).
+          remiseGlobale = 0;
+        }
+      }
+    }
     const total = Math.max(0, sousTotal + totalTva - remiseGlobale);
 
     const noteFinale = dto.raisonRemise && remiseGlobale > 0
@@ -205,6 +224,10 @@ export class VenteService {
       discountAmount: remiseGlobale.toFixed(2),
       total: total.toFixed(2),
       ...(noteFinale !== dto.note ? { note: noteFinale } : {}),
+      // Module 11 D1 : snapshot de la raison (utilise par completerTicket
+      // pour reappliquer la promo en atomique). Format strict "PROMO:CODE"
+      // ou texte libre pour les remises manuelles.
+      ...(remiseGlobale > 0 && dto.raisonRemise ? { discountReason: dto.raisonRemise } : {}),
     });
 
     await this.audit.log({
@@ -216,17 +239,10 @@ export class VenteService {
       },
     });
 
-    // Code promo : si raisonRemise commence par "PROMO:CODE", enregistre
-    // l'usage et incremente le compteur. Best-effort — un echec n'interrompt
-    // pas la creation du ticket.
-    if (dto.raisonRemise && dto.raisonRemise.startsWith("PROMO:") && remiseGlobale > 0) {
-      const code = dto.raisonRemise.slice("PROMO:".length).trim();
-      if (code) {
-        this.promotion
-          .appliquerAuTicket(tenantId, code, ticket.id, dto.clientId, sousTotal + totalTva)
-          .catch(() => { /* silencieux */ });
-      }
-    }
+    // Module 11 D1 (fix C4) : l'application reelle (increment usage,
+    // enregistrement promotion_usages, audit) est differee a
+    // completerTicket() — coherent avec le credit fidelite, et evite
+    // de consommer un usage si le ticket est annule en PARKED.
 
     return this.mapTicket(ticketMaj, lignesCrees.map(this.mapLigne), []);
   }
@@ -328,6 +344,27 @@ export class VenteService {
     const complete = await this.ticketRepo.changerStatut(tenantId, ticketId, "COMPLETED", {
       completedAt: new Date(),
     });
+
+    // Module 11 D1 (fix C1+C2+C4) : applique le code promo de facon
+    // atomique au moment de la completion. Si la limite globale a ete
+    // atteinte par une vente concurrente (race), l'increment echoue
+    // cleanly et on log audit (le ticket reste complete car le client
+    // a deja paye). Le montant de la remise est verrouille dans
+    // ticket.discountAmount des la creation — recalculer ici causerait
+    // une incoherence si le total a evolue entre creation et completion.
+    if (ticket.discountReason?.startsWith("PROMO:") && Number(ticket.discountAmount) > 0) {
+      const code = ticket.discountReason.slice("PROMO:".length).trim();
+      if (code) {
+        await this.promotion.appliquerAuTicketEnVerifiant(
+          tenantId, userId, code, ticket.id,
+          ticket.customerId ?? undefined,
+          // On passe le sous-total + TVA (montant AVANT remise) pour
+          // que la validation des conditions (montantMin, etc.) soit
+          // coherente avec celle faite au panier.
+          Number(ticket.subtotal) + Number(ticket.taxAmount),
+        );
+      }
+    }
 
     await this.audit.log({
       tenantId, userId, action: AUDIT_ACTIONS.TICKET_COMPLETED,
@@ -447,6 +484,14 @@ export class VenteService {
     if (ticket.status === "COMPLETED") throw new TicketNonModifiableException(ticket.status);
 
     const voided = await this.ticketRepo.changerStatut(tenantId, ticketId, "VOIDED");
+
+    // Module 11 D2 : si le ticket avait consomme un code promo, on libere
+    // l'usage (decrement compteur + suppression promotion_usages). Best-
+    // effort : un echec ne re-leve pas l'annulation. Note : un ticket
+    // PARKED n'a pas encore consomme la promo (application differee a
+    // completerTicket), donc rien a liberer pour ces cas.
+    this.promotion.libererUsagesTicket(tenantId, ticketId)
+      .catch((err) => console.error("[promotion] liberation usages echouee:", err));
 
     await this.audit.log({
       tenantId, userId, action: AUDIT_ACTIONS.TICKET_VOIDED,
