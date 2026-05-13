@@ -21,6 +21,12 @@ export interface InfosContexte {
   /** Imprime "[OFFLINE]" en entete pour tracer les ventes synchronisees
    *  depuis la file hors-ligne (utile pour le rapprochement comptable). */
   origineOffline?: boolean;
+  /**
+   * Module 15 D2 : message libre imprime en bas du ticket. Configure
+   * par emplacement via /parametres/emplacements/[id]. Max 200 chars
+   * (~3-4 lignes 80mm). Tronque silencieusement si plus long.
+   */
+  footerMessage?: string | null;
 }
 
 /**
@@ -139,9 +145,31 @@ export function genererTicketEscPos(
 
   b.saut(2)
     .aligner("centre")
-    .ligne("Merci de votre visite")
-    .saut(3)
-    .couper();
+    .ligne("Merci de votre visite");
+
+  // Module 15 D2 : message libre par emplacement (footer personnalise).
+  // Wrap automatique sur la largeur du ticket. Tronque a 200 chars pour
+  // eviter qu'un message trop long ne mange tout le rouleau.
+  const footer = (contexte.footerMessage ?? "").trim().slice(0, 200);
+  if (footer) {
+    b.saut(1);
+    // Decoupe en lignes de COLS=42 chars max (sans casser les mots si possible)
+    const mots = footer.split(/\s+/);
+    let ligne = "";
+    for (const mot of mots) {
+      if (ligne.length === 0) {
+        ligne = mot;
+      } else if (ligne.length + 1 + mot.length <= COLS) {
+        ligne += " " + mot;
+      } else {
+        b.ligne(ligne);
+        ligne = mot;
+      }
+    }
+    if (ligne.length > 0) b.ligne(ligne);
+  }
+
+  b.saut(3).couper();
 
   return b.build();
 }

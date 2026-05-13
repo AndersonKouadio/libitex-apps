@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { Button, Card, Skeleton } from "@heroui/react";
-import { MapPin, Plus, Pencil, Trash2 } from "lucide-react";
+import { MapPin, Plus, Pencil, Trash2, Settings } from "lucide-react";
 import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
 import { useSupprimerEmplacementMutation } from "@/features/stock/queries/emplacement.mutations";
 import { ModalEmplacement } from "@/features/stock/components/modal-emplacement";
+import { ModalConfigEmplacement } from "@/features/location-settings/components/modal-config-emplacement";
 import type { IEmplacement } from "@/features/stock/types/stock.type";
 import { useConfirmation } from "@/providers/confirmation-provider";
 
@@ -25,6 +26,8 @@ export default function PageEmplacements() {
   const confirmer = useConfirmation();
   const [modalOuvert, setModalOuvert] = useState(false);
   const [enEdition, setEnEdition] = useState<IEmplacement | null>(null);
+  // Module 15 D3 : modale de configuration override par emplacement
+  const [configEmp, setConfigEmp] = useState<IEmplacement | null>(null);
 
   function ouvrirCreation() {
     setEnEdition(null);
@@ -96,6 +99,14 @@ export default function PageEmplacements() {
                     <Button
                       variant="ghost"
                       className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
+                      onPress={() => setConfigEmp(emp)}
+                      aria-label={`Configurer ${emp.nom}`}
+                    >
+                      <Settings size={14} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="text-muted hover:text-accent p-1.5 h-auto min-w-0"
                       onPress={() => ouvrirEdition(emp)}
                       aria-label={`Modifier ${emp.nom}`}
                     >
@@ -121,6 +132,13 @@ export default function PageEmplacements() {
         ouvert={modalOuvert}
         emplacement={enEdition}
         onFermer={() => setModalOuvert(false)}
+      />
+
+      {/* Module 15 D3 : configuration override par emplacement */}
+      <ModalConfigEmplacement
+        ouvert={configEmp !== null}
+        emplacement={configEmp ? { id: configEmp.id, nom: configEmp.nom } : null}
+        onFermer={() => setConfigEmp(null)}
       />
     </PageContainer>
   );
