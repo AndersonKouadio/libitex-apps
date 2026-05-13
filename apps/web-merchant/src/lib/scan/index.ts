@@ -5,6 +5,7 @@
 
 export {
   FORMATS_SCAN_DEFAULT, creerBarcodeDetector, supporteBarcodeDetector,
+  creerDetecteur, nomMoteurDetection,
 } from "./barcode-detector";
 export type {
   BarcodeDetectionResult, BarcodeDetectorInstance, BarcodeDetectorCtor,

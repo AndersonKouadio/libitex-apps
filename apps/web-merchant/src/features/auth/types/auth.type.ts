@@ -48,6 +48,8 @@ export interface IBoutiqueDetail {
   adresse: string | null;
   tauxTva: number;
   methodesPaiement: MethodePaiement[];
+  /** Module 14 D1 : URL du logo, null si non configure. */
+  logoUrl: string | null;
 }
 
 export interface IAuthResponse {

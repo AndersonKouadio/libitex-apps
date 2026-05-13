@@ -41,6 +41,9 @@ export class BoutiqueService {
       address: dto.adresse,
       taxRate: dto.tauxTva !== undefined ? String(dto.tauxTva) : undefined,
       paymentMethods: dto.methodesPaiement,
+      // Module 14 D1 : propagation du logo. null efface l'URL, undefined
+      // ne touche pas (preserve la valeur existante).
+      logoUrl: dto.logoUrl,
     });
     return this.toDetail(updated);
   }
@@ -79,6 +82,7 @@ export class BoutiqueService {
       adresse: tenant.address,
       tauxTva: Number(tenant.taxRate ?? 0),
       methodesPaiement: (tenant.paymentMethods ?? ["CASH", "CARD", "MOBILE_MONEY", "BANK_TRANSFER"]) as any,
+      logoUrl: tenant.logoUrl ?? null,
     };
   }
 }

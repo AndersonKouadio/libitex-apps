@@ -10,6 +10,7 @@ import { ChampDevise } from "@/features/auth/components/champ-devise";
 import type { SecteurActivite } from "@/features/auth/types/auth.type";
 import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
 import { useModifierBoutiqueMutation } from "@/features/boutique/queries/boutique.mutations";
+import { ChampUploadLogo } from "@/features/boutique/components/champ-upload-logo";
 
 export default function PageProfilBoutique() {
   const { data: boutique, isLoading } = useBoutiqueActiveQuery();
@@ -22,6 +23,9 @@ export default function PageProfilBoutique() {
   const [telephone, setTelephone] = useState("");
   const [adresse, setAdresse] = useState("");
   const [tauxTva, setTauxTva] = useState("0");
+  // Module 14 D1 : logoUrl est enregistre immediatement via mutation
+  // (a la difference des autres champs qui attendent le clic "Enregistrer").
+  // L'upload est synchrone et le commercant voit le resultat tout de suite.
 
   useEffect(() => {
     if (!boutique) return;
@@ -33,6 +37,16 @@ export default function PageProfilBoutique() {
     setAdresse(boutique.adresse ?? "");
     setTauxTva(String(boutique.tauxTva ?? 0));
   }, [boutique]);
+
+  // Module 14 D1 : enregistre immediatement le nouveau logo (pas d'attente
+  // sur le bouton "Enregistrer"). Permet de voir le resultat tout de suite.
+  async function changerLogo(url: string | null) {
+    if (!boutique) return;
+    await mutation.mutateAsync({
+      tenantId: boutique.id,
+      data: { logoUrl: url },
+    });
+  }
 
   async function enregistrer() {
     if (!boutique) return;
@@ -96,6 +110,13 @@ export default function PageProfilBoutique() {
             </div>
           ) : (
             <>
+              {/* Module 14 D1 : upload logo en haut, enregistrement immediat */}
+              <ChampUploadLogo
+                valeur={boutique.logoUrl ?? null}
+                onChange={changerLogo}
+                isDisabled={mutation.isPending}
+              />
+
               <TextField isRequired value={nom} onChange={setNom}>
                 <Label>Nom de la boutique</Label>
                 <Input />
