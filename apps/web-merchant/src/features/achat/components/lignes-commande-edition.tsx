@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Button, NumberField, SearchField, Card, Skeleton,
+  Button, Input, SearchField, Card, Skeleton,
 } from "@heroui/react";
 import { Trash2, Plus } from "lucide-react";
 import { formatMontant } from "@/features/vente/utils/format";
@@ -66,13 +66,14 @@ export function LignesCommandeEdition({
           </p>
         ) : (
           <div className="space-y-2">
-            {/* Header de colonnes pour lever l'ambiguite des champs */}
+            {/* Header de colonnes pour lever l'ambiguite des champs.
+                Largeurs alignees avec les inputs des lignes. */}
             <div className="flex items-center gap-2 px-2 text-xs font-medium text-muted">
               <div className="flex-1 min-w-0">Produit</div>
-              <div className="w-28 text-right">Quantite</div>
-              <div className="w-32 text-right">Prix unitaire</div>
-              <div className="w-28 text-right">Total</div>
-              <div className="w-8" />
+              <div className="w-28 text-right shrink-0">Quantite</div>
+              <div className="w-36 text-right shrink-0">Prix unitaire</div>
+              <div className="w-32 text-right shrink-0">Total</div>
+              <div className="w-8 shrink-0" />
             </div>
 
             {lignes.map((l, i) => (
@@ -83,37 +84,38 @@ export function LignesCommandeEdition({
                     {l.nomVariante ? `${l.nomVariante} · ` : ""}{l.sku}
                   </p>
                 </div>
-                <NumberField
-                  value={Number.isFinite(l.quantite) ? l.quantite : 0}
-                  onChange={(v) => onQuantite(i, v)}
-                  minValue={0}
+                {/* Input natif type=number : plus de wrapper Group / steppers
+                    qui mangent l'espace interne. Le contenu remplit toute
+                    la largeur visible du champ. */}
+                <Input
+                  type="number"
+                  inputMode="decimal"
                   step={0.001}
+                  min={0}
+                  value={Number.isFinite(l.quantite) ? String(l.quantite) : "0"}
+                  onChange={(e) => {
+                    const v = e.target.value === "" ? 0 : Number(e.target.value);
+                    onQuantite(i, Number.isFinite(v) ? v : 0);
+                  }}
                   aria-label="Quantite a commander"
-                  className="w-28 shrink-0"
-                >
-                  <NumberField.Group>
-                    <NumberField.Input
-                      placeholder="Qte"
-                      className="text-right tabular-nums"
-                    />
-                  </NumberField.Group>
-                </NumberField>
-                <NumberField
-                  value={Number.isFinite(l.prixUnitaire) ? l.prixUnitaire : 0}
-                  onChange={(v) => onPrix(i, v)}
-                  minValue={0}
+                  placeholder="Qte"
+                  className="w-28 shrink-0 text-right tabular-nums px-2"
+                />
+                <Input
+                  type="number"
+                  inputMode="decimal"
                   step={1}
+                  min={0}
+                  value={Number.isFinite(l.prixUnitaire) ? String(l.prixUnitaire) : "0"}
+                  onChange={(e) => {
+                    const v = e.target.value === "" ? 0 : Number(e.target.value);
+                    onPrix(i, Number.isFinite(v) ? v : 0);
+                  }}
                   aria-label="Prix unitaire d'achat"
-                  className="w-32 shrink-0"
-                >
-                  <NumberField.Group>
-                    <NumberField.Input
-                      placeholder="Prix"
-                      className="text-right tabular-nums"
-                    />
-                  </NumberField.Group>
-                </NumberField>
-                <span className="w-28 text-right text-sm font-semibold tabular-nums shrink-0">
+                  placeholder="Prix"
+                  className="w-36 shrink-0 text-right tabular-nums px-2"
+                />
+                <span className="w-32 text-right text-sm font-semibold tabular-nums shrink-0">
                   {formatMontant(l.quantite * l.prixUnitaire)} F
                 </span>
                 <Button
