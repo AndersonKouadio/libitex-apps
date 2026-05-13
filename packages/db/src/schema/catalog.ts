@@ -117,7 +117,16 @@ export const variants = pgTable("variants", {
   attributes: jsonb("attributes").$type<Record<string, string>>().default({}),
   barcode: varchar("barcode", { length: 50 }),
   pricePurchase: numeric("price_purchase", { precision: 15, scale: 2 }).default("0"),
+  /**
+   * Phase A.1 : utilise comme CUMP (Cout Unitaire Moyen Pondere) courant.
+   * Mis a jour atomiquement a chaque reception via la formule :
+   *   nouveau_cump = (stock_existant * ancien_cump + qty_recue * landed_unit_cost)
+   *                  / (stock_existant + qty_recue)
+   * Sert a la valorisation du stock + calcul de marge reelle.
+   */
   priceLanded: numeric("price_landed", { precision: 15, scale: 2 }).default("0"),
+  /** Phase A.1 : audit derniere mise a jour CUMP. NULL = pas encore initialise. */
+  cumpLastUpdatedAt: timestamp("cump_last_updated_at", { withTimezone: true }),
   priceRetail: numeric("price_retail", { precision: 15, scale: 2 }).notNull(),
   priceWholesale: numeric("price_wholesale", { precision: 15, scale: 2 }),
   priceVip: numeric("price_vip", { precision: 15, scale: 2 }),
