@@ -2,6 +2,7 @@ import { Test } from "@nestjs/testing";
 import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { AchatService } from "./achat.service";
 import { AchatRepository } from "./repositories/achat.repository";
+import { LandedCostService } from "./services/landed-cost.service";
 import { RealtimeGateway } from "../realtime/realtime.gateway";
 import { NotificationsService } from "../notifications/notifications.service";
 
@@ -10,6 +11,7 @@ describe("AchatService", () => {
   let repoMock: jest.Mocked<AchatRepository>;
   let realtimeMock: jest.Mocked<RealtimeGateway>;
   let notificationsMock: jest.Mocked<NotificationsService>;
+  let landedCostMock: jest.Mocked<LandedCostService>;
 
   beforeEach(async () => {
     repoMock = {
@@ -29,6 +31,17 @@ describe("AchatService", () => {
       stockTotalParVariante: jest.fn().mockResolvedValue(new Map()),
       prixAchatActuelParVariante: jest.fn().mockResolvedValue(new Map()),
       obtenirContexteEnvoiBdC: jest.fn(),
+      // Phase A.2 : mocks pour les frais d'approche
+      listerFraisCommande: jest.fn().mockResolvedValue([]),
+      ajouterFraisCommande: jest.fn(),
+      modifierFraisCommande: jest.fn(),
+      supprimerFraisCommande: jest.fn(),
+      sommerFraisCommande: jest.fn().mockResolvedValue(0),
+      majTotauxCommande: jest.fn(),
+      majLandedLigne: jest.fn(),
+      obtenirContexteCump: jest.fn(),
+      majCump: jest.fn(),
+      obtenirPoidsVariantes: jest.fn().mockResolvedValue(new Map()),
     } as unknown as jest.Mocked<AchatRepository>;
 
     realtimeMock = {
@@ -43,12 +56,19 @@ describe("AchatService", () => {
       } as any,
     } as unknown as jest.Mocked<NotificationsService>;
 
+    landedCostMock = {
+      calculerLandedCosts: jest.fn().mockReturnValue([]),
+      calculerNouveauCump: jest.fn().mockReturnValue(0),
+      appliquerLandedEtRecalculerCump: jest.fn(),
+    } as unknown as jest.Mocked<LandedCostService>;
+
     const moduleRef = await Test.createTestingModule({
       providers: [
         AchatService,
         { provide: AchatRepository, useValue: repoMock },
         { provide: RealtimeGateway, useValue: realtimeMock },
         { provide: NotificationsService, useValue: notificationsMock },
+        { provide: LandedCostService, useValue: landedCostMock },
       ],
     }).compile();
 

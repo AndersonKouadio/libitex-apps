@@ -1,19 +1,24 @@
-import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException, Logger } from "@nestjs/common";
 import { AchatRepository } from "./repositories/achat.repository";
+import { LandedCostService, type LigneReception } from "./services/landed-cost.service";
 import {
   CreerFournisseurDto, ModifierFournisseurDto, FournisseurResponseDto,
   CreerCommandeDto, ReceptionCommandeDto, ModifierStatutCommandeDto,
   CommandeResponseDto, LigneCommandeResponseDto,
+  CreerFraisDto, ModifierFraisDto, FraisResponseDto,
 } from "./dto/achat.dto";
 import { RealtimeGateway } from "../realtime/realtime.gateway";
 import { NotificationsService } from "../notifications/notifications.service";
 
 @Injectable()
 export class AchatService {
+  private readonly logger = new Logger(AchatService.name);
+
   constructor(
     private readonly achatRepo: AchatRepository,
     private readonly realtime: RealtimeGateway,
     private readonly notifications: NotificationsService,
+    private readonly landedCost: LandedCostService,
   ) {}
 
   // ─── Fournisseurs ─────────────────────────────────────────────────────
@@ -185,6 +190,10 @@ export class AchatService {
       emplacementId: r.locationId,
       statut: r.status,
       montantTotal: Number(r.totalAmount),
+      // Phase A.2 : expose les totaux landed dans la liste aussi
+      fraisTotal: Number((r as any).costsTotal ?? 0),
+      totalDebarque: Number((r as any).landedTotal ?? r.totalAmount),
+      methodeAllocation: ((r as any).costsAllocationMethod ?? "QUANTITY") as "QUANTITY" | "WEIGHT" | "VALUE",
       dateAttendue: r.expectedDate ? new Date(r.expectedDate).toISOString() : null,
       dateReception: r.receivedAt ? new Date(r.receivedAt).toISOString() : null,
       notes: r.notes ?? null,
@@ -219,6 +228,10 @@ export class AchatService {
       emplacementId: commande.locationId,
       statut: commande.status,
       montantTotal: Number(commande.totalAmount),
+      // Phase A.2 : exposer les totaux landed pour l'UI
+      fraisTotal: Number(commande.costsTotal ?? 0),
+      totalDebarque: Number(commande.landedTotal ?? commande.totalAmount),
+      methodeAllocation: (commande.costsAllocationMethod ?? "QUANTITY") as "QUANTITY" | "WEIGHT" | "VALUE",
       dateAttendue: commande.expectedDate ? new Date(commande.expectedDate).toISOString() : null,
       dateReception: commande.receivedAt ? new Date(commande.receivedAt).toISOString() : null,
       notes: commande.notes ?? null,
@@ -444,6 +457,18 @@ export class AchatService {
       receivedAt,
     });
 
+    // Phase A.2 : Landed Cost + recalcul CUMP. Best-effort : un echec ici
+    // (pas de frais saisis, calcul invalide) n'invalide PAS la reception
+    // qui est deja appliquee (stock + lignes en DB). On log + on continue.
+    try {
+      await this.appliquerLandedCost(tenantId, id, commande.costsAllocationMethod, dto.lignes, parId);
+    } catch (err) {
+      this.logger.error(
+        `[A.2] Echec calcul Landed Cost pour commande ${id} : ` +
+        `${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
     // Fix C5 : emit avec variantIds precis pour que les POS rafraichissent
     // uniquement les variantes affectees au lieu de tout le stock.
     this.realtime.emitToTenant(tenantId, "stock.updated", {
@@ -457,4 +482,181 @@ export class AchatService {
 
     return this.obtenirCommande(tenantId, id);
   }
+
+  // ─── Phase A.2 : CRUD frais d'approche (Landed Cost) ──────────────────
+
+  /**
+   * Liste les frais d'une commande. Verifie d'abord que la commande
+   * appartient au tenant (cross-tenant guard).
+   */
+  async listerFrais(tenantId: string, commandeId: string): Promise<FraisResponseDto[]> {
+    const commande = await this.achatRepo.trouverCommande(tenantId, commandeId);
+    if (!commande) throw new NotFoundException("Commande introuvable");
+    const rows = await this.achatRepo.listerFraisCommande(commandeId);
+    return rows.map((r) => this.mapFrais(r));
+  }
+
+  /**
+   * Ajoute un frais a une commande. Calcule amount_in_base (montant
+   * converti en devise tenant) puis met a jour costs_total + landed_total
+   * de la commande. Refus si commande RECEIVED ou CANCELLED (les frais
+   * apres reception complete n'ont plus de sens — ils doivent etre
+   * inseres AVANT la reception finale pour etre ventiles sur les lignes).
+   */
+  async ajouterFrais(
+    tenantId: string, userId: string, commandeId: string, dto: CreerFraisDto,
+  ): Promise<FraisResponseDto> {
+    const commande = await this.achatRepo.trouverCommande(tenantId, commandeId);
+    if (!commande) throw new NotFoundException("Commande introuvable");
+    if (commande.status === "CANCELLED") {
+      throw new BadRequestException("Commande annulee, impossible d'ajouter un frais");
+    }
+
+    const amountInBase = dto.montant * dto.tauxChange;
+    const row = await this.achatRepo.ajouterFraisCommande({
+      tenantId,
+      purchaseOrderId: commandeId,
+      category: dto.categorie,
+      label: dto.libelle,
+      amount: dto.montant.toFixed(2),
+      currency: dto.devise.toUpperCase(),
+      exchangeRate: dto.tauxChange.toFixed(6),
+      amountInBase: amountInBase.toFixed(2),
+      notes: dto.notes,
+      createdBy: userId,
+    });
+
+    // Met a jour le snapshot costs_total + landed_total
+    const sommeFrais = await this.achatRepo.sommerFraisCommande(commandeId);
+    await this.achatRepo.majTotauxCommande(commandeId, sommeFrais, Number(commande.totalAmount));
+
+    return this.mapFrais(row);
+  }
+
+  async modifierFrais(
+    tenantId: string, commandeId: string, fraisId: string, dto: ModifierFraisDto,
+  ): Promise<FraisResponseDto> {
+    const commande = await this.achatRepo.trouverCommande(tenantId, commandeId);
+    if (!commande) throw new NotFoundException("Commande introuvable");
+
+    // Recharge le frais courant pour calculer le nouveau amount_in_base
+    // si montant/taux ont change.
+    const existant = (await this.achatRepo.listerFraisCommande(commandeId))
+      .find((f) => f.id === fraisId);
+    if (!existant) throw new NotFoundException("Frais introuvable");
+
+    const update: any = {};
+    if (dto.categorie !== undefined) update.category = dto.categorie;
+    if (dto.libelle !== undefined) update.label = dto.libelle;
+    if (dto.devise !== undefined) update.currency = dto.devise.toUpperCase();
+    if (dto.notes !== undefined) update.notes = dto.notes;
+
+    let nouveauMontant = dto.montant !== undefined ? dto.montant : Number(existant.amount);
+    let nouveauTaux = dto.tauxChange !== undefined ? dto.tauxChange : Number(existant.exchangeRate);
+    if (dto.montant !== undefined) update.amount = dto.montant.toFixed(2);
+    if (dto.tauxChange !== undefined) update.exchangeRate = dto.tauxChange.toFixed(6);
+    if (dto.montant !== undefined || dto.tauxChange !== undefined) {
+      update.amountInBase = (nouveauMontant * nouveauTaux).toFixed(2);
+    }
+
+    const row = await this.achatRepo.modifierFraisCommande(fraisId, update);
+    if (!row) throw new NotFoundException("Frais introuvable");
+
+    // Met a jour le snapshot
+    const sommeFrais = await this.achatRepo.sommerFraisCommande(commandeId);
+    await this.achatRepo.majTotauxCommande(commandeId, sommeFrais, Number(commande.totalAmount));
+
+    return this.mapFrais(row);
+  }
+
+  async supprimerFrais(
+    tenantId: string, commandeId: string, fraisId: string,
+  ): Promise<void> {
+    const commande = await this.achatRepo.trouverCommande(tenantId, commandeId);
+    if (!commande) throw new NotFoundException("Commande introuvable");
+    await this.achatRepo.supprimerFraisCommande(fraisId);
+
+    const sommeFrais = await this.achatRepo.sommerFraisCommande(commandeId);
+    await this.achatRepo.majTotauxCommande(commandeId, sommeFrais, Number(commande.totalAmount));
+  }
+
+  private mapFrais(r: any): FraisResponseDto {
+    return {
+      id: r.id,
+      categorie: r.category,
+      libelle: r.label,
+      montant: Number(r.amount),
+      devise: r.currency,
+      tauxChange: Number(r.exchangeRate),
+      montantEnBase: Number(r.amountInBase),
+      notes: r.notes ?? null,
+      creeLe: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+    };
+  }
+
+  /**
+   * Phase A.2 : ventile les frais d'approche sur les lignes recues et
+   * met a jour le CUMP des variants. Helper extrait de receptionner()
+   * pour garder ce dernier lisible.
+   *
+   * Si pas de frais (somme = 0), landed_unit_cost = unit_price, le CUMP
+   * est quand meme recalcule (utile pour le premier stock du variant).
+   */
+  private async appliquerLandedCost(
+    tenantId: string,
+    commandeId: string,
+    methode: "QUANTITY" | "WEIGHT" | "VALUE",
+    lignesDto: ReceptionCommandeDto["lignes"],
+    parId: Map<string, LigneCommandeBrute>,
+  ): Promise<void> {
+    // 1. Recupere la somme des frais (deja convertis en devise tenant)
+    const fraisTotal = await this.achatRepo.sommerFraisCommande(commandeId);
+
+    // 2. Met a jour le snapshot total commande pour les rapports
+    const commandeRow = await this.achatRepo.trouverCommande(tenantId, commandeId);
+    if (commandeRow) {
+      await this.achatRepo.majTotauxCommande(
+        commandeId,
+        fraisTotal,
+        Number(commandeRow.totalAmount),
+      );
+    }
+
+    // 3. Recupere les poids si methode = WEIGHT
+    const lignesRecues: LigneReception[] = lignesDto
+      .filter((r) => r.quantite > 0)
+      .map((r) => {
+        const ligne = parId.get(r.ligneId)!;
+        return {
+          lineId: ligne.id,
+          variantId: ligne.variantId,
+          quantiteRecue: r.quantite,
+          unitPrice: Number(ligne.unitPrice),
+        };
+      });
+
+    if (methode === "WEIGHT") {
+      const poids = await this.achatRepo.obtenirPoidsVariantes(
+        [...new Set(lignesRecues.map((l) => l.variantId))],
+      );
+      for (const l of lignesRecues) {
+        l.poidsUnitaire = poids.get(l.variantId) ?? 0;
+      }
+    }
+
+    // 4. Calcule landed_unit_cost par ligne
+    const resultats = this.landedCost.calculerLandedCosts(
+      lignesRecues,
+      fraisTotal,
+      methode,
+    );
+
+    // 5. Persiste les couts debarques + recalcule CUMP atomiquement
+    await this.landedCost.appliquerLandedEtRecalculerCump(tenantId, resultats);
+  }
 }
+
+/** Phase A.2 : alias de type pour le helper appliquerLandedCost. */
+type LigneCommandeBrute = Awaited<
+  ReturnType<AchatRepository["listerLignesCommande"]>
+>[number];

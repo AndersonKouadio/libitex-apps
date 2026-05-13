@@ -3,7 +3,7 @@ import { eq, and, isNull, sql, desc, ilike, or, inArray, type SQL } from "drizzl
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
   type Database, suppliers, purchaseOrders, purchaseOrderLines,
-  stockMovements, variants, products, locations, tenants,
+  purchaseOrderCosts, stockMovements, variants, products, locations, tenants,
 } from "@libitex/db";
 
 @Injectable()
@@ -474,5 +474,177 @@ export class AchatRepository {
     if (requetes.length === 0) return;
     // db.batch envoie tout en une transaction Neon (atomique : tout ou rien).
     await (this.db as any).batch(requetes);
+  }
+
+  // ─── Phase A.2 : frais d'approche (purchase_order_costs) ────────────────
+
+  /**
+   * Liste les frais d'approche d'une commande. Tri par categorie puis date
+   * de creation pour rendu UI stable.
+   */
+  async listerFraisCommande(purchaseOrderId: string) {
+    return this.db
+      .select()
+      .from(purchaseOrderCosts)
+      .where(eq(purchaseOrderCosts.purchaseOrderId, purchaseOrderId))
+      .orderBy(purchaseOrderCosts.category, purchaseOrderCosts.createdAt);
+  }
+
+  /**
+   * Phase A.2 : ajoute un frais a une commande. Calcule amountInBase
+   * (montant converti devise tenant) cote service pour figer la valeur
+   * historique meme si le taux change apres.
+   */
+  async ajouterFraisCommande(data: {
+    tenantId: string;
+    purchaseOrderId: string;
+    category: "TRANSPORT" | "CUSTOMS" | "TRANSIT" | "INSURANCE" | "HANDLING" | "OTHER";
+    label: string;
+    amount: string;
+    currency: string;
+    exchangeRate: string;
+    amountInBase: string;
+    notes?: string;
+    createdBy?: string;
+  }) {
+    const [row] = await this.db.insert(purchaseOrderCosts).values(data).returning();
+    return row;
+  }
+
+  async modifierFraisCommande(
+    id: string,
+    data: Partial<{
+      category: "TRANSPORT" | "CUSTOMS" | "TRANSIT" | "INSURANCE" | "HANDLING" | "OTHER";
+      label: string;
+      amount: string;
+      currency: string;
+      exchangeRate: string;
+      amountInBase: string;
+      notes: string | null;
+    }>,
+  ) {
+    const [row] = await this.db
+      .update(purchaseOrderCosts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(purchaseOrderCosts.id, id))
+      .returning();
+    return row;
+  }
+
+  async supprimerFraisCommande(id: string) {
+    await this.db
+      .delete(purchaseOrderCosts)
+      .where(eq(purchaseOrderCosts.id, id));
+  }
+
+  /**
+   * Phase A.2 : somme des frais en devise tenant pour une commande.
+   * Utilise par le service pour ventiler sur les lignes au moment de
+   * la reception et pour mettre a jour costs_total / landed_total.
+   */
+  async sommerFraisCommande(purchaseOrderId: string): Promise<number> {
+    const [row] = await this.db
+      .select({
+        total: sql<string>`COALESCE(SUM(${purchaseOrderCosts.amountInBase}::numeric), 0)`,
+      })
+      .from(purchaseOrderCosts)
+      .where(eq(purchaseOrderCosts.purchaseOrderId, purchaseOrderId));
+    return Number(row?.total ?? 0);
+  }
+
+  /**
+   * Phase A.2 : met a jour le snapshot costs_total + landed_total
+   * sur purchase_orders. A appeler apres chaque modif des frais.
+   */
+  async majTotauxCommande(
+    purchaseOrderId: string,
+    costsTotal: number,
+    totalAmount: number,
+  ): Promise<void> {
+    await this.db
+      .update(purchaseOrders)
+      .set({
+        costsTotal: costsTotal.toFixed(2),
+        landedTotal: (Number(totalAmount) + costsTotal).toFixed(2),
+        updatedAt: new Date(),
+      })
+      .where(eq(purchaseOrders.id, purchaseOrderId));
+  }
+
+  /**
+   * Phase A.2 : applique le cout debarque calcule a une ligne. Le service
+   * Landed Cost passe les valeurs deja calculees.
+   */
+  async majLandedLigne(
+    lineId: string,
+    landedUnitCost: string,
+    landedTotalCost: string,
+  ): Promise<void> {
+    await this.db
+      .update(purchaseOrderLines)
+      .set({ landedUnitCost, landedTotalCost })
+      .where(eq(purchaseOrderLines.id, lineId));
+  }
+
+  /**
+   * Phase A.2 : recupere le CUMP courant et le stock global d'un variant
+   * pour le calcul du nouveau CUMP a la reception.
+   * Renvoie { stockExistant, cumpActuel } (les deux en number).
+   */
+  async obtenirContexteCump(tenantId: string, variantId: string) {
+    // Stock total = SUM(quantity) — la colonne est deja signee
+    // (negatif pour sorties, positif pour entrees) selon convention
+    // event-sourcing. Voir stockTotalParVariante().
+    const [stockRow] = await this.db
+      .select({
+        stock: sql<string>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+      })
+      .from(stockMovements)
+      .where(and(
+        eq(stockMovements.tenantId, tenantId),
+        eq(stockMovements.variantId, variantId),
+      ));
+
+    const [variantRow] = await this.db
+      .select({ cump: variants.priceLanded })
+      .from(variants)
+      .where(eq(variants.id, variantId))
+      .limit(1);
+
+    return {
+      stockExistant: Number(stockRow?.stock ?? 0),
+      cumpActuel: Number(variantRow?.cump ?? 0),
+    };
+  }
+
+  /**
+   * Phase A.2 : met a jour le CUMP du variant (price_landed) et
+   * l'horodatage de la derniere maj. Appele apres calcul cote service.
+   */
+  async majCump(variantId: string, nouveauCump: string): Promise<void> {
+    await this.db
+      .update(variants)
+      .set({
+        priceLanded: nouveauCump,
+        cumpLastUpdatedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(variants.id, variantId));
+  }
+
+  /**
+   * Phase A.2 : recupere le poids d'un variant pour l'allocation WEIGHT.
+   * Renvoie 0 si pas de poids defini (l'allocation tombera proportionnel
+   * a la quantite par fallback dans le service).
+   */
+  async obtenirPoidsVariantes(variantIds: string[]): Promise<Map<string, number>> {
+    if (variantIds.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: variants.id, weight: variants.weight })
+      .from(variants)
+      .where(inArray(variants.id, variantIds));
+    const m = new Map<string, number>();
+    for (const r of rows) m.set(r.id, Number(r.weight ?? 0));
+    return m;
   }
 }
