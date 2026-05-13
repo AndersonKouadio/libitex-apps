@@ -1,8 +1,8 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { eq, and, isNull, gte, lte, sql, asc, type SQL } from "drizzle-orm";
+import { eq, and, isNull, gte, lte, sql, asc, ne, type SQL } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
-  type Database, reservations, customers, tenants,
+  type Database, reservations, customers, tenants, locations,
 } from "@libitex/db";
 
 @Injectable()
@@ -92,6 +92,87 @@ export class ReservationRepository {
       .update(reservations)
       .set({ deletedAt: new Date() })
       .where(and(eq(reservations.id, id), eq(reservations.tenantId, tenantId)));
+  }
+
+  /**
+   * Module 12 D1 (fix C1) : verifie qu'un emplacement appartient bien au
+   * tenant. Retourne true si OK, false sinon. Utilise par le service pour
+   * rejeter les tentatives cross-tenant.
+   */
+  async emplacementAppartientTenant(tenantId: string, locationId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ id: locations.id })
+      .from(locations)
+      .where(and(eq(locations.id, locationId), eq(locations.tenantId, tenantId)))
+      .limit(1);
+    return !!row;
+  }
+
+  /**
+   * Module 12 D1 (fix C2) : verifie qu'un client appartient bien au tenant.
+   * Retourne true si OK ou si clientId est null/undefined, false si
+   * client introuvable ou dans un autre tenant.
+   */
+  async clientAppartientTenant(tenantId: string, clientId: string): Promise<boolean> {
+    const [row] = await this.db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(and(
+        eq(customers.id, clientId),
+        eq(customers.tenantId, tenantId),
+        isNull(customers.deletedAt),
+      ))
+      .limit(1);
+    return !!row;
+  }
+
+  /**
+   * Module 12 D1 (fix C4) : detecte les conflits horaires sur une meme
+   * table. Une reservation est en conflit si :
+   * - meme tenant, meme locationId, meme tableNumber (case-insensitive)
+   * - statut actif (PENDING, CONFIRMED, SEATED)
+   * - non supprimee (deletedAt null)
+   * - reservedAt dans la fenetre [debut - 90min, debut + 90min]
+   * - ID different (pour modifier sans se conflicter soi-meme)
+   *
+   * Retourne la premiere conflit trouvee (pour le message d'erreur),
+   * undefined si pas de conflit. Skip si tableNumber est null/empty
+   * (pas de table assignee = pas de check possible).
+   */
+  async detecterConflitHoraire(opts: {
+    tenantId: string;
+    locationId: string;
+    tableNumber: string;
+    reservedAt: Date;
+    excluId?: string;
+    fenetreMinutes?: number;
+  }) {
+    const fenetre = opts.fenetreMinutes ?? 90;
+    const debut = new Date(opts.reservedAt.getTime() - fenetre * 60_000);
+    const fin = new Date(opts.reservedAt.getTime() + fenetre * 60_000);
+
+    const conditions: SQL[] = [
+      eq(reservations.tenantId, opts.tenantId),
+      eq(reservations.locationId, opts.locationId),
+      // Case-insensitive sur le numero de table (libre, "Table 4" vs "table 4")
+      sql`UPPER(${reservations.tableNumber}) = ${opts.tableNumber.toUpperCase()}`,
+      isNull(reservations.deletedAt),
+      sql`${reservations.status} IN ('PENDING', 'CONFIRMED', 'SEATED')`,
+      gte(reservations.reservedAt, debut),
+      lte(reservations.reservedAt, fin),
+    ];
+    if (opts.excluId) conditions.push(ne(reservations.id, opts.excluId));
+
+    const [row] = await this.db
+      .select({
+        id: reservations.id,
+        reservedAt: reservations.reservedAt,
+        customerName: reservations.customerName,
+      })
+      .from(reservations)
+      .where(and(...conditions))
+      .limit(1);
+    return row;
   }
 
   /**

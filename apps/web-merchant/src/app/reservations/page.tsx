@@ -3,11 +3,12 @@
 import { useState, useMemo } from "react";
 import { Button, Card, Chip, Skeleton, Select, ListBox, Label } from "@heroui/react";
 import {
-  Plus, Calendar, Users, Phone, MapPin, Clock, Pencil, Trash2, Check, X,
+  Plus, Calendar, Users, Phone, MapPin, Clock, Pencil, Trash2, Check, X, Ban,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
+import { ChampDate } from "@/components/forms/champ-date";
 import {
   useReservationsQuery, useResumeJourQuery,
   useModifierReservationMutation, useSupprimerReservationMutation,
@@ -77,6 +78,19 @@ export default function PageReservations() {
     modifier.mutate({ id: r.id, data: { statut: nouveau } });
   }
 
+  // Module 12 D2 (m3) : annulation rapide depuis la liste
+  async function annulerRapide(r: IReservation) {
+    const ok = await confirmer({
+      titre: `Annuler la reservation de ${r.nomClient} ?`,
+      description: r.telephone
+        ? `Le client recevra une notification WhatsApp d'annulation.`
+        : "Le client ne sera pas notifie (pas de telephone enregistre).",
+      actionLibelle: "Annuler la reservation",
+    });
+    if (!ok) return;
+    await modifier.mutateAsync({ id: r.id, data: { statut: "CANCELLED" } });
+  }
+
   return (
     <PageContainer>
       <PageHeader
@@ -116,15 +130,7 @@ export default function PageReservations() {
       )}
 
       <div className="mb-4 flex flex-wrap gap-3 items-end">
-        <div>
-          <label className="block text-xs text-muted mb-1">Date</label>
-          <input
-            type="date"
-            value={dateFiltre}
-            onChange={(e) => setDateFiltre(e.target.value)}
-            className="h-9 px-3 text-sm rounded-md border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30"
-          />
-        </div>
+        <ChampDate label="Date" value={dateFiltre} onChange={setDateFiltre} />
         <Select
           selectedKey={statutFiltre || "all"}
           onSelectionChange={(k) => setStatutFiltre(k === "all" ? "" : String(k))}
@@ -222,6 +228,17 @@ export default function PageReservations() {
                           onPress={() => changerStatut(r, "COMPLETED")}
                         >
                           <Check size={12} /> Terminer
+                        </Button>
+                      )}
+                      {/* Module 12 D2 (m3) : annulation rapide */}
+                      {(r.statut === "PENDING" || r.statut === "CONFIRMED") && (
+                        <Button
+                          variant="ghost"
+                          className="h-8 px-2 text-xs gap-1 text-danger"
+                          aria-label="Annuler la reservation"
+                          onPress={() => annulerRapide(r)}
+                        >
+                          <Ban size={12} /> Annuler
                         </Button>
                       )}
                       <Button

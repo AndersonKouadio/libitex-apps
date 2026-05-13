@@ -55,13 +55,13 @@ export class ReservationController {
     @Param("id") id: string,
     @Body() dto: ModifierReservationDto,
   ) {
-    return this.service.modifier(user.tenantId, id, dto);
+    return this.service.modifier(user.tenantId, user.userId, id, dto);
   }
 
   @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: "Supprimer une reservation (soft delete)" })
+  @ApiOperation({ summary: "Supprimer une reservation (soft delete + notif client WhatsApp)" })
   supprimer(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
-    return this.service.supprimer(user.tenantId, id);
+    return this.service.supprimer(user.tenantId, user.userId, id);
   }
 }

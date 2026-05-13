@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import {
-  Modal, Button, TextField, Label, Input, FieldError, Select, ListBox, TextArea,
+  Modal, Button, TextField, Label, Input, FieldError, Select, ListBox, TextArea, toast,
 } from "@heroui/react";
 import {
   useCreerReservationMutation, useModifierReservationMutation,
 } from "../queries/reservation.query";
 import { useEmplacementListQuery } from "@/features/stock/queries/emplacement-list.query";
+import { ChampDate } from "@/components/forms/champ-date";
 import type { IReservation, StatutReservation } from "../types/reservation.type";
 
 interface Props {
@@ -76,6 +77,20 @@ export function ModalReservation({ ouvert, reservation, onFermer }: Props) {
     const nb = Number(etat.nombrePersonnes);
     if (!Number.isFinite(nb) || nb < 1) return;
 
+    // Module 12 D2 : validation cote front pour eviter un aller-retour
+    // serveur si la date est trop dans le passe ou la taille > 200.
+    if (!reservation) {
+      const dateRes = new Date(dateISO);
+      if (dateRes.getTime() < Date.now() - 60 * 60 * 1000) {
+        toast.danger("La date de reservation ne peut pas etre dans le passe");
+        return;
+      }
+    }
+    if (nb > 200) {
+      toast.danger("Maximum 200 couverts par reservation");
+      return;
+    }
+
     const base = {
       emplacementId: etat.emplacementId,
       nomClient: etat.nomClient.trim(),
@@ -86,15 +101,22 @@ export function ModalReservation({ ouvert, reservation, onFermer }: Props) {
       notes: etat.notes.trim() || undefined,
     };
 
-    if (reservation) {
-      await modifier.mutateAsync({
-        id: reservation.id,
-        data: { ...base, statut: etat.statut },
-      });
-    } else {
-      await creer.mutateAsync(base);
+    try {
+      if (reservation) {
+        await modifier.mutateAsync({
+          id: reservation.id,
+          data: { ...base, statut: etat.statut },
+        });
+      } else {
+        await creer.mutateAsync(base);
+      }
+      onFermer();
+    } catch (err) {
+      // Module 12 D1 : afficher les erreurs metier (conflit horaire,
+      // transition interdite, etc.) plutot que silencieusement avorter.
+      const msg = err instanceof Error ? err.message : "Erreur";
+      toast.danger(msg);
     }
-    onFermer();
   }
 
   const enCours = creer.isPending || modifier.isPending;
@@ -127,33 +149,35 @@ export function ModalReservation({ ouvert, reservation, onFermer }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <TextField value={etat.nomClient} onChange={set("nomClient")} isRequired>
                 <Label>Nom du client</Label>
-                <Input placeholder="M. Kouame" />
+                <Input placeholder="M. Kouame" autoComplete="name" autoCapitalize="words" />
                 <FieldError />
               </TextField>
               <TextField value={etat.telephone} onChange={set("telephone")}>
                 <Label>Telephone</Label>
-                <Input placeholder="+225..." />
+                <Input
+                  placeholder="+225..."
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                />
               </TextField>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <TextField value={etat.date} onChange={set("date")} isRequired>
-                <Label>Date</Label>
-                <Input type="date" />
-              </TextField>
+              <ChampDate label="Date" value={etat.date} onChange={set("date")} isRequired />
               <TextField value={etat.heure} onChange={set("heure")} isRequired>
                 <Label>Heure</Label>
                 <Input type="time" />
               </TextField>
               <TextField value={etat.nombrePersonnes} onChange={set("nombrePersonnes")} isRequired>
                 <Label>Couverts</Label>
-                <Input type="number" min="1" />
+                <Input type="number" min="1" max="200" inputMode="numeric" />
               </TextField>
             </div>
 
             <TextField value={etat.numeroTable} onChange={set("numeroTable")}>
               <Label>Table</Label>
-              <Input placeholder="Table 4, Terrasse 2, Bar..." />
+              <Input placeholder="Table 4, Terrasse 2, Bar..." autoCapitalize="words" />
             </TextField>
 
             {reservation && (
