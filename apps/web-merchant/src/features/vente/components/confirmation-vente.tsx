@@ -8,6 +8,7 @@ import { imprimerTicket } from "../utils/imprimer-ticket";
 import { BoutonPOS } from "./bouton-pos";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { usePreferencesPOS } from "@/lib/preferences-pos";
+import { useLocationSettingsEffectifsQuery } from "@/features/location-settings/queries/location-settings.query";
 import type { ITicket } from "../types/vente.type";
 
 interface Props {
@@ -20,14 +21,22 @@ interface Props {
   /** Vrai si le ticket vient d'etre synchronise depuis la file offline.
    *  Marque le ticket imprime "[OFFLINE]" pour traçabilité comptable. */
   origineOffline?: boolean;
+  /** Module 15 D2 : emplacement courant, pour fetch le footer ticket. */
+  emplacementId?: string;
   onNouvelle: () => void;
 }
 
 export function ConfirmationVente({
-  numeroTicket, total, monnaie, ticket, numeroSession, origineOffline, onNouvelle,
+  numeroTicket, total, monnaie, ticket, numeroSession, origineOffline,
+  emplacementId, onNouvelle,
 }: Props) {
   const { boutiqueActive, utilisateur } = useAuth();
   const prefs = usePreferencesPOS();
+  // Module 15 D2 : recupere les settings effectifs de l'emplacement pour
+  // injecter le footer personnalise dans le ticket imprime.
+  const { data: locSettings } = useLocationSettingsEffectifsQuery(
+    emplacementId ?? null,
+  );
   // Garde anti-double-print : l'effet pourrait re-fire (StrictMode, re-render).
   const dejaImprimeRef = useRef(false);
 
@@ -39,7 +48,13 @@ export function ConfirmationVente({
         ticket,
         { nom: boutiqueActive.nom, devise: boutiqueActive.devise },
         monnaie,
-        { caissier: caissier || undefined, numeroSession, origineOffline },
+        {
+          caissier: caissier || undefined,
+          numeroSession,
+          origineOffline,
+          // Module 15 D2 : footer personnalise par emplacement
+          footerMessage: locSettings?.ticketFooterMessage ?? null,
+        },
       );
       // Toast informatif si on est passe en fallback HTML suite a une
       // erreur USB. Permet au caissier de comprendre pourquoi la popup

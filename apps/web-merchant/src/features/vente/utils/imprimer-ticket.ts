@@ -26,6 +26,12 @@ interface InfosContexte {
    *  retour reseau). Imprime "[OFFLINE]" en entete du ticket pour
    *  tracabilite comptable. */
   origineOffline?: boolean;
+  /**
+   * Module 15 D2 : message libre par emplacement, imprime en bas de ticket.
+   * Provient de location_settings.ticket_footer_message via la query
+   * useLocationSettingsEffectifsQuery.
+   */
+  footerMessage?: string | null;
 }
 
 /**

@@ -24,6 +24,7 @@ import { ReservationModule } from "./features/reservation/reservation.module";
 import { RealtimeModule } from "./features/realtime/realtime.module";
 import { HealthModule } from "./features/health/health.module";
 import { NotificationsModule } from "./features/notifications/notifications.module";
+import { LocationSettingsModule } from "./features/location-settings/location-settings.module";
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { NotificationsModule } from "./features/notifications/notifications.modu
     ReservationModule,
     HealthModule,
     NotificationsModule,
+    LocationSettingsModule,
   ],
   providers: [
     // Active le ThrottlerGuard globalement. Les routes peuvent override

@@ -427,6 +427,8 @@ export default function PagePOS() {
           ticket={encaissement.derniereVente.ticket}
           numeroSession={sessionActive?.numeroSession}
           origineOffline={encaissement.derniereVente.origineOffline}
+          /* Module 15 D2 : emplacement courant pour le footer ticket personnalise */
+          emplacementId={empId}
           onNouvelle={encaissement.fermerDerniereVente}
         />
       )}
