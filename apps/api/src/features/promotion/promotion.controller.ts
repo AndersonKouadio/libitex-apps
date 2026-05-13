@@ -21,7 +21,7 @@ export class PromotionController {
   @ApiOperation({ summary: "Creer un code promo" })
   @Roles("ADMIN", "MANAGER")
   creer(@CurrentUser() user: CurrentUserData, @Body() dto: CreerPromotionDto) {
-    return this.service.creer(user.tenantId, dto);
+    return this.service.creer(user.tenantId, user.userId, dto);
   }
 
   @Get()
@@ -38,7 +38,7 @@ export class PromotionController {
     @Param("id") id: string,
     @Body() dto: ModifierPromotionDto,
   ) {
-    return this.service.modifier(user.tenantId, id, dto);
+    return this.service.modifier(user.tenantId, user.userId, id, dto);
   }
 
   @Delete(":id")
@@ -46,7 +46,7 @@ export class PromotionController {
   @ApiOperation({ summary: "Supprimer un code promo (soft delete)" })
   @Roles("ADMIN", "MANAGER")
   supprimer(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
-    return this.service.supprimer(user.tenantId, id);
+    return this.service.supprimer(user.tenantId, user.userId, id);
   }
 
   @Post("valider")

@@ -101,6 +101,42 @@ export class PromotionRepository {
       .where(eq(promotions.id, id));
   }
 
+  /**
+   * Module 11 D1 (fix C1) : increment atomique avec check de la limite
+   * globale en meme temps. UPDATE conditionnel renvoie 0 row si la
+   * limite est atteinte au moment du commit (race-safe pour 2 caissiers
+   * simultanes sur le dernier usage disponible).
+   *
+   * Retourne true si l'increment a eu lieu, false si la limite etait
+   * atteinte. Postgres garantit l'atomicite d'une seule requete UPDATE.
+   */
+  async incrementerUsageAtomique(id: string): Promise<boolean> {
+    const rows = await this.db
+      .update(promotions)
+      .set({ usageCount: sql`${promotions.usageCount} + 1`, updatedAt: new Date() })
+      .where(and(
+        eq(promotions.id, id),
+        sql`(${promotions.usageLimit} IS NULL OR ${promotions.usageCount} < ${promotions.usageLimit})`,
+      ))
+      .returning({ id: promotions.id });
+    return rows.length > 0;
+  }
+
+  /**
+   * Module 11 D2 (I4) : decremente usage_count si un ticket annule
+   * apres usage doit liberer le code. Idempotent : ne descend pas
+   * sous 0 (GREATEST(0, count - 1)).
+   */
+  async decrementerUsage(id: string): Promise<void> {
+    await this.db
+      .update(promotions)
+      .set({
+        usageCount: sql`GREATEST(0, ${promotions.usageCount} - 1)`,
+        updatedAt: new Date(),
+      })
+      .where(eq(promotions.id, id));
+  }
+
   async compterUsagesClient(promotionId: string, customerId: string): Promise<number> {
     const [row] = await this.db
       .select({ n: sql<number>`COUNT(*)::int` })
@@ -121,5 +157,22 @@ export class PromotionRepository {
   }) {
     const [row] = await this.db.insert(promotionUsages).values(data).returning();
     return row;
+  }
+
+  /**
+   * Module 11 D2 : retrouver les usages d'un ticket (pour decrementer
+   * si le ticket est annule apres usage).
+   */
+  async usagesParTicket(ticketId: string) {
+    return this.db
+      .select()
+      .from(promotionUsages)
+      .where(eq(promotionUsages.ticketId, ticketId));
+  }
+
+  async supprimerUsagesTicket(ticketId: string): Promise<void> {
+    await this.db
+      .delete(promotionUsages)
+      .where(eq(promotionUsages.ticketId, ticketId));
   }
 }

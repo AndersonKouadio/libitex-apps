@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Tag, X, Loader2 } from "lucide-react";
-import { toast } from "@heroui/react";
+import { toast, TextField, Input, Button } from "@heroui/react";
 import { promotionAPI } from "../apis/promotion.api";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { formatMontant } from "@/features/vente/utils/format";
@@ -90,24 +90,31 @@ export function BarreCodePromo({
   return (
     <form onSubmit={valider} className="flex items-center gap-1.5">
       <div className="relative flex-1">
-        <Tag size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-        <input
-          type="text"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder="Code promo"
-          aria-label="Saisir un code promo"
-          className="w-full h-8 pl-7 pr-2 text-xs rounded-md border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent placeholder:text-muted uppercase"
+        <Tag
+          size={12}
+          className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none z-10"
         />
+        <TextField value={code} onChange={setCode} aria-label="Saisir un code promo">
+          <Input
+            placeholder="Code promo"
+            autoCapitalize="characters"
+            className="h-8 pl-7 pr-2 text-xs uppercase"
+          />
+        </TextField>
       </div>
-      <button
+      <Button
         type="submit"
-        disabled={validation || !code.trim() || !!remiseCourante}
-        title={remiseCourante && !codeApplique ? "Une remise manuelle est deja appliquee" : "Appliquer le code"}
-        className="h-8 px-2.5 text-xs font-medium rounded-md bg-accent text-accent-foreground hover:brightness-95 disabled:opacity-40 disabled:cursor-not-allowed"
+        variant="primary"
+        className="h-8 px-2.5 text-xs min-w-0"
+        isDisabled={validation || !code.trim() || !!remiseCourante}
+        aria-label={
+          remiseCourante && !codeApplique
+            ? "Une remise manuelle est deja appliquee"
+            : "Appliquer le code"
+        }
       >
         {validation ? <Loader2 size={12} className="animate-spin" /> : "OK"}
-      </button>
+      </Button>
     </form>
   );
 }

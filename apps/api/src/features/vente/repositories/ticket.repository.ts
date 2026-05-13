@@ -83,6 +83,8 @@ export class TicketRepository {
   async mettreAJourTotaux(ticketId: string, totaux: {
     subtotal: string; taxAmount: string; total: string;
     discountAmount?: string; note?: string;
+    /** Module 11 D1 : raison de la remise (ex "PROMO:RENTREE10"). */
+    discountReason?: string | null;
   }) {
     const [updated] = await this.db
       .update(tickets)

@@ -89,6 +89,14 @@ export const tickets = pgTable("tickets", {
   customerPhone: varchar("customer_phone", { length: 50 }),
   note: text("note"),
   /**
+   * Module 11 D1 : raison de la remise globale en clair. Snapshot au moment
+   * de la creation du ticket. Format strict pour les codes promo :
+   * "PROMO:CODE" (utilise par completerTicket pour appliquer atomiquement).
+   * Pour une remise manuelle libre, contient le texte saisi par le caissier.
+   * Null si pas de remise.
+   */
+  discountReason: varchar("discount_reason", { length: 255 }),
+  /**
    * Cle d'idempotence pour eviter les doublons sur les ventes offline
    * resyncees apres interruption. UUID v4 fourni par le frontend
    * (file-attente-offline). Si la cle existe deja, le backend retourne
