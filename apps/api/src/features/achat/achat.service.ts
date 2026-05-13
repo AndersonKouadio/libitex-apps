@@ -188,12 +188,13 @@ export class AchatService {
       fournisseurId: r.supplierId,
       nomFournisseur: r.supplierName,
       emplacementId: r.locationId,
+      nomEmplacement: r.locationName,
       statut: r.status,
       montantTotal: Number(r.totalAmount),
       // Phase A.2 : expose les totaux landed dans la liste aussi
-      fraisTotal: Number((r as any).costsTotal ?? 0),
-      totalDebarque: Number((r as any).landedTotal ?? r.totalAmount),
-      methodeAllocation: ((r as any).costsAllocationMethod ?? "QUANTITY") as "QUANTITY" | "WEIGHT" | "VALUE",
+      fraisTotal: Number(r.costsTotal ?? 0),
+      totalDebarque: Number(r.landedTotal ?? r.totalAmount),
+      methodeAllocation: (r.costsAllocationMethod ?? "QUANTITY") as "QUANTITY" | "WEIGHT" | "VALUE",
       dateAttendue: r.expectedDate ? new Date(r.expectedDate).toISOString() : null,
       dateReception: r.receivedAt ? new Date(r.receivedAt).toISOString() : null,
       notes: r.notes ?? null,
@@ -205,6 +206,8 @@ export class AchatService {
     const commande = await this.achatRepo.trouverCommande(tenantId, id);
     if (!commande) throw new NotFoundException("Commande introuvable");
     const fournisseur = await this.achatRepo.trouverFournisseur(tenantId, commande.supplierId);
+    // Phase A.3 : expose le nom de l'emplacement dans la reponse detail
+    const emplacement = await this.achatRepo.emplacementDuTenant(tenantId, commande.locationId);
     const lignes = await this.achatRepo.listerLignesCommande(id);
 
     const lignesDto: LigneCommandeResponseDto[] = lignes.map((l) => ({
@@ -226,6 +229,7 @@ export class AchatService {
       fournisseurId: commande.supplierId,
       nomFournisseur: fournisseur?.name ?? "",
       emplacementId: commande.locationId,
+      nomEmplacement: emplacement?.name ?? "",
       statut: commande.status,
       montantTotal: Number(commande.totalAmount),
       // Phase A.2 : exposer les totaux landed pour l'UI

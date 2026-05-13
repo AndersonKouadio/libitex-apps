@@ -66,6 +66,15 @@ export function LignesCommandeEdition({
           </p>
         ) : (
           <div className="space-y-2">
+            {/* Header de colonnes pour lever l'ambiguite des champs */}
+            <div className="flex items-center gap-2 px-2 text-xs font-medium text-muted">
+              <div className="flex-1 min-w-0">Produit</div>
+              <div className="w-28 text-right">Quantite</div>
+              <div className="w-32 text-right">Prix unitaire</div>
+              <div className="w-28 text-right">Total</div>
+              <div className="w-8" />
+            </div>
+
             {lignes.map((l, i) => (
               <div key={`${l.varianteId}-${i}`} className="flex items-center gap-2 p-2 border border-border rounded-lg">
                 <div className="flex-1 min-w-0">
@@ -80,11 +89,11 @@ export function LignesCommandeEdition({
                   minValue={0}
                   step={0.001}
                   aria-label="Quantite a commander"
-                  className="w-24"
+                  className="w-28 shrink-0"
                 >
                   <NumberField.Group>
                     <NumberField.Input
-                      placeholder="Quantite"
+                      placeholder="Qte"
                       className="text-right tabular-nums"
                     />
                   </NumberField.Group>
@@ -95,21 +104,21 @@ export function LignesCommandeEdition({
                   minValue={0}
                   step={1}
                   aria-label="Prix unitaire d'achat"
-                  className="w-28"
+                  className="w-32 shrink-0"
                 >
                   <NumberField.Group>
                     <NumberField.Input
-                      placeholder="Prix unitaire"
+                      placeholder="Prix"
                       className="text-right tabular-nums"
                     />
                   </NumberField.Group>
                 </NumberField>
-                <span className="w-24 text-right text-sm font-semibold tabular-nums shrink-0">
+                <span className="w-28 text-right text-sm font-semibold tabular-nums shrink-0">
                   {formatMontant(l.quantite * l.prixUnitaire)} F
                 </span>
                 <Button
                   variant="ghost"
-                  className="h-8 w-8 p-0 min-w-0 text-danger"
+                  className="h-8 w-8 p-0 min-w-0 text-danger shrink-0"
                   aria-label="Retirer"
                   onPress={() => onRetirer(i)}
                 >

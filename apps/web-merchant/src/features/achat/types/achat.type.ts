@@ -32,6 +32,7 @@ export interface ICommande {
   fournisseurId: string;
   nomFournisseur: string;
   emplacementId: string;
+  nomEmplacement: string;
   statut: StatutCommande;
   montantTotal: number;
   /** Phase A.2 : somme des frais d'approche en devise tenant. */

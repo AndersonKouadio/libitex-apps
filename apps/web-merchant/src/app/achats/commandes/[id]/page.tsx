@@ -100,37 +100,66 @@ export default function PageDetailCommande({ params }: { params: Promise<{ id: s
                 {LIBELLE_STATUT[commande.statut]}
               </Chip>
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted text-xs">Sous-total lignes</span>
-              <span className="tabular-nums">{formatMontant(commande.montantTotal)} F</span>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted text-xs">Frais d&apos;approche</span>
-              <span className="tabular-nums">{formatMontant(commande.fraisTotal ?? 0)} F</span>
-            </div>
-            <div className="flex items-center justify-between gap-2 pt-2 border-t border-border">
-              <span className="text-xs font-medium">Cout debarque</span>
-              <span className="font-semibold tabular-nums">{formatMontant(commande.totalDebarque ?? commande.montantTotal)} F</span>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted text-xs">Allocation</span>
-              <span className="text-xs">{LIBELLE_METHODE_ALLOCATION[commande.methodeAllocation ?? "QUANTITY"]}</span>
-            </div>
-            {commande.dateAttendue && (
+
+            {/* Phase A.3 : section "Logistique" — emplacement + dates */}
+            <div className="pt-2 border-t border-border space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-muted text-xs">Livraison attendue</span>
-                <span>{new Date(commande.dateAttendue).toLocaleDateString("fr-FR")}</span>
+                <span className="text-muted text-xs">Reception prevue a</span>
+                <span className="text-right">{commande.nomEmplacement || "—"}</span>
               </div>
-            )}
-            {commande.dateReception && (
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-muted text-xs">Fournisseur</span>
+                <span className="text-right max-w-[60%] truncate">{commande.nomFournisseur}</span>
+              </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-muted text-xs">Premiere reception</span>
-                <span>{new Date(commande.dateReception).toLocaleDateString("fr-FR")}</span>
+                <span className="text-muted text-xs">Articles</span>
+                <span className="tabular-nums">
+                  {(commande.lignes ?? []).length} ligne{(commande.lignes ?? []).length > 1 ? "s" : ""}
+                  {" · "}
+                  {(commande.lignes ?? []).reduce((s, l) => s + l.quantiteCommandee, 0).toLocaleString("fr-FR")} unite
+                  {(commande.lignes ?? []).reduce((s, l) => s + l.quantiteCommandee, 0) > 1 ? "s" : ""}
+                </span>
               </div>
-            )}
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted text-xs">Creee le</span>
-              <span>{new Date(commande.creeLe).toLocaleDateString("fr-FR")}</span>
+            </div>
+
+            {/* Phase A.3 : section "Couts" — sous-total + frais + debarque */}
+            <div className="pt-2 border-t border-border space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted text-xs">Sous-total lignes</span>
+                <span className="tabular-nums">{formatMontant(commande.montantTotal)} F</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted text-xs">Frais d&apos;approche</span>
+                <span className="tabular-nums">{formatMontant(commande.fraisTotal ?? 0)} F</span>
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-border">
+                <span className="text-xs font-medium">Cout debarque</span>
+                <span className="font-semibold tabular-nums">{formatMontant(commande.totalDebarque ?? commande.montantTotal)} F</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted text-xs">Allocation des frais</span>
+                <span className="text-xs">{LIBELLE_METHODE_ALLOCATION[commande.methodeAllocation ?? "QUANTITY"]}</span>
+              </div>
+            </div>
+
+            {/* Phase A.3 : section "Dates" */}
+            <div className="pt-2 border-t border-border space-y-2">
+              {commande.dateAttendue && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted text-xs">Livraison attendue</span>
+                  <span>{new Date(commande.dateAttendue).toLocaleDateString("fr-FR")}</span>
+                </div>
+              )}
+              {commande.dateReception && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted text-xs">Premiere reception</span>
+                  <span>{new Date(commande.dateReception).toLocaleDateString("fr-FR")}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted text-xs">Creee le</span>
+                <span>{new Date(commande.creeLe).toLocaleDateString("fr-FR")}</span>
+              </div>
             </div>
             {commande.notes && (
               <div className="pt-2 border-t border-border">

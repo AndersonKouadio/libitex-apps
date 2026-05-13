@@ -257,8 +257,13 @@ export class AchatRepository {
         supplierId: purchaseOrders.supplierId,
         supplierName: suppliers.name,
         locationId: purchaseOrders.locationId,
+        locationName: locations.name,
         status: purchaseOrders.status,
         totalAmount: purchaseOrders.totalAmount,
+        // Phase A.2 : totaux landed cost
+        costsTotal: purchaseOrders.costsTotal,
+        landedTotal: purchaseOrders.landedTotal,
+        costsAllocationMethod: purchaseOrders.costsAllocationMethod,
         expectedDate: purchaseOrders.expectedDate,
         receivedAt: purchaseOrders.receivedAt,
         notes: purchaseOrders.notes,
@@ -267,6 +272,7 @@ export class AchatRepository {
       })
       .from(purchaseOrders)
       .innerJoin(suppliers, eq(purchaseOrders.supplierId, suppliers.id))
+      .innerJoin(locations, eq(purchaseOrders.locationId, locations.id))
       .where(and(...conditions))
       .orderBy(desc(purchaseOrders.createdAt));
   }

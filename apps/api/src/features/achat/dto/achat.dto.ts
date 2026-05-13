@@ -141,6 +141,7 @@ export class CommandeResponseDto {
   @ApiProperty() fournisseurId!: string;
   @ApiProperty() nomFournisseur!: string;
   @ApiProperty() emplacementId!: string;
+  @ApiProperty() nomEmplacement!: string;
   @ApiProperty() statut!: string;
   @ApiProperty() montantTotal!: number;
   /** Phase A.2 : somme des frais d'approche en devise tenant. */
