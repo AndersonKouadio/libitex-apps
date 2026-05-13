@@ -15,3 +15,10 @@ export {
   verifierPapier,
 } from "./usb";
 export type { DeviceUSB, EtatPapier } from "./usb";
+
+// Module 13 D2 : Bluetooth pour imprimantes mobiles (camion, stand marche).
+export {
+  supporteWebBluetooth, appairerImprimanteBT, oublierImprimanteBT,
+  decrireImprimanteBT, envoyerCommandesBT, imprimanteBTConnue, nomDeviceBT,
+} from "./bluetooth";
+export type { DeviceBluetooth } from "./bluetooth";

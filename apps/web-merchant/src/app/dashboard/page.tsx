@@ -23,6 +23,7 @@ import {
   SelecteurPeriode, type PeriodeJours,
 } from "@/features/tableau-de-bord/components/selecteur-periode";
 import { CarteOnboarding } from "@/features/tableau-de-bord/components/carte-onboarding";
+import { BanniereConfigIncomplete } from "@/features/boutique/components/banniere-config-incomplete";
 import { HistoriqueTickets } from "@/features/vente/components/historique-tickets";
 import { formatMontant } from "@/features/vente/utils/format";
 
@@ -54,6 +55,9 @@ export default function TableauDeBordPage() {
           nomBoutique={boutiqueActive?.nom}
         />
       )}
+
+      {/* Module 14 D2 : nudge config incomplete (logo/tel/adresse) */}
+      <BanniereConfigIncomplete />
 
       <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
         <h2 className="text-xs font-semibold text-muted uppercase tracking-wider">
