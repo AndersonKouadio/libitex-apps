@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button, Card, Chip, Skeleton } from "@heroui/react";
-import { Plus, Tag, Pencil, Trash2, Calendar, Users, Hash } from "lucide-react";
+import { Plus, Tag, Pencil, Trash2, Calendar, Users, Hash, BarChart3 } from "lucide-react";
 import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
@@ -10,6 +10,7 @@ import {
   usePromotionsQuery, useSupprimerPromotionMutation,
 } from "@/features/promotion/queries/promotion.query";
 import { ModalPromotion } from "@/features/promotion/components/modal-promotion";
+import { ModalStatsPromotion } from "@/features/promotion/components/modal-stats-promotion";
 import { useConfirmation } from "@/providers/confirmation-provider";
 import { formatMontant } from "@/features/vente/utils/format";
 import type { IPromotion } from "@/features/promotion/types/promotion.type";
@@ -20,6 +21,7 @@ export default function PagePromotions() {
   const confirmer = useConfirmation();
   const [modalOuvert, setModalOuvert] = useState(false);
   const [enEdition, setEnEdition] = useState<IPromotion | null>(null);
+  const [statsOuvert, setStatsOuvert] = useState<IPromotion | null>(null);
 
   function ouvrirCreation() {
     setEnEdition(null);
@@ -119,6 +121,17 @@ export default function PagePromotions() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
+                      {/* Module 11 D3 : bouton stats si le code a au moins 1 usage */}
+                      {p.usageCount > 0 && (
+                        <Button
+                          variant="ghost"
+                          className="h-8 w-8 p-0 min-w-0 text-accent"
+                          aria-label="Voir les statistiques"
+                          onPress={() => setStatsOuvert(p)}
+                        >
+                          <BarChart3 size={14} />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         className="h-8 w-8 p-0 min-w-0"
@@ -148,6 +161,11 @@ export default function PagePromotions() {
         ouvert={modalOuvert}
         promotion={enEdition}
         onFermer={() => setModalOuvert(false)}
+      />
+
+      <ModalStatsPromotion
+        promotion={statsOuvert}
+        onFermer={() => setStatsOuvert(null)}
       />
     </PageContainer>
   );

@@ -4,7 +4,7 @@ import {
 import { PromotionRepository } from "./repositories/promotion.repository";
 import {
   CreerPromotionDto, ModifierPromotionDto, ValiderCodeDto,
-  PromotionResponseDto, ValidationResultDto,
+  PromotionResponseDto, ValidationResultDto, StatsPromotionDto,
 } from "./dto/promotion.dto";
 import { AuditService, AUDIT_ACTIONS } from "../../common/audit/audit.service";
 
@@ -106,6 +106,31 @@ export class PromotionService {
       entityType: "PROMOTION", entityId: id,
       before: { code: existant.code },
     });
+  }
+
+  /**
+   * Module 11 D3 : statistiques consolidees pour un code promo
+   * (page admin /parametres/promotions). Verifie d'abord que la promo
+   * existe dans ce tenant pour eviter de leaker des stats cross-tenant.
+   */
+  async obtenirStats(tenantId: string, promotionId: string): Promise<StatsPromotionDto> {
+    const promo = await this.repo.trouverParId(tenantId, promotionId);
+    if (!promo) throw new NotFoundException("Promotion introuvable");
+
+    const stats = await this.repo.obtenirStats(tenantId, promotionId);
+    const topRaw = await this.repo.obtenirTopClients(tenantId, promotionId, 5);
+
+    return {
+      nbUsages: stats.nbUsages,
+      totalRemise: Math.round(stats.totalRemise),
+      caGenere: Math.round(stats.caGenere),
+      topClients: topRaw.map((r) => ({
+        customerId: r.customerId!,
+        nomComplet: [r.nom, r.prenom].filter(Boolean).join(" ") || "Client",
+        nbUsages: Number(r.nbUsages),
+        totalRemise: Math.round(Number(r.totalRemise)),
+      })),
+    };
   }
 
   /**

@@ -1,5 +1,7 @@
 import { httpClient } from "@/lib/http";
-import type { IPromotion, IResultatValidation, TypePromotion } from "../types/promotion.type";
+import type {
+  IPromotion, IResultatValidation, TypePromotion, IStatsPromotion,
+} from "../types/promotion.type";
 
 const BASE = "/promotions";
 
@@ -38,4 +40,8 @@ export const promotionAPI = {
     httpClient.post<IResultatValidation>(`${BASE}/valider`, {
       code, montantTicket, clientId,
     }, { token }),
+
+  /** Module 11 D3 : stats consolidees d'un code promo (admin uniquement). */
+  obtenirStats: (token: string, id: string) =>
+    httpClient.get<IStatsPromotion>(`${BASE}/${id}/stats`, { token }),
 };
