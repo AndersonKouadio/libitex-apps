@@ -156,6 +156,16 @@ describe("LandedCostService", () => {
       expect(cump).toBe(125);
     });
 
+    it("cumpActuel=0 (jamais initialise) avec stock existant -> ignore le stock, cump = landed", () => {
+      // Cas reel : 10 nuggets en stock avec cumpActuel=0 (jamais valorises),
+      // on recoit 2 unites a 6000 F debarque. La formule classique donnerait
+      // (10*0 + 2*6000) / 12 = 1000, mais c'est aberrant (le stock existant
+      // n'a pas de valeur connue, il ne peut pas diluer le cout reel).
+      // Bonne reponse : nouveau CUMP = 6000 (cout debarque de la reception).
+      const cump = service.calculerNouveauCump(10, 0, 2, 6000);
+      expect(cump).toBe(6000);
+    });
+
     it("stock existant + nouveau lot a prix different = moyenne ponderee", () => {
       // 10 unites a 100 + 10 unites a 200 = 20 unites, moyenne 150
       const cump = service.calculerNouveauCump(10, 100, 10, 200);

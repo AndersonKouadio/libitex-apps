@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   Disclosure, DisclosureGroup,
-  TextField, Label, Input, Button, Switch, Chip, Tooltip,
+  TextField, Label, Input, Description, Button, Switch, Chip, Tooltip,
 } from "@heroui/react";
 import { ChevronDown, Save, Info, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
 import type { IVariante } from "../types/produit.type";
@@ -123,7 +123,11 @@ function LigneVarianteEditer({
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <TextField type="number" value={etat.prixAchat} onChange={set("prixAchat")}>
-            <Label>Prix d'achat</Label><Input placeholder="9 500" min="0" />
+            <Label>Prix d'achat estimé</Label>
+            <Input placeholder="9 500" min="0" />
+            <Description className="text-[10px]">
+              Affiné à la réception (voir CUMP ci-dessous)
+            </Description>
           </TextField>
           <TextField isRequired type="number" value={etat.prixDetail} onChange={set("prixDetail")}>
             <Label>Prix détail</Label><Input placeholder="15 000" min="0" />

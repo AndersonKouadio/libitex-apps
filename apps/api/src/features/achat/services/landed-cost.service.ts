@@ -121,7 +121,11 @@ export class LandedCostService {
    *
    * Edge cases :
    * - stock_existant + qty_recue = 0 -> on garde cump_actuel (pas de division)
-   * - cump_actuel = 0 (premier achat) -> nouveau_cump = landed_unit_cost
+   * - cump_actuel <= 0 (CUMP jamais initialise) -> on ignore le stock existant
+   *   (on ne peut pas valoriser un stock sans connaitre son cout). Le nouveau
+   *   CUMP est donc le cout debarque de la reception courante. Sans cette
+   *   regle, la formule diluait le cout debarque par un stock value a 0,
+   *   donnant un CUMP aberramment faible (ex : 12000/12 = 1000 au lieu de 6000).
    * - stock_existant negatif (cas degrade post-vente offline) -> on traite
    *   comme 0 pour eviter une moyenne aberrante.
    */
@@ -131,6 +135,12 @@ export class LandedCostService {
     quantiteRecue: number,
     landedUnitCost: number,
   ): number {
+    // Cas premier achat / CUMP jamais initialise : on ne dilue pas le cout
+    // debarque par un stock existant non valorise.
+    if (cumpActuel <= 0) {
+      if (quantiteRecue <= 0) return 0;
+      return Number(landedUnitCost.toFixed(4));
+    }
     const stockSafe = Math.max(0, stockExistant);
     const denom = stockSafe + quantiteRecue;
     if (denom <= 0) return cumpActuel;

@@ -1,6 +1,6 @@
 "use client";
 
-import { TextField, Label, Input, Button } from "@heroui/react";
+import { TextField, Label, Input, Button, Description } from "@heroui/react";
 import { Info, RefreshCw } from "lucide-react";
 import type { CreerVarianteDTO } from "../schemas/produit.schema";
 import type { TypeProduit } from "../hooks/useFormProduit";
@@ -80,8 +80,13 @@ export function SectionVarianteUnique({ type, variante, onChange, onRegenererSku
           value={variante.prixAchat ? String(variante.prixAchat) : ""}
           onChange={(v) => onChange({ prixAchat: v ? Number(v) : undefined })}
         >
-          <Label>Prix d'achat (F CFA)</Label>
+          <Label>Prix d'achat estimé (F CFA)</Label>
           <Input placeholder="9 500" min="0" />
+          <Description>
+            Optionnel. Sera affiné automatiquement à la première réception
+            d'un bon de commande (CUMP : coût débarqué moyen incluant les
+            frais de transport, douane, transit).
+          </Description>
         </TextField>
 
         <TextField

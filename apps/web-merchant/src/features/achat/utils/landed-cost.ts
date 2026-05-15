@@ -71,12 +71,21 @@ export function preview(
     const fraisParUnite = fraisAlloue / l.quantiteRecue;
     const landedUnitCost = l.prixUnitaire + fraisParUnite;
 
-    const stockSafe = Math.max(0, l.stockAvant);
-    const denomCump = stockSafe + l.quantiteRecue;
-    const nouveauCump =
-      denomCump > 0
-        ? (stockSafe * l.cumpActuel + l.quantiteRecue * landedUnitCost) / denomCump
-        : l.cumpActuel;
+    // Miroir du LandedCostService backend :
+    // - cumpActuel <= 0 (jamais initialise) -> on ignore le stock existant
+    //   (non valorise) et nouveauCump = landedUnitCost
+    // - sinon, moyenne ponderee classique
+    let nouveauCump: number;
+    if (l.cumpActuel <= 0) {
+      nouveauCump = landedUnitCost;
+    } else {
+      const stockSafe = Math.max(0, l.stockAvant);
+      const denomCump = stockSafe + l.quantiteRecue;
+      nouveauCump =
+        denomCump > 0
+          ? (stockSafe * l.cumpActuel + l.quantiteRecue * landedUnitCost) / denomCump
+          : l.cumpActuel;
+    }
     const deltaCump = nouveauCump - l.cumpActuel;
     const variationPct =
       l.cumpActuel > 0 ? Math.round((deltaCump / l.cumpActuel) * 100) : null;
