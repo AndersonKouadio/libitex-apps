@@ -424,6 +424,13 @@ export class CatalogueService {
       attributs: raw.attributes ?? {},
       codeBarres: raw.barcode,
       prixAchat: Number(raw.pricePurchase ?? 0),
+      // Phase A.4 : expose le CUMP + date MAJ pour calcul de marge reelle
+      cump: Number(raw.priceLanded ?? 0),
+      cumpMajLe: raw.cumpLastUpdatedAt
+        ? (raw.cumpLastUpdatedAt instanceof Date
+            ? raw.cumpLastUpdatedAt.toISOString()
+            : raw.cumpLastUpdatedAt)
+        : null,
       prixDetail: Number(raw.priceRetail),
       prixGros: raw.priceWholesale ? Number(raw.priceWholesale) : null,
       prixVip: raw.priceVip ? Number(raw.priceVip) : null,

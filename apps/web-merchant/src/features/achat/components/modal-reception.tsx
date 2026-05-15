@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Modal, Button, Switch, NumberField, toast } from "@heroui/react";
+import { useEffect, useMemo, useState } from "react";
+import { Modal, Button, Switch, NumberField, Chip, toast } from "@heroui/react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { useReceptionMutation } from "../queries/achat.query";
+import { useStockEmplacementQuery } from "@/features/stock/queries/stock-emplacement.query";
 import { formatMontant } from "@/features/vente/utils/format";
+import { preview } from "../utils/landed-cost";
 import type { ICommande } from "../types/achat.type";
 
 interface Props {
@@ -24,6 +27,16 @@ export function ModalReception({ ouvert, commande, onFermer }: Props) {
   const reception = useReceptionMutation();
   const [quantites, setQuantites] = useState<Record<string, number>>({});
   const [majPrix, setMajPrix] = useState(true);
+
+  // Phase A.4 : recupere le stock courant pour preview de l'impact CUMP
+  const { data: stockEmplacement } = useStockEmplacementQuery(commande?.emplacementId);
+  const stockParVariante = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of stockEmplacement ?? []) {
+      map.set(s.varianteId, Number(s.quantite ?? 0));
+    }
+    return map;
+  }, [stockEmplacement]);
 
   useEffect(() => {
     if (!ouvert || !commande) return;
@@ -57,6 +70,26 @@ export function ModalReception({ ouvert, commande, onFermer }: Props) {
   const tout_recu = (commande.lignes ?? []).every(
     (l) => l.quantiteRecue >= l.quantiteCommandee - 0.0001,
   );
+
+  // Phase A.4 : preview de l'impact sur le CUMP par ligne, avec frais alloues
+  const apercuParLigne = useMemo(() => {
+    if (!commande) return new Map<string, ReturnType<typeof preview>[number]>();
+    const lignesPreview = (commande.lignes ?? []).map((l) => ({
+      ligneId: l.id,
+      prixUnitaire: l.prixUnitaire,
+      quantiteRecue: quantites[l.id] ?? 0,
+      cumpActuel: l.cumpActuel ?? 0,
+      stockAvant: stockParVariante.get(l.varianteId) ?? 0,
+    }));
+    const resultats = preview(
+      lignesPreview,
+      commande.fraisTotal ?? 0,
+      commande.methodeAllocation ?? "QUANTITY",
+    );
+    const map = new Map<string, (typeof resultats)[number]>();
+    for (const r of resultats) map.set(r.ligneId, r);
+    return map;
+  }, [commande, quantites, stockParVariante]);
 
   async function valider() {
     if (!commande) return;
@@ -107,43 +140,95 @@ export function ModalReception({ ouvert, commande, onFermer }: Props) {
               {(commande.lignes ?? []).map((l) => {
                 const reste = l.quantiteCommandee - l.quantiteRecue;
                 const enDepassement = lignesEnDepassement.includes(l.id);
+                const apercu = apercuParLigne.get(l.id);
+                const qteSaisie = quantites[l.id] ?? 0;
                 return (
                   <div
                     key={l.id}
-                    className={`flex items-center gap-2 p-2 border rounded-lg ${
+                    className={`p-2 border rounded-lg ${
                       enDepassement ? "border-danger/60 bg-danger/5" : "border-border"
                     }`}
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{l.nomProduit}</p>
-                      <p className="text-xs text-muted truncate">
-                        {l.nomVariante ? `${l.nomVariante} · ` : ""}{l.sku}
-                      </p>
-                      <p className="text-xs text-muted mt-0.5">
-                        Commandé {l.quantiteCommandee} · deja recu {l.quantiteRecue}
-                        {reste > 0 && <span className="text-warning"> · reste {reste.toFixed(2)}</span>}
-                      </p>
-                      {enDepassement && (
-                        <p className="text-xs text-danger mt-0.5">
-                          La quantite saisie depasse le reste a recevoir
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{l.nomProduit}</p>
+                        <p className="text-xs text-muted truncate">
+                          {l.nomVariante ? `${l.nomVariante} · ` : ""}{l.sku}
                         </p>
-                      )}
+                        <p className="text-xs text-muted mt-0.5">
+                          Commandé {l.quantiteCommandee} · deja recu {l.quantiteRecue}
+                          {reste > 0 && <span className="text-warning"> · reste {reste.toFixed(2)}</span>}
+                        </p>
+                        {enDepassement && (
+                          <p className="text-xs text-danger mt-0.5">
+                            La quantite saisie depasse le reste a recevoir
+                          </p>
+                        )}
+                      </div>
+                      <NumberField
+                        value={Number.isFinite(quantites[l.id]) ? (quantites[l.id] ?? 0) : 0}
+                        onChange={(v) => setQuantites((q) => ({ ...q, [l.id]: Number.isFinite(v) ? v : 0 }))}
+                        minValue={0}
+                        maxValue={reste}
+                        step={0.001}
+                        isInvalid={enDepassement}
+                        aria-label={`Quantite recue pour ${l.nomProduit}`}
+                        className="w-28"
+                      >
+                        <NumberField.Group>
+                          <NumberField.Input className="text-right tabular-nums" />
+                        </NumberField.Group>
+                      </NumberField>
                     </div>
-                    <NumberField
-                      // Fix I4 : NumberField HeroUI v3 garantit valeur numerique
-                      value={Number.isFinite(quantites[l.id]) ? (quantites[l.id] ?? 0) : 0}
-                      onChange={(v) => setQuantites((q) => ({ ...q, [l.id]: Number.isFinite(v) ? v : 0 }))}
-                      minValue={0}
-                      maxValue={reste}
-                      step={0.001}
-                      isInvalid={enDepassement}
-                      aria-label={`Quantite recue pour ${l.nomProduit}`}
-                      className="w-28"
-                    >
-                      <NumberField.Group>
-                        <NumberField.Input className="text-right tabular-nums" />
-                      </NumberField.Group>
-                    </NumberField>
+
+                    {/* Phase A.4 : preview de l'impact CUMP */}
+                    {qteSaisie > 0 && apercu && (
+                      <div className="mt-2 pt-2 border-t border-border/60 grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <p className="text-muted">CUMP actuel</p>
+                          <p className="tabular-nums font-medium">
+                            {l.cumpActuel > 0 ? `${formatMontant(l.cumpActuel)} F` : "—"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted">Cout debarque</p>
+                          <p className="tabular-nums font-medium">
+                            {formatMontant(apercu.landedUnitCost)} F
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted">Nouveau CUMP</p>
+                          <div className="flex items-center gap-1 tabular-nums font-semibold">
+                            {formatMontant(apercu.nouveauCump)} F
+                            {apercu.variationPct !== null && apercu.variationPct !== 0 && (
+                              <Chip
+                                variant="soft"
+                                size="sm"
+                                className={`text-[10px] gap-0.5 ${
+                                  apercu.variationPct > 0
+                                    ? "bg-warning/10 text-warning"
+                                    : "bg-success/10 text-success"
+                                }`}
+                              >
+                                {apercu.variationPct > 0 ? (
+                                  <TrendingUp size={10} />
+                                ) : (
+                                  <TrendingDown size={10} />
+                                )}
+                                {apercu.variationPct > 0 ? "+" : ""}
+                                {apercu.variationPct}%
+                              </Chip>
+                            )}
+                            {apercu.variationPct === 0 && (
+                              <Chip variant="soft" size="sm" className="text-[10px] gap-0.5 bg-muted/10 text-muted">
+                                <Minus size={10} />
+                                stable
+                              </Chip>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

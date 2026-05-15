@@ -221,6 +221,8 @@ export class AchatService {
       quantiteRecue: Number(l.quantityReceived),
       prixUnitaire: Number(l.unitPrice),
       totalLigne: Number(l.lineTotal),
+      // Phase A.4 : CUMP actuel pour preview de l'impact a la reception
+      cumpActuel: Number(l.cumpActuel ?? 0),
     }));
 
     return {

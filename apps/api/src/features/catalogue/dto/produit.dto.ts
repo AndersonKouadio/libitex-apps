@@ -404,6 +404,14 @@ export class VarianteResponseDto {
   attributs!: Record<string, string>;
   codeBarres!: string | null;
   prixAchat!: number;
+  /**
+   * Phase A.4 : CUMP (Cout Unitaire Moyen Pondere) courant.
+   * Inclut les frais d'approche (transport, douane, transit...) ventiles
+   * a la reception. Sert a calculer la marge reelle.
+   */
+  cump!: number;
+  /** Date derniere reception ayant impacte le CUMP. null = pas encore initialise. */
+  cumpMajLe!: string | null;
   prixDetail!: number;
   prixGros!: number | null;
   prixVip!: number | null;

@@ -334,6 +334,9 @@ export class AchatRepository {
         quantityReceived: purchaseOrderLines.quantityReceived,
         unitPrice: purchaseOrderLines.unitPrice,
         lineTotal: purchaseOrderLines.lineTotal,
+        // Phase A.4 : expose le CUMP actuel pour permettre la preview
+        // "avant/apres" dans la modale de reception.
+        cumpActuel: variants.priceLanded,
       })
       .from(purchaseOrderLines)
       .innerJoin(variants, eq(purchaseOrderLines.variantId, variants.id))

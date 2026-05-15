@@ -15,6 +15,14 @@ export interface IVariante {
   attributs: Record<string, string>;
   codeBarres: string | null;
   prixAchat: number;
+  /**
+   * Phase A.4 : CUMP (Cout Unitaire Moyen Pondere) courant, inclut les
+   * frais d'approche (transport, douane, transit...). Sert au calcul de
+   * la marge reelle. = 0 si aucune reception encore valorisee.
+   */
+  cump: number;
+  /** Date ISO derniere reception ayant impacte le CUMP. null si jamais initialise. */
+  cumpMajLe: string | null;
   prixDetail: number;
   prixGros: number | null;
   prixVip: number | null;

@@ -24,6 +24,11 @@ export interface ILigneCommande {
   quantiteRecue: number;
   prixUnitaire: number;
   totalLigne: number;
+  /**
+   * Phase A.4 : CUMP actuel de la variante (avant la prochaine reception).
+   * Permet le preview "avant/apres" dans la modale de reception.
+   */
+  cumpActuel: number;
 }
 
 export interface ICommande {

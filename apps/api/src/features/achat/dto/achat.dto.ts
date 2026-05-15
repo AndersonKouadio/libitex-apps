@@ -133,6 +133,9 @@ export class LigneCommandeResponseDto {
   @ApiProperty() quantiteRecue!: number;
   @ApiProperty() prixUnitaire!: number;
   @ApiProperty() totalLigne!: number;
+  /** Phase A.4 : CUMP actuel de la variante au moment de la lecture. */
+  @ApiProperty({ description: "CUMP actuel de la variante (cout debarque moyen)" })
+  cumpActuel!: number;
 }
 
 export class CommandeResponseDto {
