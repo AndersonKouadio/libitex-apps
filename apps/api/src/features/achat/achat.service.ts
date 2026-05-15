@@ -154,10 +154,10 @@ export class AchatService {
           notes: dto.notes,
           createdBy: userId,
           totalAmount: total.toFixed(2),
-          // Phase A.5 : snapshot devise + taux + sous-total devise
+          // Phase A.5 : snapshot devise + taux fige.
+          // Le sous-total en devise est recalcule a la lecture (totalAmount / tauxChange).
           currencyCode: devise,
           exchangeRateAtOrder: tauxChange.toFixed(6),
-          subtotalInCurrency: sousTotalDevise.toFixed(2),
         });
         break;
       } catch (err) {
@@ -173,16 +173,15 @@ export class AchatService {
     }
 
     await this.achatRepo.ajouterLignes(dto.lignes.map((l) => {
-      // Phase A.5 : conversion devise commande -> XOF pour stockage en XOF
+      // Phase A.5 : conversion devise commande -> XOF pour stockage en XOF.
+      // Le prix en devise commande sera recalcule a la lecture
+      // (unitPrice / exchangeRateAtOrder).
       const unitPriceXOF = l.prixUnitaire * tauxChange;
       const lineTotalXOF = l.quantite * unitPriceXOF;
       return {
         purchaseOrderId: commande!.id,
         variantId: l.varianteId,
         quantityOrdered: l.quantite.toString(),
-        // Snapshot prix en devise saisie (pour affichage UI sans recalcul)
-        unitPriceInCurrency: l.prixUnitaire.toFixed(2),
-        // Stockage en XOF (devise tenant) pour CUMP + rapports
         unitPrice: unitPriceXOF.toFixed(2),
         lineTotal: lineTotalXOF.toFixed(2),
       };
@@ -218,10 +217,14 @@ export class AchatService {
       fraisTotal: Number(r.costsTotal ?? 0),
       totalDebarque: Number(r.landedTotal ?? r.totalAmount),
       methodeAllocation: (r.costsAllocationMethod ?? "QUANTITY") as "QUANTITY" | "WEIGHT" | "VALUE",
-      // Phase A.5 : multi-devises
+      // Phase A.5 : multi-devises. sousTotalDevise = totalAmount XOF / tauxChange.
       devise: r.currencyCode ?? "XOF",
       tauxChange: Number(r.exchangeRateAtOrder ?? 1),
-      sousTotalDevise: Number(r.subtotalInCurrency ?? r.totalAmount ?? 0),
+      sousTotalDevise: ((): number => {
+        const taux = Number(r.exchangeRateAtOrder ?? 1);
+        const total = Number(r.totalAmount ?? 0);
+        return taux > 0 ? Number((total / taux).toFixed(2)) : total;
+      })(),
       dateAttendue: r.expectedDate ? new Date(r.expectedDate).toISOString() : null,
       dateReception: r.receivedAt ? new Date(r.receivedAt).toISOString() : null,
       notes: r.notes ?? null,
@@ -237,6 +240,8 @@ export class AchatService {
     const emplacement = await this.achatRepo.emplacementDuTenant(tenantId, commande.locationId);
     const lignes = await this.achatRepo.listerLignesCommande(id);
 
+    // Phase A.5 : prix en devise commande = prixUnitaire XOF / tauxChange
+    const tauxLecture = Number(commande.exchangeRateAtOrder ?? 1) || 1;
     const lignesDto: LigneCommandeResponseDto[] = lignes.map((l) => ({
       id: l.id,
       varianteId: l.variantId,
@@ -247,8 +252,9 @@ export class AchatService {
       quantiteCommandee: Number(l.quantityOrdered),
       quantiteRecue: Number(l.quantityReceived),
       prixUnitaire: Number(l.unitPrice),
-      // Phase A.5 : prix en devise commande (fallback prixUnitaire si pas saisi en devise)
-      prixUnitaireDevise: Number(l.unitPriceInCurrency ?? l.unitPrice),
+      prixUnitaireDevise: tauxLecture > 0
+        ? Number((Number(l.unitPrice) / tauxLecture).toFixed(2))
+        : Number(l.unitPrice),
       totalLigne: Number(l.lineTotal),
       // Phase A.4 : CUMP actuel pour preview de l'impact a la reception
       cumpActuel: Number(l.cumpActuel ?? 0),
@@ -267,10 +273,14 @@ export class AchatService {
       fraisTotal: Number(commande.costsTotal ?? 0),
       totalDebarque: Number(commande.landedTotal ?? commande.totalAmount),
       methodeAllocation: (commande.costsAllocationMethod ?? "QUANTITY") as "QUANTITY" | "WEIGHT" | "VALUE",
-      // Phase A.5 : multi-devises
+      // Phase A.5 : multi-devises. sousTotalDevise = totalAmount XOF / tauxChange.
       devise: commande.currencyCode ?? "XOF",
       tauxChange: Number(commande.exchangeRateAtOrder ?? 1),
-      sousTotalDevise: Number(commande.subtotalInCurrency ?? commande.totalAmount ?? 0),
+      sousTotalDevise: ((): number => {
+        const taux = Number(commande.exchangeRateAtOrder ?? 1);
+        const total = Number(commande.totalAmount ?? 0);
+        return taux > 0 ? Number((total / taux).toFixed(2)) : total;
+      })(),
       dateAttendue: commande.expectedDate ? new Date(commande.expectedDate).toISOString() : null,
       dateReception: commande.receivedAt ? new Date(commande.receivedAt).toISOString() : null,
       notes: commande.notes ?? null,

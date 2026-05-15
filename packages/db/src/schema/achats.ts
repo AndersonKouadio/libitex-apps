@@ -75,13 +75,6 @@ export const purchaseOrders = pgTable("purchase_orders", {
   /** Total HT calcule a partir des lignes, EN DEVISE TENANT (XOF). Snapshot pour rapports. */
   totalAmount: numeric("total_amount", { precision: 15, scale: 2 }).notNull().default("0"),
   /**
-   * Phase A.5 : total HT EN DEVISE COMMANDE (devise fournisseur).
-   * = somme(unitPriceInCurrency * quantite). Si currency = tenant, identique a totalAmount.
-   * Snapshot pour rapports en devise etrangere et lecture sans recalcul.
-   */
-  subtotalInCurrency: numeric("subtotal_in_currency", { precision: 15, scale: 2 })
-    .notNull().default("0"),
-  /**
    * Phase A.1 : somme des frais d'approche (purchase_order_costs)
    * convertis en devise du tenant. Snapshot pour rapports.
    */
@@ -153,16 +146,9 @@ export const purchaseOrderLines = pgTable("purchase_order_lines", {
   /** Quantite deja recue (cumulee sur les receptions successives). */
   quantityReceived: numeric("quantity_received", { precision: 15, scale: 3 }).notNull().default("0"),
   /** Prix d'achat unitaire negocie sur cette commande, EN DEVISE TENANT (XOF).
-   *  Si la commande est en devise etrangere, ce prix est unitPriceInCurrency * exchangeRateAtOrder. */
+   *  Si la commande est en devise etrangere, ce prix est unitPriceInCurrency * exchangeRateAtOrder.
+   *  Le prix en devise commande est recalcule a la lecture via unitPrice / exchangeRateAtOrder. */
   unitPrice: numeric("unit_price", { precision: 15, scale: 2 }).notNull(),
-  /**
-   * Phase A.5 : prix unitaire EN DEVISE COMMANDE (devise fournisseur).
-   * Saisi par l'utilisateur dans la devise du fournisseur (CNY, EUR, USD...).
-   * Conversion automatique vers unitPrice (XOF) via exchangeRateAtOrder.
-   * Si currency = tenant, identique a unitPrice.
-   */
-  unitPriceInCurrency: numeric("unit_price_in_currency", { precision: 15, scale: 2 })
-    .notNull().default("0"),
   /** Total ligne EN DEVISE TENANT (XOF) = quantityOrdered * unitPrice. Snapshot. */
   lineTotal: numeric("line_total", { precision: 15, scale: 2 }).notNull(),
   /**

@@ -219,9 +219,11 @@ export class AchatRepository {
     createdBy?: string;
     totalAmount: string;
     // Phase A.5 : multi-devises (optionnels — defaut XOF, taux 1.0)
+    // Ces deux colonnes sont en DB depuis Phase A.1 (currency_code,
+    // exchange_rate_at_order). Le sous-total en devise est recalcule a la
+    // lecture (totalAmount / exchangeRateAtOrder).
     currencyCode?: string;
     exchangeRateAtOrder?: string;
-    subtotalInCurrency?: string;
   }) {
     const [row] = await this.db.insert(purchaseOrders).values(data).returning();
     return row;
@@ -231,9 +233,9 @@ export class AchatRepository {
     purchaseOrderId: string;
     variantId: string;
     quantityOrdered: string;
+    /** Prix unitaire EN DEVISE TENANT (XOF). Le prix en devise commande
+     *  est calcule a la lecture (unitPrice / exchangeRateAtOrder). */
     unitPrice: string;
-    /** Phase A.5 : prix unitaire dans la devise de la commande (snapshot UI). */
-    unitPriceInCurrency?: string;
     lineTotal: string;
   }[]) {
     if (lignes.length === 0) return;
@@ -270,10 +272,9 @@ export class AchatRepository {
         costsTotal: purchaseOrders.costsTotal,
         landedTotal: purchaseOrders.landedTotal,
         costsAllocationMethod: purchaseOrders.costsAllocationMethod,
-        // Phase A.5 : multi-devises
+        // Phase A.5 : multi-devises (subtotalInCurrency calcule au service)
         currencyCode: purchaseOrders.currencyCode,
         exchangeRateAtOrder: purchaseOrders.exchangeRateAtOrder,
-        subtotalInCurrency: purchaseOrders.subtotalInCurrency,
         expectedDate: purchaseOrders.expectedDate,
         receivedAt: purchaseOrders.receivedAt,
         notes: purchaseOrders.notes,
@@ -343,8 +344,6 @@ export class AchatRepository {
         quantityOrdered: purchaseOrderLines.quantityOrdered,
         quantityReceived: purchaseOrderLines.quantityReceived,
         unitPrice: purchaseOrderLines.unitPrice,
-        // Phase A.5 : prix en devise commande (pour affichage UI sans recalcul)
-        unitPriceInCurrency: purchaseOrderLines.unitPriceInCurrency,
         lineTotal: purchaseOrderLines.lineTotal,
         // Phase A.4 : expose le CUMP actuel pour permettre la preview
         // "avant/apres" dans la modale de reception.
