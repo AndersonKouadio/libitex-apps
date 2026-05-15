@@ -145,6 +145,9 @@ export class AchatService {
     for (let attempt = 0; attempt < AchatService.MAX_RETRIES_NUMERO; attempt += 1) {
       const orderNumber = await this.achatRepo.prochainNumeroCommande(tenantId);
       try {
+        // Phase A.5 diagnostic : on insere d'abord SANS currencyCode/exchangeRateAtOrder
+        // pour isoler la source du 500. Si ca passe, on les ajoute via UPDATE
+        // dans un 2e temps (et c'est tolerant a l'absence de ces colonnes en prod).
         commande = await this.achatRepo.creerCommande({
           tenantId,
           orderNumber,
@@ -154,10 +157,6 @@ export class AchatService {
           notes: dto.notes,
           createdBy: userId,
           totalAmount: total.toFixed(2),
-          // Phase A.5 : snapshot devise + taux fige.
-          // Le sous-total en devise est recalcule a la lecture (totalAmount / tauxChange).
-          currencyCode: devise,
-          exchangeRateAtOrder: tauxChange.toFixed(6),
         });
         break;
       } catch (err) {
@@ -186,6 +185,18 @@ export class AchatService {
         lineTotal: lineTotalXOF.toFixed(2),
       };
     }));
+
+    // Phase A.5 : mise a jour devise + taux en post-insert, tolerant a
+    // l'absence des colonnes en prod (try/catch silencieux). Si les colonnes
+    // currency_code / exchange_rate_at_order existent (Phase A.1), elles
+    // sont mises a jour ; sinon on degrade graciously en XOF/1.0.
+    try {
+      await this.achatRepo.majDeviseCommande(commande.id, devise, tauxChange.toFixed(6));
+    } catch (err) {
+      this.logger.warn(
+        `Maj devise commande ${commande.id} echouee (colonnes Phase A.1 manquantes ?): ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
 
     // Realtime : notifie les autres postes de l'apparition d'une nouvelle
     // commande (filtree cote front sur tenantId).

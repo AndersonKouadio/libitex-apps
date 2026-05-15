@@ -242,6 +242,21 @@ export class AchatRepository {
     await this.db.insert(purchaseOrderLines).values(lignes);
   }
 
+  /**
+   * Phase A.5 : maj devise + taux post-insert. Tolerant a l'absence des
+   * colonnes (try/catch dans le service appelant). Permet de creer la
+   * commande meme si les colonnes Phase A.1 ne sont pas presentes en prod.
+   */
+  async majDeviseCommande(commandeId: string, devise: string, taux: string) {
+    await this.db
+      .update(purchaseOrders)
+      .set({
+        currencyCode: devise,
+        exchangeRateAtOrder: taux,
+      })
+      .where(eq(purchaseOrders.id, commandeId));
+  }
+
   async listerCommandes(tenantId: string, filtres: {
     statut?: string;
     supplierId?: string;
