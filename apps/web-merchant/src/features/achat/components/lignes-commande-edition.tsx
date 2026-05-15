@@ -30,6 +30,10 @@ interface Props {
   recherche: string;
   variantesDispo: VarianteDispo[];
   chargementProduits: boolean;
+  /** Phase A.5 : devise affichee dans les en-tetes (defaut XOF, fallback "F"). */
+  devise?: string;
+  /** Phase A.5 : taux de change. Si != 1, affiche l'equivalent XOF en plus du prix devise. */
+  tauxChange?: number;
   onAjouter: (v: VarianteDispo) => void;
   onQuantite: (idx: number, qte: number) => void;
   onPrix: (idx: number, prix: number) => void;
@@ -44,9 +48,14 @@ interface Props {
  */
 export function LignesCommandeEdition({
   lignes, recherche, variantesDispo, chargementProduits,
+  devise = "XOF", tauxChange = 1,
   onAjouter, onQuantite, onPrix, onRetirer, onRecherche,
 }: Props) {
   const total = lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire, 0);
+  // Phase A.5 : symbole/devise affichee
+  const isXOF = devise === "XOF";
+  const sigle = isXOF ? "F" : devise;
+  const totalEnXOF = total * tauxChange;
 
   return (
     <Card className="lg:col-span-2">
@@ -55,9 +64,16 @@ export function LignesCommandeEdition({
           <p className="text-sm font-semibold text-foreground">
             Lignes ({lignes.length})
           </p>
-          <p className="text-sm font-bold tabular-nums">
-            Total : {formatMontant(total)} F
-          </p>
+          <div className="text-right">
+            <p className="text-sm font-bold tabular-nums">
+              Total : {formatMontant(total)} {sigle}
+            </p>
+            {!isXOF && tauxChange > 0 && (
+              <p className="text-xs text-muted tabular-nums">
+                ≈ {formatMontant(totalEnXOF)} F
+              </p>
+            )}
+          </div>
         </div>
 
         {lignes.length === 0 ? (
@@ -67,12 +83,12 @@ export function LignesCommandeEdition({
         ) : (
           <div className="space-y-2">
             {/* Header de colonnes pour lever l'ambiguite des champs.
-                Largeurs alignees avec les inputs des lignes. */}
+                Phase A.5 : indique la devise sur les colonnes monetaires. */}
             <div className="flex items-center gap-2 px-2 text-xs font-medium text-muted">
               <div className="flex-1 min-w-0">Produit</div>
               <div className="w-28 text-right shrink-0">Quantite</div>
-              <div className="w-36 text-right shrink-0">Prix unitaire</div>
-              <div className="w-32 text-right shrink-0">Total</div>
+              <div className="w-36 text-right shrink-0">Prix unitaire ({sigle})</div>
+              <div className="w-32 text-right shrink-0">Total ({sigle})</div>
               <div className="w-8 shrink-0" />
             </div>
 
@@ -116,7 +132,7 @@ export function LignesCommandeEdition({
                   className="w-36 shrink-0 text-right tabular-nums px-2"
                 />
                 <span className="w-32 text-right text-sm font-semibold tabular-nums shrink-0">
-                  {formatMontant(l.quantite * l.prixUnitaire)} F
+                  {formatMontant(l.quantite * l.prixUnitaire)} {sigle}
                 </span>
                 <Button
                   variant="ghost"

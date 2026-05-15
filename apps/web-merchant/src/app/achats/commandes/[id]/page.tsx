@@ -122,6 +122,26 @@ export default function PageDetailCommande({ params }: { params: Promise<{ id: s
               </div>
             </div>
 
+            {/* Phase A.5 : section "Devise" si commande en devise etrangere */}
+            {commande.devise && commande.devise !== "XOF" && (
+              <div className="pt-2 border-t border-border space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted text-xs">Devise commande</span>
+                  <span className="font-medium">{commande.devise}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted text-xs">Taux fige</span>
+                  <span className="text-xs tabular-nums">
+                    1 {commande.devise} = {formatMontant(commande.tauxChange)} XOF
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted text-xs">Sous-total ({commande.devise})</span>
+                  <span className="tabular-nums">{formatMontant(commande.sousTotalDevise)} {commande.devise}</span>
+                </div>
+              </div>
+            )}
+
             {/* Phase A.3 : section "Couts" — sous-total + frais + debarque */}
             <div className="pt-2 border-t border-border space-y-2">
               <div className="flex items-center justify-between gap-2">
@@ -240,13 +260,27 @@ export default function PageDetailCommande({ params }: { params: Promise<{ id: s
                         {l.quantiteCommandee} <span className={l.quantiteRecue >= l.quantiteCommandee ? "text-success" : "text-warning"}>· {l.quantiteRecue}</span>
                       </p>
                     </div>
-                    <div className="w-24 text-right">
+                    <div className="w-28 text-right">
                       <p className="text-xs text-muted">PU</p>
-                      <p className="text-sm tabular-nums">{formatMontant(l.prixUnitaire)}</p>
+                      <p className="text-sm tabular-nums">
+                        {formatMontant(l.prixUnitaireDevise ?? l.prixUnitaire)} {commande.devise === "XOF" ? "F" : commande.devise}
+                      </p>
+                      {commande.devise && commande.devise !== "XOF" && (
+                        <p className="text-[10px] text-muted tabular-nums">
+                          ≈ {formatMontant(l.prixUnitaire)} F
+                        </p>
+                      )}
                     </div>
-                    <div className="w-24 text-right">
+                    <div className="w-28 text-right">
                       <p className="text-xs text-muted">Total</p>
-                      <p className="text-sm font-semibold tabular-nums">{formatMontant(l.totalLigne)}</p>
+                      <p className="text-sm font-semibold tabular-nums">
+                        {formatMontant(commande.devise === "XOF" ? l.totalLigne : (l.prixUnitaireDevise ?? 0) * l.quantiteCommandee)} {commande.devise === "XOF" ? "F" : commande.devise}
+                      </p>
+                      {commande.devise && commande.devise !== "XOF" && (
+                        <p className="text-[10px] text-muted tabular-nums">
+                          ≈ {formatMontant(l.totalLigne)} F
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}

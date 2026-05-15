@@ -1,7 +1,8 @@
 "use client";
 
-import { Select, ListBox, Label, TextField, TextArea, Card } from "@heroui/react";
+import { Select, ListBox, Label, TextField, Input, TextArea, Card, Description } from "@heroui/react";
 import { ChampDate } from "@/components/forms/champ-date";
+import { DEVISES_FREQUENTES } from "../schemas/achat.schema";
 import type { IFournisseur } from "../types/achat.type";
 
 interface Emplacement {
@@ -16,10 +17,16 @@ interface Props {
   emplacementId: string;
   dateAttendue: string;
   notes: string;
+  /** Phase A.5 : devise commande (ex CNY pour import Chine). Defaut XOF. */
+  devise: string;
+  /** Phase A.5 : taux de change devise -> XOF, fige a la creation. */
+  tauxChange: number;
   onFournisseur: (v: string) => void;
   onEmplacement: (v: string) => void;
   onDate: (v: string) => void;
   onNotes: (v: string) => void;
+  onDevise: (v: string) => void;
+  onTauxChange: (v: number) => void;
 }
 
 /**
@@ -30,8 +37,11 @@ interface Props {
 export function FormulaireInfosCommande({
   fournisseurs, emplacements,
   fournisseurId, emplacementId, dateAttendue, notes,
+  devise, tauxChange,
   onFournisseur, onEmplacement, onDate, onNotes,
+  onDevise, onTauxChange,
 }: Props) {
+  const enDeviseEtrangere = devise !== "XOF";
   return (
     <Card className="lg:col-span-1">
       <Card.Content className="p-4 space-y-3">
@@ -66,6 +76,45 @@ export function FormulaireInfosCommande({
             </ListBox>
           </Select.Popover>
         </Select>
+
+        {/* Phase A.5 : Devise commande + taux de change */}
+        <Select
+          selectedKey={devise}
+          onSelectionChange={(k) => onDevise(String(k))}
+          aria-label="Devise de la commande"
+        >
+          <Label>Devise de la commande</Label>
+          <Select.Trigger><Select.Value /><Select.Indicator /></Select.Trigger>
+          <Select.Popover>
+            <ListBox>
+              {DEVISES_FREQUENTES.map((d) => (
+                <ListBox.Item key={d} id={d} textValue={d}>{d}</ListBox.Item>
+              ))}
+            </ListBox>
+          </Select.Popover>
+        </Select>
+
+        {enDeviseEtrangere && (
+          <TextField
+            value={tauxChange > 0 ? String(tauxChange) : ""}
+            onChange={(v) => onTauxChange(v === "" ? 0 : Number(v.replace(",", ".")))}
+            isRequired
+          >
+            <Label>Taux de change (1 {devise} = ? XOF)</Label>
+            <Input
+              type="number"
+              inputMode="decimal"
+              step="0.000001"
+              min="0"
+              placeholder={devise === "EUR" ? "655.957" : devise === "USD" ? "615" : "91.5"}
+            />
+            <Description className="text-xs">
+              Saisissez le taux negocie avec votre transitaire. Il sera fige
+              et utilise pour convertir les prix en XOF.
+            </Description>
+          </TextField>
+        )}
+
         <ChampDate
           label="Date de livraison attendue"
           value={dateAttendue}

@@ -218,6 +218,10 @@ export class AchatRepository {
     notes?: string;
     createdBy?: string;
     totalAmount: string;
+    // Phase A.5 : multi-devises (optionnels — defaut XOF, taux 1.0)
+    currencyCode?: string;
+    exchangeRateAtOrder?: string;
+    subtotalInCurrency?: string;
   }) {
     const [row] = await this.db.insert(purchaseOrders).values(data).returning();
     return row;
@@ -228,6 +232,8 @@ export class AchatRepository {
     variantId: string;
     quantityOrdered: string;
     unitPrice: string;
+    /** Phase A.5 : prix unitaire dans la devise de la commande (snapshot UI). */
+    unitPriceInCurrency?: string;
     lineTotal: string;
   }[]) {
     if (lignes.length === 0) return;
@@ -264,6 +270,10 @@ export class AchatRepository {
         costsTotal: purchaseOrders.costsTotal,
         landedTotal: purchaseOrders.landedTotal,
         costsAllocationMethod: purchaseOrders.costsAllocationMethod,
+        // Phase A.5 : multi-devises
+        currencyCode: purchaseOrders.currencyCode,
+        exchangeRateAtOrder: purchaseOrders.exchangeRateAtOrder,
+        subtotalInCurrency: purchaseOrders.subtotalInCurrency,
         expectedDate: purchaseOrders.expectedDate,
         receivedAt: purchaseOrders.receivedAt,
         notes: purchaseOrders.notes,
@@ -333,6 +343,8 @@ export class AchatRepository {
         quantityOrdered: purchaseOrderLines.quantityOrdered,
         quantityReceived: purchaseOrderLines.quantityReceived,
         unitPrice: purchaseOrderLines.unitPrice,
+        // Phase A.5 : prix en devise commande (pour affichage UI sans recalcul)
+        unitPriceInCurrency: purchaseOrderLines.unitPriceInCurrency,
         lineTotal: purchaseOrderLines.lineTotal,
         // Phase A.4 : expose le CUMP actuel pour permettre la preview
         // "avant/apres" dans la modale de reception.

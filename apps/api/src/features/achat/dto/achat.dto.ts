@@ -77,6 +77,11 @@ export class FournisseurResponseDto {
 export class LigneCommandeDto {
   @ApiProperty() @IsUUID() varianteId!: string;
   @ApiProperty() @IsNumber() @Min(0.001) quantite!: number;
+  /**
+   * Prix unitaire dans la devise de la commande (CreerCommandeDto.devise).
+   * Si devise = tenant (XOF), c'est le prix direct. Sinon, sera converti
+   * en XOF a la creation via le taux de change figé.
+   */
   @ApiProperty() @IsNumber() @Min(0) prixUnitaire!: number;
 }
 
@@ -85,6 +90,22 @@ export class CreerCommandeDto {
   @ApiProperty() @IsUUID() emplacementId!: string;
   @ApiProperty({ required: false }) @IsOptional() @IsDateString() dateAttendue?: string;
   @ApiProperty({ required: false }) @IsOptional() @IsString() notes?: string;
+
+  /**
+   * Phase A.5 : devise de la commande (devise fournisseur).
+   * Defaut XOF. Format ISO 4217 : XOF, EUR, USD, CNY, GBP, MAD, GHS, NGN.
+   */
+  @ApiProperty({ required: false, example: "CNY", description: "Devise commande (ISO 4217)" })
+  @IsOptional() @IsString() @MaxLength(3)
+  devise?: string;
+
+  /**
+   * Phase A.5 : taux de change devise commande -> devise tenant (XOF).
+   * Defaut 1.0. Saisi a la creation et fige (snapshot pour audit).
+   */
+  @ApiProperty({ required: false, example: 91.5, description: "Taux conversion devise commande -> XOF" })
+  @IsOptional() @Type(() => Number) @IsNumber() @Min(0.000001)
+  tauxChange?: number;
 
   @ApiProperty({ type: [LigneCommandeDto] })
   @IsArray()
@@ -132,6 +153,9 @@ export class LigneCommandeResponseDto {
   @ApiProperty() quantiteCommandee!: number;
   @ApiProperty() quantiteRecue!: number;
   @ApiProperty() prixUnitaire!: number;
+  /** Phase A.5 : prix unitaire en devise de la commande (avant conversion XOF). */
+  @ApiProperty({ description: "Prix unitaire en devise commande" })
+  prixUnitaireDevise!: number;
   @ApiProperty() totalLigne!: number;
   /** Phase A.4 : CUMP actuel de la variante au moment de la lecture. */
   @ApiProperty({ description: "CUMP actuel de la variante (cout debarque moyen)" })
@@ -147,6 +171,22 @@ export class CommandeResponseDto {
   @ApiProperty() nomEmplacement!: string;
   @ApiProperty() statut!: string;
   @ApiProperty() montantTotal!: number;
+  /**
+   * Phase A.5 : devise de la commande (ex: CNY pour import Chine).
+   * Defaut tenant currency (XOF).
+   */
+  @ApiProperty({ example: "XOF" }) devise!: string;
+  /**
+   * Phase A.5 : taux de change fige a la creation (devise commande -> XOF).
+   * 1.0 si meme devise.
+   */
+  @ApiProperty({ example: 91.5 }) tauxChange!: number;
+  /**
+   * Phase A.5 : sous-total HT en devise commande (= somme lignes en devise).
+   * Si devise = XOF, identique a montantTotal.
+   */
+  @ApiProperty({ description: "Sous-total en devise commande" })
+  sousTotalDevise!: number;
   /** Phase A.2 : somme des frais d'approche en devise tenant. */
   @ApiProperty({ description: "Total frais d'approche (landed cost)" })
   fraisTotal!: number;

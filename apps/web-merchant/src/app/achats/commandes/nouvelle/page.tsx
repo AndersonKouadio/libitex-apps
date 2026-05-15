@@ -38,6 +38,9 @@ export default function PageNouvelleCommande() {
   const [notes, setNotes] = useState("");
   const [recherche, setRecherche] = useState("");
   const [lignes, setLignes] = useState<LigneEdition[]>([]);
+  // Phase A.5 : devise commande + taux de change
+  const [devise, setDevise] = useState("XOF");
+  const [tauxChange, setTauxChange] = useState(1.0);
 
   const produits = produitsData?.data ?? [];
 
@@ -105,6 +108,12 @@ export default function PageNouvelleCommande() {
     const valides = lignes.filter((l) => l.quantite > 0);
     if (valides.length === 0) { toast.danger("Toutes les quantites sont a 0"); return; }
 
+    // Phase A.5 : valider la devise/taux. Si XOF, taux force a 1.0.
+    if (devise !== "XOF" && (!tauxChange || tauxChange <= 0)) {
+      toast.danger("Saisissez le taux de change pour la devise " + devise);
+      return;
+    }
+
     // Fix m5 + m6 : validation Zod complete (dateAttendue >= today,
     // notes <= 500 chars).
     const parsed = commandeSchema.safeParse({
@@ -112,6 +121,8 @@ export default function PageNouvelleCommande() {
       emplacementId,
       dateAttendue: dateAttendue || undefined,
       notes: notes || undefined,
+      devise,
+      tauxChange: devise === "XOF" ? 1.0 : tauxChange,
       lignes: valides.map((l) => ({
         varianteId: l.varianteId,
         quantite: l.quantite,
@@ -151,16 +162,22 @@ export default function PageNouvelleCommande() {
           emplacementId={emplacementId}
           dateAttendue={dateAttendue}
           notes={notes}
+          devise={devise}
+          tauxChange={tauxChange}
           onFournisseur={setFournisseurId}
           onEmplacement={setEmplacementId}
           onDate={setDateAttendue}
           onNotes={setNotes}
+          onDevise={setDevise}
+          onTauxChange={setTauxChange}
         />
         <LignesCommandeEdition
           lignes={lignes}
           recherche={recherche}
           variantesDispo={variantesDispo}
           chargementProduits={chargementProduits}
+          devise={devise}
+          tauxChange={tauxChange}
           onAjouter={ajouterLigne}
           onQuantite={modifierQuantite}
           onPrix={modifierPrix}

@@ -35,6 +35,10 @@ export const commandeSchema = z.object({
     .refine((d) => !d || d >= aujourdhuiISO(), "La date de livraison ne peut pas etre dans le passe")
     .optional(),
   notes: z.string().max(MAX_LONGUEUR_NOTES, `Notes : 500 caracteres maximum`).optional(),
+  /** Phase A.5 : devise commande (defaut XOF). */
+  devise: z.string().min(3).max(3).optional(),
+  /** Phase A.5 : taux de change devise -> XOF, fige a la creation (defaut 1.0). */
+  tauxChange: z.coerce.number().positive("Taux > 0 requis").optional(),
   lignes: z.array(ligneCommandeSchema).min(1, "Ajoutez au moins une ligne"),
 });
 

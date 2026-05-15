@@ -125,7 +125,18 @@ export class AchatService {
       );
     }
 
-    const total = dto.lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire, 0);
+    // Phase A.5 : devise + taux de change. Si devise = XOF (devise tenant) ou
+    // non specifiee, taux = 1.0. Sinon, on convertit les prix unitaires
+    // (en devise commande) vers XOF (devise tenant) via le taux fige.
+    const devise = (dto.devise ?? "XOF").toUpperCase();
+    const tauxChange = dto.tauxChange && dto.tauxChange > 0 ? dto.tauxChange : 1.0;
+
+    // Sous-total HT en devise commande
+    const sousTotalDevise = dto.lignes.reduce(
+      (s, l) => s + l.quantite * l.prixUnitaire, 0,
+    );
+    // Total HT en devise tenant (XOF)
+    const total = sousTotalDevise * tauxChange;
 
     // Fix C4 : retry-on-conflict. Deux callers simultanes peuvent calculer
     // le meme numero ; la contrainte UNIQUE rejette le 2e, on retry avec
@@ -143,6 +154,10 @@ export class AchatService {
           notes: dto.notes,
           createdBy: userId,
           totalAmount: total.toFixed(2),
+          // Phase A.5 : snapshot devise + taux + sous-total devise
+          currencyCode: devise,
+          exchangeRateAtOrder: tauxChange.toFixed(6),
+          subtotalInCurrency: sousTotalDevise.toFixed(2),
         });
         break;
       } catch (err) {
@@ -157,13 +172,21 @@ export class AchatService {
       throw new BadRequestException("Echec de generation du numero de commande (concurrence trop forte)");
     }
 
-    await this.achatRepo.ajouterLignes(dto.lignes.map((l) => ({
-      purchaseOrderId: commande!.id,
-      variantId: l.varianteId,
-      quantityOrdered: l.quantite.toString(),
-      unitPrice: l.prixUnitaire.toFixed(2),
-      lineTotal: (l.quantite * l.prixUnitaire).toFixed(2),
-    })));
+    await this.achatRepo.ajouterLignes(dto.lignes.map((l) => {
+      // Phase A.5 : conversion devise commande -> XOF pour stockage en XOF
+      const unitPriceXOF = l.prixUnitaire * tauxChange;
+      const lineTotalXOF = l.quantite * unitPriceXOF;
+      return {
+        purchaseOrderId: commande!.id,
+        variantId: l.varianteId,
+        quantityOrdered: l.quantite.toString(),
+        // Snapshot prix en devise saisie (pour affichage UI sans recalcul)
+        unitPriceInCurrency: l.prixUnitaire.toFixed(2),
+        // Stockage en XOF (devise tenant) pour CUMP + rapports
+        unitPrice: unitPriceXOF.toFixed(2),
+        lineTotal: lineTotalXOF.toFixed(2),
+      };
+    }));
 
     // Realtime : notifie les autres postes de l'apparition d'une nouvelle
     // commande (filtree cote front sur tenantId).
@@ -195,6 +218,10 @@ export class AchatService {
       fraisTotal: Number(r.costsTotal ?? 0),
       totalDebarque: Number(r.landedTotal ?? r.totalAmount),
       methodeAllocation: (r.costsAllocationMethod ?? "QUANTITY") as "QUANTITY" | "WEIGHT" | "VALUE",
+      // Phase A.5 : multi-devises
+      devise: r.currencyCode ?? "XOF",
+      tauxChange: Number(r.exchangeRateAtOrder ?? 1),
+      sousTotalDevise: Number(r.subtotalInCurrency ?? r.totalAmount ?? 0),
       dateAttendue: r.expectedDate ? new Date(r.expectedDate).toISOString() : null,
       dateReception: r.receivedAt ? new Date(r.receivedAt).toISOString() : null,
       notes: r.notes ?? null,
@@ -220,6 +247,8 @@ export class AchatService {
       quantiteCommandee: Number(l.quantityOrdered),
       quantiteRecue: Number(l.quantityReceived),
       prixUnitaire: Number(l.unitPrice),
+      // Phase A.5 : prix en devise commande (fallback prixUnitaire si pas saisi en devise)
+      prixUnitaireDevise: Number(l.unitPriceInCurrency ?? l.unitPrice),
       totalLigne: Number(l.lineTotal),
       // Phase A.4 : CUMP actuel pour preview de l'impact a la reception
       cumpActuel: Number(l.cumpActuel ?? 0),
@@ -238,6 +267,10 @@ export class AchatService {
       fraisTotal: Number(commande.costsTotal ?? 0),
       totalDebarque: Number(commande.landedTotal ?? commande.totalAmount),
       methodeAllocation: (commande.costsAllocationMethod ?? "QUANTITY") as "QUANTITY" | "WEIGHT" | "VALUE",
+      // Phase A.5 : multi-devises
+      devise: commande.currencyCode ?? "XOF",
+      tauxChange: Number(commande.exchangeRateAtOrder ?? 1),
+      sousTotalDevise: Number(commande.subtotalInCurrency ?? commande.totalAmount ?? 0),
       dateAttendue: commande.expectedDate ? new Date(commande.expectedDate).toISOString() : null,
       dateReception: commande.receivedAt ? new Date(commande.receivedAt).toISOString() : null,
       notes: commande.notes ?? null,
