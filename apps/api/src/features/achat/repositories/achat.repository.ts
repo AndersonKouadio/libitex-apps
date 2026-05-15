@@ -1,5 +1,5 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { eq, and, isNull, sql, desc, ilike, or, inArray, type SQL } from "drizzle-orm";
+import { eq, and, isNull, sql, desc, ilike, or, inArray, like, type SQL } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
   type Database, suppliers, purchaseOrders, purchaseOrderLines,
@@ -164,10 +164,11 @@ export class AchatRepository {
    * BC-YYYYMMDD-NNN. NNN est le MAX suffixe deja utilise + 1 (le MAX evite
    * les trous si une commande a ete supprimee).
    *
-   * En isolation : ne suffit PAS pour la concurrence — deux callers
-   * simultanes peuvent lire le meme max et calculer le meme next. La
-   * protection finale est faite par la contrainte UNIQUE et le pattern
-   * retry-on-conflict cote service (cf. `creerCommandeAvecRetry`).
+   * Fix C4 (ameliore) : utilise le query builder Drizzle (.select()) au lieu
+   * de db.execute() pour eviter les ambiguites sur le format de retour du
+   * driver neon-http (qui renvoie { rows: [...] } et non un tableau direct).
+   * La protection finale contre les races reste la contrainte UNIQUE +
+   * retry-on-conflict cote service.
    */
   async prochainNumeroCommande(tenantId: string): Promise<string> {
     const now = new Date();
@@ -175,19 +176,20 @@ export class AchatRepository {
     const m = String(now.getMonth() + 1).padStart(2, "0");
     const d = String(now.getDate()).padStart(2, "0");
     const prefix = `BC-${y}${m}${d}`;
+    const startPos = prefix.length + 2; // position apres "BC-YYYYMMDD-"
 
-    const result = await this.db.execute(sql`
-      SELECT COALESCE(
-        MAX(CAST(SUBSTRING("order_number" FROM ${prefix.length + 2}) AS INTEGER)),
-        0
-      ) AS max_suffix
-      FROM ${purchaseOrders}
-      WHERE "tenant_id" = ${tenantId}
-        AND "order_number" LIKE ${prefix + "-%"}
-    `);
-    const rows = result as unknown as Array<{ max_suffix: number | string | null }>;
-    const row = rows[0];
-    const next = Number(row?.max_suffix ?? 0) + 1;
+    const [row] = await this.db
+      .select({
+        maxSuffix: sql<number>`COALESCE(MAX(CAST(SUBSTRING(${purchaseOrders.orderNumber} FROM ${startPos}) AS INTEGER)), 0)`,
+      })
+      .from(purchaseOrders)
+      .where(and(
+        eq(purchaseOrders.tenantId, tenantId),
+        like(purchaseOrders.orderNumber, `${prefix}-%`),
+        isNull(purchaseOrders.deletedAt),
+      ));
+
+    const next = Number(row?.maxSuffix ?? 0) + 1;
     return `${prefix}-${String(next).padStart(3, "0")}`;
   }
 
@@ -198,15 +200,31 @@ export class AchatRepository {
 
   /**
    * Verifie si une erreur Postgres est une violation de contrainte UNIQUE
-   * sur orderNumber (code 23505). Permet au service de detecter le cas
-   * "deux creations simultanees ont genere le meme numero" et de retry.
+   * sur orderNumber (code 23505). Gere les deux formats possibles :
+   * - NeonDbError direct : { code, constraint, message }
+   * - Erreur wrappee par neon-http/Drizzle : { message: "Failed query..." }
+   *   avec le code Postgres dans err.cause ou dans le message lui-meme.
    */
   estViolationUniqueOrderNumber(err: unknown): boolean {
     if (typeof err !== "object" || err === null) return false;
-    const e = err as { code?: string; constraint?: string; message?: string };
-    if (e.code !== "23505") return false;
-    const id = e.constraint ?? e.message ?? "";
-    return id.includes("purchase_orders_number") || id.includes("order_number");
+    const e = err as Record<string, unknown>;
+
+    // Format 1 : NeonDbError direct avec .code et .constraint
+    const code = String(e["code"] ?? e["sourceError"]?.["code"] ?? "");
+    if (code === "23505") {
+      const constraint = String(
+        e["constraint"] ?? e["sourceError"]?.["constraint"] ?? e["message"] ?? "",
+      );
+      return constraint.includes("purchase_orders_number") || constraint.includes("order_number");
+    }
+
+    // Format 2 : Drizzle/neon-http wrapping — code dans le message
+    const msg = String(e["message"] ?? "");
+    if (msg.includes("23505") || msg.includes("duplicate key")) {
+      return msg.includes("purchase_orders_number") || msg.includes("order_number");
+    }
+
+    return false;
   }
 
   async creerCommande(data: {
