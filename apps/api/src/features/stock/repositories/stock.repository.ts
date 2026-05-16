@@ -283,6 +283,43 @@ export class StockRepository {
     return rows;
   }
 
+  /**
+   * Recherche une variante par SKU dans le scope tenant. Utilise par l'import
+   * stock initial pour resoudre les SKU CSV en variantId.
+   */
+  async trouverVarianteParSku(tenantId: string, sku: string) {
+    return this.db
+      .select({
+        variantId: variants.id,
+        productId: products.id,
+        productType: products.productType,
+        productName: products.name,
+        sku: variants.sku,
+      })
+      .from(variants)
+      .innerJoin(products, eq(variants.productId, products.id))
+      .where(and(eq(products.tenantId, tenantId), eq(variants.sku, sku)))
+      .limit(1)
+      .then((rows) => rows[0]);
+  }
+
+  /**
+   * Recherche un emplacement par nom (insensible casse) dans le scope tenant.
+   * Utilise par l'import stock initial pour resoudre nomEmplacement -> id.
+   */
+  async trouverEmplacementParNom(tenantId: string, nom: string) {
+    return this.db
+      .select({ id: locations.id, name: locations.name })
+      .from(locations)
+      .where(and(
+        eq(locations.tenantId, tenantId),
+        isNull(locations.deletedAt),
+        sql`LOWER(${locations.name}) = LOWER(${nom})`,
+      ))
+      .limit(1)
+      .then((rows) => rows[0]);
+  }
+
   async obtenirVarianteAvecProduit(variantId: string) {
     return this.db
       .select({

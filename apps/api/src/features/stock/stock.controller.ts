@@ -4,6 +4,10 @@ import {
 } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiQuery } from "@nestjs/swagger";
+import { Type } from "class-transformer";
+import {
+  IsString, IsNumber, IsOptional, IsArray, ValidateNested, IsNotEmpty,
+} from "class-validator";
 import { StockService } from "./stock.service";
 import {
   CreerEmplacementDto, ModifierEmplacementDto, EntreeStockDto,
@@ -12,6 +16,22 @@ import {
 } from "./dto/stock.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
+
+class LigneImportStockDto {
+  @IsString() @IsNotEmpty() sku!: string;
+  @IsString() @IsNotEmpty() nomEmplacement!: string;
+  @IsNumber() quantite!: number;
+  @IsOptional() @IsString() numeroLot?: string;
+  @IsOptional() @IsString() dateExpiration?: string;
+  @IsOptional() @IsString() note?: string;
+}
+
+class ImporterStockDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LigneImportStockDto)
+  lignes!: LigneImportStockDto[];
+}
 
 @ApiTags("Stock")
 @ApiBearerAuth()
@@ -57,6 +77,13 @@ export class StockController {
   @Roles("ADMIN", "MANAGER", "WAREHOUSE")
   entreeStock(@CurrentUser() user: CurrentUserData, @Body() dto: EntreeStockDto) {
     return this.stockService.entreeStock(user.tenantId, user.userId, dto);
+  }
+
+  @Post("import")
+  @ApiOperation({ summary: "Import en lot de stock initial (sku + nomEmplacement + quantite)" })
+  @Roles("ADMIN", "MANAGER", "WAREHOUSE")
+  importerStock(@CurrentUser() user: CurrentUserData, @Body() dto: ImporterStockDto) {
+    return this.stockService.importerStockInitial(user.tenantId, user.userId, dto.lignes);
   }
 
   @Post("ajustement")
