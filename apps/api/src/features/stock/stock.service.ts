@@ -236,6 +236,8 @@ export class StockService {
   async resumeAlertes(tenantId: string, seuilAlerte = 10): Promise<{
     nbAlertes: number;
     nbRuptures: number;
+    nbExpires: number;
+    nbBientotPerimes: number;
   }> {
     const rows = await this.stockRepo.stockAgregeTenant(tenantId);
     let nbAlertes = 0;
@@ -246,7 +248,18 @@ export class StockService {
       if (q <= 0) nbRuptures += 1;
       else if (q <= seuilAlerte) nbAlertes += 1;
     }
-    return { nbAlertes, nbRuptures };
+
+    // Peremption : lots periphables a moins de 7 jours d'expiration.
+    const lots = await this.stockRepo.lotsPerimeBientot(tenantId, 7);
+    const aujourdhui = new Date().toISOString().split("T")[0]!;
+    let nbExpires = 0;
+    let nbBientotPerimes = 0;
+    for (const lot of lots) {
+      if (lot.expiryDate <= aujourdhui) nbExpires += 1;
+      else nbBientotPerimes += 1;
+    }
+
+    return { nbAlertes, nbRuptures, nbExpires, nbBientotPerimes };
   }
 
   /**
@@ -266,7 +279,40 @@ export class StockService {
       if (r.estRupture) resume.nbRuptures += 1;
       else resume.nbAlertes += 1;
     }
-    return { ...resume, total: rows.length, lignes: rows.slice(0, 20) };
+
+    // Peremption : lots PERISHABLE expirant <= 7 jours OU deja expires.
+    const lots = await this.stockRepo.lotsPerimeBientot(tenantId, 7);
+    const aujourdhui = new Date().toISOString().split("T")[0]!;
+    const lotsPeremption = lots.map((lot) => {
+      const expiry = new Date(lot.expiryDate + "T00:00:00.000Z");
+      const today = new Date(aujourdhui + "T00:00:00.000Z");
+      const joursRestants = Math.floor((expiry.getTime() - today.getTime()) / 86400000);
+      return {
+        batchId: lot.batchId,
+        variantId: lot.variantId,
+        batchNumber: lot.batchNumber,
+        expiryDate: lot.expiryDate,
+        joursRestants,
+        quantiteRestante: Number(lot.quantiteRestante),
+        sku: lot.sku,
+        nomProduit: lot.nomProduit,
+        nomVariante: lot.nomVariante,
+        estExpire: joursRestants < 0,
+      };
+    });
+
+    const nbExpires = lotsPeremption.filter((l) => l.estExpire).length;
+    const nbBientotPerimes = lotsPeremption.length - nbExpires;
+
+    return {
+      ...resume,
+      total: rows.length,
+      lignes: rows.slice(0, 20),
+      nbExpires,
+      nbBientotPerimes,
+      totalPeremption: lotsPeremption.length,
+      lotsPeremption: lotsPeremption.slice(0, 20),
+    };
   }
 
   async appliquerInventaire(

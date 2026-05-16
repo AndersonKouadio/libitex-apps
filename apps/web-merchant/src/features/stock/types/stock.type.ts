@@ -65,4 +65,21 @@ export interface IAlerteStockDetail {
   nbAlertes: number;
   total: number;
   lignes: IAlerteLigneStock[];
+  nbExpires: number;
+  nbBientotPerimes: number;
+  totalPeremption: number;
+  lotsPeremption: IAlerteLotPeremption[];
+}
+
+export interface IAlerteLotPeremption {
+  batchId: string;
+  variantId: string;
+  batchNumber: string;
+  expiryDate: string;
+  joursRestants: number;
+  quantiteRestante: number;
+  sku: string;
+  nomProduit: string;
+  nomVariante: string | null;
+  estExpire: boolean;
 }

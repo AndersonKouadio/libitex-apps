@@ -16,7 +16,7 @@ export const stockAPI = {
     httpClient.get<IEmplacement[]>(`${BASE}/emplacements`, { token }),
 
   resumeAlertes: (token: string) =>
-    httpClient.get<{ nbAlertes: number; nbRuptures: number }>(`${BASE}/alertes/resume`, { token }),
+    httpClient.get<{ nbAlertes: number; nbRuptures: number; nbExpires: number; nbBientotPerimes: number }>(`${BASE}/alertes/resume`, { token }),
 
   listerAlertes: (token: string) =>
     httpClient.get<IAlerteStockDetail>(`${BASE}/alertes/detail`, { token }),

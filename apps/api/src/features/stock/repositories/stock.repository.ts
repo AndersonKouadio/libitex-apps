@@ -249,6 +249,40 @@ export class StockRepository {
     return lot;
   }
 
+  /**
+   * Lots PERISHABLE expirant dans les `joursAvant` jours OU deja expires,
+   * avec quantite restante > 0. Joint variants + products pour affichage.
+   * Tri du plus urgent (deja expire) au moins urgent.
+   */
+  async lotsPerimeBientot(tenantId: string, joursAvant = 7) {
+    const seuilDate = new Date();
+    seuilDate.setUTCDate(seuilDate.getUTCDate() + joursAvant);
+    const seuilIso = seuilDate.toISOString().split("T")[0]!;
+
+    const rows = await this.db
+      .select({
+        batchId: batches.id,
+        variantId: batches.variantId,
+        batchNumber: batches.batchNumber,
+        expiryDate: batches.expiryDate,
+        quantiteRestante: batches.quantityRemaining,
+        sku: variants.sku,
+        nomProduit: products.name,
+        nomVariante: variants.name,
+      })
+      .from(batches)
+      .innerJoin(variants, eq(batches.variantId, variants.id))
+      .innerJoin(products, eq(variants.productId, products.id))
+      .where(and(
+        eq(products.tenantId, tenantId),
+        sql`${batches.quantityRemaining} > 0`,
+        sql`${batches.expiryDate} <= ${seuilIso}`,
+      ))
+      .orderBy(batches.expiryDate);
+
+    return rows;
+  }
+
   async obtenirVarianteAvecProduit(variantId: string) {
     return this.db
       .select({
