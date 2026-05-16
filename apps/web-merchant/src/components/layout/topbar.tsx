@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
-import { Avatar, Button, Dropdown } from "@heroui/react";
-import { Bell, Store, Settings, LogOut, Check } from "lucide-react";
+import { Avatar, Dropdown } from "@heroui/react";
+import { Store, Settings, LogOut, Check } from "lucide-react";
+import { ClocheAlertes } from "./cloche-alertes";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useSwitcherBoutiqueMutation } from "@/features/boutique/queries/boutique-switch.mutation";
 import { SECTEUR_LABELS } from "@/features/auth/utils/secteur-activite";
@@ -39,13 +40,7 @@ export function Topbar({ titre: titreManuel }: Props = {}) {
         <div className="flex items-center gap-1.5 shrink-0">
           <ToggleTheme />
 
-          <Button
-            variant="ghost"
-            className="w-9 h-9 min-w-0 p-0 text-muted hover:text-foreground"
-            aria-label="Notifications"
-          >
-            <Bell size={18} />
-          </Button>
+          <ClocheAlertes />
 
           <Dropdown>
             <Dropdown.Trigger>

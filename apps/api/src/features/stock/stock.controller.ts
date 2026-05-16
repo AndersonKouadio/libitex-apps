@@ -89,6 +89,12 @@ export class StockController {
     return this.stockService.resumeAlertes(user.tenantId);
   }
 
+  @Get("alertes/detail")
+  @ApiOperation({ summary: "Liste détaillée des variantes en rupture ou en alerte (dropdown cloche)" })
+  listerAlertes(@CurrentUser() user: CurrentUserData) {
+    return this.stockService.listerAlertes(user.tenantId);
+  }
+
   @Get("emplacement/:emplacementId")
   @ApiOperation({ summary: "Stock complet d'un emplacement" })
   stockParEmplacement(

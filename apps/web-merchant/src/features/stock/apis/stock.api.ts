@@ -1,6 +1,7 @@
 import { httpClient } from "@/lib/http";
 import type {
   IEmplacement, IStockActuel, IStockEmplacement, IMouvementStock, FiltreMouvements,
+  IAlerteStockDetail,
 } from "../types/stock.type";
 
 export interface MouvementsResponse<T> {
@@ -16,6 +17,9 @@ export const stockAPI = {
 
   resumeAlertes: (token: string) =>
     httpClient.get<{ nbAlertes: number; nbRuptures: number }>(`${BASE}/alertes/resume`, { token }),
+
+  listerAlertes: (token: string) =>
+    httpClient.get<IAlerteStockDetail>(`${BASE}/alertes/detail`, { token }),
 
   creerEmplacement: (token: string, data: { nom: string; type?: string; adresse?: string }) =>
     httpClient.post<IEmplacement>(`${BASE}/emplacements`, data, { token }),

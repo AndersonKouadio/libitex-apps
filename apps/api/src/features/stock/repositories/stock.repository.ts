@@ -204,6 +204,47 @@ export class StockRepository {
       .groupBy(stockMovements.variantId, products.productType);
   }
 
+  /**
+   * Retourne les variantes en rupture (qte <= 0) ou en alerte (qte <= seuil)
+   * avec leurs noms — pour l'affichage dans le dropdown de la cloche.
+   * Exclut les MENU (pas de stock propre).
+   */
+  async stockAlertesDetaille(tenantId: string, seuilAlerte = 10) {
+    const rows = await this.db
+      .select({
+        variantId: stockMovements.variantId,
+        sku: variants.sku,
+        nomProduit: products.name,
+        nomVariante: variants.name,
+        typeProduit: products.productType,
+        quantite: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+      })
+      .from(stockMovements)
+      .innerJoin(variants, eq(stockMovements.variantId, variants.id))
+      .innerJoin(products, eq(variants.productId, products.id))
+      .where(and(
+        eq(stockMovements.tenantId, tenantId),
+        eq(products.isActive, true),
+      ))
+      .groupBy(
+        stockMovements.variantId, variants.sku, products.name,
+        variants.name, products.productType,
+      );
+
+    return rows
+      .filter((r) => r.typeProduit !== "MENU" && Number(r.quantite) <= seuilAlerte)
+      .map((r) => ({
+        variantId: r.variantId,
+        sku: r.sku,
+        nomProduit: r.nomProduit,
+        nomVariante: r.nomVariante,
+        typeProduit: r.typeProduit,
+        quantite: Number(r.quantite),
+        estRupture: Number(r.quantite) <= 0,
+      }))
+      .sort((a, b) => a.quantite - b.quantite); // ruptures en premier
+  }
+
   async creerLot(data: {
     variantId: string;
     batchNumber: string;
