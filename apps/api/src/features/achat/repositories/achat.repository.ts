@@ -164,10 +164,13 @@ export class AchatRepository {
    * BC-YYYYMMDD-NNN. NNN est le MAX suffixe deja utilise + 1 (le MAX evite
    * les trous si une commande a ete supprimee).
    *
-   * Fix C4 (ameliore) : utilise le query builder Drizzle (.select()) au lieu
-   * de db.execute() pour eviter les ambiguites sur le format de retour du
-   * driver neon-http (qui renvoie { rows: [...] } et non un tableau direct).
-   * La protection finale contre les races reste la contrainte UNIQUE +
+   * Fix C4 (v3) : selectionne tous les numeros du jour, extrait le suffixe
+   * numerique en JavaScript. On evite les expressions sql<> complexes avec
+   * SUBSTRING/CAST qui ne resolvent pas les colonnes correctement dans
+   * certains contextes Drizzle + neon-http (bug constate en prod :
+   * MAX retournait toujours 0 → numero "001" en boucle → UNIQUE conflict).
+   * Le nombre de commandes par jour est borne (< 1000) : le SELECT est
+   * neglieable. La protection contre les races reste la contrainte UNIQUE +
    * retry-on-conflict cote service.
    */
   async prochainNumeroCommande(tenantId: string): Promise<string> {
@@ -176,12 +179,9 @@ export class AchatRepository {
     const m = String(now.getMonth() + 1).padStart(2, "0");
     const d = String(now.getDate()).padStart(2, "0");
     const prefix = `BC-${y}${m}${d}`;
-    const startPos = prefix.length + 2; // position apres "BC-YYYYMMDD-"
 
-    const [row] = await this.db
-      .select({
-        maxSuffix: sql<number>`COALESCE(MAX(CAST(SUBSTRING(${purchaseOrders.orderNumber} FROM ${startPos}) AS INTEGER)), 0)`,
-      })
+    const rows = await this.db
+      .select({ orderNumber: purchaseOrders.orderNumber })
       .from(purchaseOrders)
       .where(and(
         eq(purchaseOrders.tenantId, tenantId),
@@ -189,8 +189,14 @@ export class AchatRepository {
         isNull(purchaseOrders.deletedAt),
       ));
 
-    const next = Number(row?.maxSuffix ?? 0) + 1;
-    return `${prefix}-${String(next).padStart(3, "0")}`;
+    // Extraire le suffixe numerique (ex: "BC-20260516-003" → 3)
+    const maxSuffix = rows.reduce((max, r) => {
+      const parts = r.orderNumber.split("-");
+      const n = parseInt(parts[parts.length - 1] ?? "0", 10);
+      return Number.isFinite(n) ? Math.max(max, n) : max;
+    }, 0);
+
+    return `${prefix}-${String(maxSuffix + 1).padStart(3, "0")}`;
   }
 
   /** @deprecated Conserve pour compat. Utilise `prochainNumeroCommande`. */
@@ -200,32 +206,30 @@ export class AchatRepository {
 
   /**
    * Verifie si une erreur Postgres est une violation de contrainte UNIQUE
-   * sur orderNumber (code 23505). Gere les deux formats possibles :
-   * - NeonDbError direct : { code, constraint, message }
-   * - Erreur wrappee par neon-http/Drizzle : { message: "Failed query..." }
-   *   avec le code Postgres dans err.cause ou dans le message lui-meme.
+   * sur orderNumber (code 23505). Resilient au format d'erreur neon-http
+   * qui varie selon la version du driver (message "Failed query: ..." avec
+   * les details Postgres en proprietes imbriquees non-standard).
+   *
+   * Fix C4 (v3) : utilise JSON.stringify pour inspecter l'ensemble de
+   * l'erreur, y compris les proprietes imbriquees, sans supposer une
+   * structure precise. Permet de detecter 23505 dans sourceError.code,
+   * cause.code, ou dans le message brut.
    */
   estViolationUniqueOrderNumber(err: unknown): boolean {
     if (typeof err !== "object" || err === null) return false;
-    const e = err as Record<string, unknown>;
-
-    // Format 1 : NeonDbError direct avec .code et .constraint
-    const sourceErr = (e["sourceError"] ?? {}) as Record<string, unknown>;
-    const code = String(e["code"] ?? sourceErr["code"] ?? "");
-    if (code === "23505") {
-      const constraint = String(
-        e["constraint"] ?? sourceErr["constraint"] ?? e["message"] ?? "",
-      );
-      return constraint.includes("purchase_orders_number") || constraint.includes("order_number");
+    try {
+      const str = JSON.stringify(err);
+      // La violation UNIQUE sur purchase_orders retourne le code PG 23505.
+      // On cherche indifferemment dans toutes les proprietes imbriquees.
+      const hasConflict = str.includes("23505")
+        || str.includes("duplicate key")
+        || str.includes("unique constraint");
+      if (!hasConflict) return false;
+      // Confirmer que c'est bien la contrainte order_number (pas une autre).
+      return str.includes("order_number") || str.includes("purchase_orders_number");
+    } catch {
+      return false;
     }
-
-    // Format 2 : Drizzle/neon-http wrapping — code dans le message
-    const msg = String(e["message"] ?? "");
-    if (msg.includes("23505") || msg.includes("duplicate key")) {
-      return msg.includes("purchase_orders_number") || msg.includes("order_number");
-    }
-
-    return false;
   }
 
   async creerCommande(data: {

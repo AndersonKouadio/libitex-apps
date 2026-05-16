@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ForbiddenException, NotFoundException, Logger, InternalServerErrorException } from "@nestjs/common";
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException, Logger } from "@nestjs/common";
 import { AchatRepository } from "./repositories/achat.repository";
 import { LandedCostService, type LigneReception } from "./services/landed-cost.service";
 import {
@@ -113,105 +113,98 @@ export class AchatService {
     userId: string,
     dto: CreerCommandeDto,
   ): Promise<CommandeResponseDto> {
-    // DIAG A.5 : suivi etape pour identifier ou eclate le 500 en prod.
-    let diagStep = "init";
-    try {
-      diagStep = "trouverFournisseur";
-      const fournisseur = await this.achatRepo.trouverFournisseur(tenantId, dto.fournisseurId);
-      if (!fournisseur) throw new BadRequestException("Fournisseur introuvable");
+    const fournisseur = await this.achatRepo.trouverFournisseur(tenantId, dto.fournisseurId);
+    if (!fournisseur) throw new BadRequestException("Fournisseur introuvable");
 
-      // Fix I9 : emplacement doit appartenir au tenant
-      diagStep = "emplacementDuTenant";
-      const emplacement = await this.achatRepo.emplacementDuTenant(tenantId, dto.emplacementId);
-      if (!emplacement) {
-        throw new ForbiddenException("Emplacement introuvable ou inaccessible");
-      }
+    // Fix I9 : emplacement doit appartenir au tenant
+    const emplacement = await this.achatRepo.emplacementDuTenant(tenantId, dto.emplacementId);
+    if (!emplacement) {
+      throw new ForbiddenException("Emplacement introuvable ou inaccessible");
+    }
 
-      // Fix C3 : verifier que toutes les variantes appartiennent au tenant
-      diagStep = "variantesDuTenant";
-      const variantIds = dto.lignes.map((l) => l.varianteId);
-      const valides = await this.achatRepo.variantesDuTenant(tenantId, variantIds);
-      const intrus = variantIds.filter((id) => !valides.has(id));
-      if (intrus.length > 0) {
-        throw new ForbiddenException(
-          `Variante(s) inaccessible(s) ou hors tenant : ${intrus.slice(0, 3).join(", ")}${intrus.length > 3 ? "..." : ""}`,
-        );
-      }
+    // Fix C3 : verifier que toutes les variantes appartiennent au tenant
+    const variantIds = dto.lignes.map((l) => l.varianteId);
+    const valides = await this.achatRepo.variantesDuTenant(tenantId, variantIds);
+    const intrus = variantIds.filter((id) => !valides.has(id));
+    if (intrus.length > 0) {
+      throw new ForbiddenException(
+        `Variante(s) inaccessible(s) ou hors tenant : ${intrus.slice(0, 3).join(", ")}${intrus.length > 3 ? "..." : ""}`,
+      );
+    }
 
-      // Phase A.5 : devise + taux de change.
-      const devise = (dto.devise ?? "XOF").toUpperCase();
-      const tauxChange = dto.tauxChange && dto.tauxChange > 0 ? dto.tauxChange : 1.0;
-      const sousTotalDevise = dto.lignes.reduce((s, l) => s + l.quantite * l.prixUnitaire, 0);
-      const total = sousTotalDevise * tauxChange;
+    // Phase A.5 : devise + taux de change. Si devise = XOF (devise tenant) ou
+    // non specifiee, taux = 1.0. Sinon, on convertit les prix unitaires
+    // (en devise commande) vers XOF (devise tenant) via le taux fige.
+    const devise = (dto.devise ?? "XOF").toUpperCase();
+    const tauxChange = dto.tauxChange && dto.tauxChange > 0 ? dto.tauxChange : 1.0;
 
-      // Fix C4 : retry-on-conflict.
-      let commande;
-      for (let attempt = 0; attempt < AchatService.MAX_RETRIES_NUMERO; attempt += 1) {
-        diagStep = `prochainNumeroCommande(attempt=${attempt})`;
-        const orderNumber = await this.achatRepo.prochainNumeroCommande(tenantId);
-        diagStep = `insertCommande(orderNumber=${orderNumber},attempt=${attempt})`;
-        try {
-          commande = await this.achatRepo.creerCommande({
-            tenantId,
-            orderNumber,
-            supplierId: dto.fournisseurId,
-            locationId: dto.emplacementId,
-            expectedDate: dto.dateAttendue ? new Date(dto.dateAttendue) : undefined,
-            notes: dto.notes,
-            createdBy: userId,
-            totalAmount: total.toFixed(2),
-          });
-          break;
-        } catch (err) {
-          if (this.achatRepo.estViolationUniqueOrderNumber(err) && attempt < AchatService.MAX_RETRIES_NUMERO - 1) {
-            continue;
-          }
-          throw err;
-        }
-      }
-      if (!commande) {
-        throw new BadRequestException("Echec de generation du numero de commande (concurrence trop forte)");
-      }
+    // Sous-total HT en devise commande
+    const sousTotalDevise = dto.lignes.reduce(
+      (s, l) => s + l.quantite * l.prixUnitaire, 0,
+    );
+    // Total HT en devise tenant (XOF)
+    const total = sousTotalDevise * tauxChange;
 
-      diagStep = "ajouterLignes";
-      await this.achatRepo.ajouterLignes(dto.lignes.map((l) => {
-        const unitPriceXOF = l.prixUnitaire * tauxChange;
-        const lineTotalXOF = l.quantite * unitPriceXOF;
-        return {
-          purchaseOrderId: commande!.id,
-          variantId: l.varianteId,
-          quantityOrdered: l.quantite.toString(),
-          unitPrice: unitPriceXOF.toFixed(2),
-          lineTotal: lineTotalXOF.toFixed(2),
-        };
-      }));
-
-      diagStep = "majDeviseCommande";
+    // Fix C4 : retry-on-conflict. Deux callers simultanes peuvent calculer
+    // le meme numero ; la contrainte UNIQUE rejette le 2e, on retry avec
+    // le suivant.
+    let commande;
+    for (let attempt = 0; attempt < AchatService.MAX_RETRIES_NUMERO; attempt += 1) {
+      const orderNumber = await this.achatRepo.prochainNumeroCommande(tenantId);
       try {
-        await this.achatRepo.majDeviseCommande(commande.id, devise, tauxChange.toFixed(6));
+        commande = await this.achatRepo.creerCommande({
+          tenantId,
+          orderNumber,
+          supplierId: dto.fournisseurId,
+          locationId: dto.emplacementId,
+          expectedDate: dto.dateAttendue ? new Date(dto.dateAttendue) : undefined,
+          notes: dto.notes,
+          createdBy: userId,
+          totalAmount: total.toFixed(2),
+        });
+        break;
       } catch (err) {
-        this.logger.warn(
-          `Maj devise commande ${commande.id} echouee: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      }
-
-      this.realtime.emitToTenant(tenantId, "commande.creee", { id: commande.id });
-
-      diagStep = "obtenirCommande";
-      return this.obtenirCommande(tenantId, commande.id);
-    } catch (err) {
-      // Re-propager les exceptions metier sans les envelopper
-      if (
-        err instanceof BadRequestException ||
-        err instanceof ForbiddenException ||
-        err instanceof NotFoundException
-      ) {
+        if (this.achatRepo.estViolationUniqueOrderNumber(err) && attempt < AchatService.MAX_RETRIES_NUMERO - 1) {
+          // Conflit detecte -> retry avec le numero suivant
+          continue;
+        }
         throw err;
       }
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(`[DIAG creerCommande] step=${diagStep} | ${msg}`);
-      throw new InternalServerErrorException(`[DIAG] step=${diagStep} | ${msg}`);
     }
+    if (!commande) {
+      throw new BadRequestException("Echec de generation du numero de commande (concurrence trop forte)");
+    }
+
+    await this.achatRepo.ajouterLignes(dto.lignes.map((l) => {
+      // Phase A.5 : conversion devise commande -> XOF pour stockage en XOF.
+      // Le prix en devise commande sera recalcule a la lecture
+      // (unitPrice / exchangeRateAtOrder).
+      const unitPriceXOF = l.prixUnitaire * tauxChange;
+      const lineTotalXOF = l.quantite * unitPriceXOF;
+      return {
+        purchaseOrderId: commande!.id,
+        variantId: l.varianteId,
+        quantityOrdered: l.quantite.toString(),
+        unitPrice: unitPriceXOF.toFixed(2),
+        lineTotal: lineTotalXOF.toFixed(2),
+      };
+    }));
+
+    // Phase A.5 : mise a jour devise + taux en post-insert, tolerant a
+    // l'absence des colonnes en prod (try/catch silencieux).
+    try {
+      await this.achatRepo.majDeviseCommande(commande.id, devise, tauxChange.toFixed(6));
+    } catch (err) {
+      this.logger.warn(
+        `Maj devise commande ${commande.id} echouee: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    // Realtime : notifie les autres postes de l'apparition d'une nouvelle
+    // commande (filtree cote front sur tenantId).
+    this.realtime.emitToTenant(tenantId, "commande.creee", { id: commande.id });
+
+    return this.obtenirCommande(tenantId, commande.id);
   }
 
   async listerCommandes(tenantId: string, filtres: {
