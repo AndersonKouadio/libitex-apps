@@ -255,6 +255,20 @@ export class StockService {
    * ADJUSTMENT si delta != 0. Les lignes a delta=0 sont comptees comme
    * "inchangees". La justification est partagee pour toutes les lignes.
    */
+  /**
+   * Retourne la liste detaillee des variantes en rupture ou en alerte,
+   * avec leur nom et quantite. Limite a 20 pour le dropdown.
+   */
+  async listerAlertes(tenantId: string, seuilAlerte = 10) {
+    const rows = await this.stockRepo.stockAlertesDetaille(tenantId, seuilAlerte);
+    const resume = { nbRuptures: 0, nbAlertes: 0 };
+    for (const r of rows) {
+      if (r.estRupture) resume.nbRuptures += 1;
+      else resume.nbAlertes += 1;
+    }
+    return { ...resume, total: rows.length, lignes: rows.slice(0, 20) };
+  }
+
   async appliquerInventaire(
     tenantId: string,
     userId: string,

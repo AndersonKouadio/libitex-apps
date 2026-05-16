@@ -49,3 +49,20 @@ export interface FiltreMouvements {
   dateDebut?: string;
   dateFin?: string;
 }
+
+export interface IAlerteLigneStock {
+  variantId: string;
+  sku: string;
+  nomProduit: string;
+  nomVariante: string | null;
+  typeProduit: string;
+  quantite: number;
+  estRupture: boolean;
+}
+
+export interface IAlerteStockDetail {
+  nbRuptures: number;
+  nbAlertes: number;
+  total: number;
+  lignes: IAlerteLigneStock[];
+}
