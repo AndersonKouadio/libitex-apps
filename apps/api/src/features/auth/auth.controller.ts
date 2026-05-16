@@ -9,6 +9,7 @@ import {
   DemanderResetDto, ReinitialiserMotDePasseDto,
   ModifierProfilDto, SupprimerCompteDto,
   RafraichirTokenDto, RafraichirTokenResponseDto,
+  VerifierMfaDto, ActiverMfaDto, DesactiverMfaDto,
 } from "./dto/auth.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 
@@ -32,6 +33,40 @@ export class AuthController {
   @ApiResponse({ status: 401, description: "Identifiants invalides" })
   connecter(@Body() dto: ConnexionDto) {
     return this.authService.connecter(dto);
+  }
+
+  @Post("mfa/verify")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Verifie le code MFA suite a un challenge de connexion" })
+  verifierMfa(@Body() dto: VerifierMfaDto) {
+    return this.authService.verifierMfa(dto.mfaChallenge, dto.code);
+  }
+
+  @Post("mfa/setup")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard("jwt"))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Lance la mise en place MFA — retourne secret + URL otpauth" })
+  setupMfa(@CurrentUser() user: CurrentUserData) {
+    return this.authService.setupMfa(user.userId);
+  }
+
+  @Post("mfa/enable")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard("jwt"))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Active le MFA apres validation d'un 1er code" })
+  activerMfa(@CurrentUser() user: CurrentUserData, @Body() dto: ActiverMfaDto) {
+    return this.authService.activerMfa(user.userId, dto.code);
+  }
+
+  @Post("mfa/disable")
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard("jwt"))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Desactive le MFA (requiert le mot de passe)" })
+  desactiverMfa(@CurrentUser() user: CurrentUserData, @Body() dto: DesactiverMfaDto) {
+    return this.authService.desactiverMfa(user.userId, dto.motDePasse);
   }
 
   @Post("refresh")

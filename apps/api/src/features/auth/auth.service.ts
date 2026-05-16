@@ -18,7 +18,9 @@ import {
 import {
   ConnexionDto, InscriptionDto, CreerBoutiqueDto,
   AuthResponseDto, BoutiqueResumeDto, TokenPayload,
+  ConnexionMfaRequiseDto, MfaSetupResponseDto,
 } from "./dto/auth.dto";
+import { MfaService } from "./mfa.service";
 
 @Injectable()
 export class AuthService {
@@ -32,6 +34,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly audit: AuditService,
     private readonly email: EmailService,
+    private readonly mfa: MfaService,
   ) {}
 
   async inscrire(dto: InscriptionDto): Promise<AuthResponseDto> {
@@ -91,7 +94,7 @@ export class AuthService {
     return this.construireReponseAuth(user, tenant.id);
   }
 
-  async connecter(dto: ConnexionDto): Promise<AuthResponseDto> {
+  async connecter(dto: ConnexionDto): Promise<AuthResponseDto | ConnexionMfaRequiseDto> {
     const user = await this.utilisateurRepo.trouverParEmail(dto.email);
     if (!user) {
       // On ne peut pas auditer (pas de tenantId/userId), juste lever l'exception.
@@ -112,6 +115,60 @@ export class AuthService {
       throw new IdentifiantsInvalidesException();
     }
 
+    // MFA active : on retourne un challenge court terme (5 min) plutot que
+    // les tokens. Le front demande le code 6 chiffres puis appelle
+    // /auth/mfa/verify pour finir la connexion.
+    if (user.mfaEnabled && user.mfaSecret) {
+      const mfaChallenge = await this.jwtService.signAsync(
+        { sub: user.id, purpose: "mfa_challenge" },
+        { expiresIn: "5m" },
+      );
+      return { requiresMfa: true, mfaChallenge, email: user.email };
+    }
+
+    return this.finaliserConnexion(user);
+  }
+
+  /**
+   * Termine la connexion apres validation du code MFA. Le challenge contient
+   * l'userId signe (5 min de validite).
+   */
+  async verifierMfa(challenge: string, code: string): Promise<AuthResponseDto> {
+    let payload: { sub: string; purpose: string };
+    try {
+      payload = await this.jwtService.verifyAsync(challenge);
+    } catch {
+      throw new IdentifiantsInvalidesException();
+    }
+    if (payload.purpose !== "mfa_challenge") {
+      throw new IdentifiantsInvalidesException();
+    }
+
+    const user = await this.utilisateurRepo.trouverParId(payload.sub);
+    if (!user || !user.mfaEnabled || !user.mfaSecret) {
+      throw new IdentifiantsInvalidesException();
+    }
+
+    if (!this.mfa.verifierCode(user.mfaSecret, code)) {
+      if (user.tenantId) {
+        await this.audit.log({
+          tenantId: user.tenantId, userId: user.id,
+          action: AUDIT_ACTIONS.USER_LOGIN_FAILED,
+          entityType: "USER", entityId: user.id,
+          after: { email: user.email, raison: "MFA_INVALIDE" },
+        });
+      }
+      throw new BadRequestException("Code MFA invalide");
+    }
+
+    return this.finaliserConnexion(user);
+  }
+
+  /**
+   * Logique commune apres validation password (et eventuellement MFA) :
+   * assure le membership, met a jour lastLogin, retourne tokens + boutiques.
+   */
+  private async finaliserConnexion(user: any): Promise<AuthResponseDto> {
     await this.assurerMembership(user.id, user.tenantId, user.role);
     await this.utilisateurRepo.mettreAJourDerniereConnexion(user.id);
 
@@ -129,6 +186,73 @@ export class AuthService {
     });
 
     return this.construireReponseAuth(user, tenantActifId);
+  }
+
+  /**
+   * Lance la mise en place MFA : genere un nouveau secret, le stocke (mais
+   * mfaEnabled reste false), retourne le secret + URL de provisionning a
+   * encoder en QR code cote client.
+   */
+  async setupMfa(userId: string): Promise<MfaSetupResponseDto> {
+    const user = await this.utilisateurRepo.trouverParId(userId);
+    if (!user) throw new NotFoundException("Utilisateur introuvable");
+
+    const secret = this.mfa.genererSecret();
+    await this.utilisateurRepo.definirSecretMfa(userId, secret);
+
+    return {
+      secret,
+      urlProvisionning: this.mfa.construireUrlProvisionning(secret, user.email),
+    };
+  }
+
+  /**
+   * Active le MFA apres validation d'un 1er code (preuve que le secret est
+   * bien configure dans l'app authenticator).
+   */
+  async activerMfa(userId: string, code: string): Promise<void> {
+    const user = await this.utilisateurRepo.trouverParId(userId);
+    if (!user || !user.mfaSecret) {
+      throw new BadRequestException("Aucun setup MFA en cours. Lancez d'abord /auth/mfa/setup.");
+    }
+    if (!this.mfa.verifierCode(user.mfaSecret, code)) {
+      throw new BadRequestException("Code MFA invalide");
+    }
+    await this.utilisateurRepo.activerMfa(userId, true);
+    if (user.tenantId) {
+      await this.audit.log({
+        tenantId: user.tenantId, userId,
+        action: AUDIT_ACTIONS.USER_LOGIN,
+        entityType: "USER", entityId: userId,
+        after: { mfaActive: true },
+      });
+    }
+  }
+
+  /**
+   * Desactive le MFA. Requiert le mot de passe en plus du token JWT (defense
+   * en profondeur — si un attaquant a un token vole, il ne pourra pas couper
+   * le MFA sans le password).
+   */
+  async desactiverMfa(userId: string, motDePasse: string): Promise<void> {
+    const user = await this.utilisateurRepo.trouverParId(userId);
+    if (!user) throw new NotFoundException("Utilisateur introuvable");
+
+    const passwordOk = await bcrypt.compare(motDePasse, user.passwordHash);
+    if (!passwordOk) {
+      throw new BadRequestException("Mot de passe incorrect");
+    }
+
+    await this.utilisateurRepo.activerMfa(userId, false);
+    await this.utilisateurRepo.definirSecretMfa(userId, null);
+    if (user.tenantId) {
+      await this.audit.log({
+        tenantId: user.tenantId, userId,
+        action: AUDIT_ACTIONS.USER_LOGIN,
+        entityType: "USER", entityId: userId,
+        after: { mfaActive: false, raison: "DESACTIVATION_MANUELLE" },
+      });
+    }
   }
 
   async listerBoutiques(userId: string): Promise<BoutiqueResumeDto[]> {
@@ -225,6 +349,7 @@ export class AuthService {
         prenom: user.firstName,
         nomFamille: user.lastName,
         mustChangePassword: user.mustChangePassword ?? false,
+        mfaEnabled: user.mfaEnabled ?? false,
       },
       boutiques,
       boutiqueActive,

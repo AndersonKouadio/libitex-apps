@@ -31,6 +31,13 @@ export const users = pgTable("users", {
   // Stocke hashe (sha256) pour qu'un dump DB ne donne pas acces aux liens en cours.
   passwordResetTokenHash: text("password_reset_token_hash"),
   passwordResetExpiresAt: timestamp("password_reset_expires_at", { withTimezone: true }),
+  // MFA TOTP (RFC 6238) : secret base32 + flag actif.
+  // Le secret est genere a la mise en place et verifie via Google Authenticator
+  // ou compatible (Authy, 1Password, etc.). Stocke en clair (encrypted-at-rest
+  // au niveau DB) — pas hashable car on doit le re-utiliser pour valider chaque
+  // code a 6 chiffres.
+  mfaSecret: text("mfa_secret"),
+  mfaEnabled: boolean("mfa_enabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),

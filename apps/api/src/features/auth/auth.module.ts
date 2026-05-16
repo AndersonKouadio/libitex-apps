@@ -5,6 +5,7 @@ import type { StringValue } from "ms";
 import { PassportModule } from "@nestjs/passport";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
+import { MfaService } from "./mfa.service";
 import { UtilisateurRepository } from "./repositories/utilisateur.repository";
 import { MembershipRepository } from "./repositories/membership.repository";
 import { JwtStrategy } from "./strategies/jwt.strategy";
@@ -26,7 +27,7 @@ import { StockModule } from "../stock/stock.module";
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, UtilisateurRepository, MembershipRepository, JwtStrategy],
+  providers: [AuthService, MfaService, UtilisateurRepository, MembershipRepository, JwtStrategy],
   exports: [AuthService, UtilisateurRepository, MembershipRepository],
 })
 export class AuthModule {}
