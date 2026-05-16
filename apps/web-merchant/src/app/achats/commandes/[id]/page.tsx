@@ -132,7 +132,7 @@ export default function PageDetailCommande({ params }: { params: Promise<{ id: s
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted text-xs">Taux fige</span>
                   <span className="text-xs tabular-nums">
-                    1 {commande.devise} = {formatMontant(commande.tauxChange)} XOF
+                    1 {commande.devise} = {commande.tauxChange.toLocaleString("fr-FR", { maximumFractionDigits: 4 })} XOF
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
