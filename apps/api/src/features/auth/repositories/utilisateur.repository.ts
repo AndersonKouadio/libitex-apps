@@ -102,6 +102,18 @@ export class UtilisateurRepository {
     await this.db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, userId));
   }
 
+  async definirSecretMfa(userId: string, secret: string | null) {
+    await this.db.update(users)
+      .set({ mfaSecret: secret, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async activerMfa(userId: string, actif: boolean) {
+    await this.db.update(users)
+      .set({ mfaEnabled: actif, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
   async sauvegarderRefreshToken(userId: string, hash: string) {
     await this.db.update(users).set({ refreshToken: hash }).where(eq(users.id, userId));
   }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Card } from "@heroui/react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { Store, Users, ChevronRight, Building2, User, MapPin, Wallet, Printer, Sparkles, Tag, MessageCircle } from "lucide-react";
+import { Store, Users, ChevronRight, Building2, User, MapPin, Wallet, Printer, Sparkles, Tag, MessageCircle, Shield } from "lucide-react";
 
 interface SectionConfig {
   href: string;
@@ -84,6 +84,13 @@ const SECTIONS: SectionConfig[] = [
     titre: "Mon compte",
     description: "Vos informations personnelles, mot de passe et suppression définitive du compte.",
     classes: "bg-secondary/10 text-secondary",
+  },
+  {
+    href: "/parametres/securite",
+    icone: Shield,
+    titre: "Sécurité (MFA)",
+    description: "Active la double authentification (Google Authenticator, Authy) sur ton compte.",
+    classes: "bg-danger/10 text-danger",
   },
 ];
 

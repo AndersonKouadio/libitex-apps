@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import type { IUtilisateurSession, IBoutiqueResume } from "../types/auth.type";
+import type { IUtilisateurSession, IBoutiqueResume, IAuthResponse } from "../types/auth.type";
 import { authAPI } from "../apis/auth.api";
 import type { ConnexionDTO } from "../schemas/auth.schema";
 import { STORAGE_KEYS } from "@/lib/storage-keys";
@@ -25,7 +25,17 @@ interface AuthContextValue {
   boutiques: IBoutiqueResume[];
   boutiqueActive: IBoutiqueResume | null;
   enChargement: boolean;
-  connecter: (data: ConnexionDTO) => Promise<void>;
+  /**
+   * Retourne `{ requiresMfa: true, mfaChallenge, email }` si le compte a la
+   * double auth — le caller doit alors afficher le formulaire de saisie du
+   * code et appeler `verifierMfa(mfaChallenge, code)` pour finaliser.
+   * Sinon `{ requiresMfa: false }` et la session est persistee.
+   */
+  connecter: (data: ConnexionDTO) => Promise<
+    | { requiresMfa: true; mfaChallenge: string; email: string }
+    | { requiresMfa: false }
+  >;
+  verifierMfa: (mfaChallenge: string, code: string) => Promise<void>;
   deconnecter: () => void;
   /**
    * Persiste une nouvelle session complete (au login, switch boutique,
@@ -131,6 +141,25 @@ export function useAuthState() {
 
   const connecter = useCallback(async (data: ConnexionDTO) => {
     const res = await authAPI.connecter(data);
+    // Si le serveur reclame le code MFA, on renvoie le challenge au consommateur
+    // (page connexion) qui affichera le formulaire de saisie. Pas de persistance
+    // tant que la 2eme etape n'est pas validee.
+    if ("requiresMfa" in res && res.requiresMfa) {
+      return { requiresMfa: true as const, mfaChallenge: res.mfaChallenge, email: res.email };
+    }
+    const auth = res as IAuthResponse;
+    persister({
+      accessToken: auth.accessToken,
+      refreshToken: auth.refreshToken,
+      utilisateur: auth.utilisateur,
+      boutiques: auth.boutiques,
+      boutiqueActive: auth.boutiqueActive,
+    });
+    return { requiresMfa: false as const };
+  }, [persister]);
+
+  const verifierMfa = useCallback(async (mfaChallenge: string, code: string) => {
+    const res = await authAPI.verifierMfa({ mfaChallenge, code });
     persister({
       accessToken: res.accessToken,
       refreshToken: res.refreshToken,
@@ -181,6 +210,7 @@ export function useAuthState() {
 
   return {
     token, utilisateur, boutiques, boutiqueActive, enChargement,
-    connecter, deconnecter, appliquerSession: persister, rafraichirTokenLocal, mettreAJourUtilisateur,
+    connecter, verifierMfa, deconnecter, appliquerSession: persister,
+    rafraichirTokenLocal, mettreAJourUtilisateur,
   };
 }

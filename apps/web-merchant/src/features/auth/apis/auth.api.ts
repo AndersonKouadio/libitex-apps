@@ -18,9 +18,32 @@ export interface ModifierProfilDTO {
   telephone?: string;
 }
 
+export interface IConnexionMfaRequise {
+  requiresMfa: true;
+  mfaChallenge: string;
+  email: string;
+}
+
+export interface IMfaSetupResponse {
+  secret: string;
+  urlProvisionning: string;
+}
+
 export const authAPI = {
   connecter: (data: ConnexionDTO) =>
-    httpClient.post<IAuthResponse>(`${BASE}/connexion`, data),
+    httpClient.post<IAuthResponse | IConnexionMfaRequise>(`${BASE}/connexion`, data),
+
+  verifierMfa: (data: { mfaChallenge: string; code: string }) =>
+    httpClient.post<IAuthResponse>(`${BASE}/mfa/verify`, data),
+
+  setupMfa: (token: string) =>
+    httpClient.post<IMfaSetupResponse>(`${BASE}/mfa/setup`, {}, { token }),
+
+  activerMfa: (token: string, code: string) =>
+    httpClient.post<{ ok: true }>(`${BASE}/mfa/enable`, { code }, { token }),
+
+  desactiverMfa: (token: string, motDePasse: string) =>
+    httpClient.post<{ ok: true }>(`${BASE}/mfa/disable`, { motDePasse }, { token }),
 
   inscrire: (data: InscriptionDTO) =>
     httpClient.post<IAuthResponse>(`${BASE}/inscription`, data),

@@ -20,6 +20,7 @@ export interface IUtilisateurSession {
   prenom: string;
   nomFamille: string;
   mustChangePassword: boolean;
+  mfaEnabled: boolean;
 }
 
 export type MethodePaiement = "CASH" | "CARD" | "MOBILE_MONEY" | "BANK_TRANSFER" | "CREDIT";

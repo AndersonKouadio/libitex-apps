@@ -139,6 +139,7 @@ export class UtilisateurSessionDto {
   prenom!: string;
   nomFamille!: string;
   mustChangePassword!: boolean;
+  mfaEnabled!: boolean;
 }
 
 export class ChangerMotDePasseDto {
@@ -234,4 +235,41 @@ export class AuthResponseDto {
   utilisateur!: UtilisateurSessionDto;
   boutiques!: BoutiqueResumeDto[];
   boutiqueActive!: BoutiqueResumeDto;
+}
+
+/**
+ * Reponse intermediaire de connexion quand le MFA est active pour ce compte.
+ * Le client doit ensuite poster le code 6 chiffres a /auth/mfa/verify pour
+ * obtenir la reponse auth complete.
+ */
+export class ConnexionMfaRequiseDto {
+  requiresMfa!: true;
+  /** Token court terme (5 min) servant uniquement a verifier le code MFA. */
+  mfaChallenge!: string;
+  email!: string;
+}
+
+export class VerifierMfaDto {
+  @IsString()
+  mfaChallenge!: string;
+
+  @IsString()
+  code!: string;
+}
+
+export class ActiverMfaDto {
+  @IsString()
+  code!: string;
+}
+
+export class DesactiverMfaDto {
+  @IsString()
+  motDePasse!: string;
+}
+
+export class MfaSetupResponseDto {
+  /** Secret en clair (a stocker dans l'app authenticator). */
+  secret!: string;
+  /** URL otpauth a encoder en QR code cote client. */
+  urlProvisionning!: string;
 }
