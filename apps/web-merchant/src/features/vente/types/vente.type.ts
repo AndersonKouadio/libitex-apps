@@ -55,6 +55,18 @@ export interface ITicket {
   paiements: IPaiement[];
   completeLe?: string;
   creeLe: string;
+  /** A3 — 'SALE' (defaut) ou 'RETURN'. */
+  type?: string;
+  /** A3 — ID du ticket d'origine si c'est un retour. */
+  refTicketId?: string | null;
+}
+
+/** A3 — Payload pour créer un ticket de retour. */
+export interface IRetourTicketPayload {
+  lignes: { ligneId: string; quantite: number }[];
+  methodeRemboursement: string;
+  reference?: string;
+  motif?: string;
 }
 
 export interface IRapportZ {

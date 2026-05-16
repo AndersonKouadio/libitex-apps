@@ -20,7 +20,7 @@ import {
   SessionCaisseRequiseException,
 } from "../../common/exceptions/metier.exception";
 import {
-  CreerTicketDto, CompleterTicketDto,
+  CreerTicketDto, CompleterTicketDto, RetourTicketDto,
   TicketResponseDto, LigneTicketResponseDto, PaiementResponseDto, RapportZResponseDto,
   RapportZJourResponseDto, RapportVentesPeriodeDto, RapportMargesDto, RapportTvaDto,
 } from "./dto/vente.dto";
@@ -504,6 +504,146 @@ export class VenteService {
     return this.mapTicket(voided, lignes.map(this.mapLigne), []);
   }
 
+  // --- Retours POS (A3) ---
+
+  /**
+   * Crée un ticket de retour lié au ticket original.
+   * - Valide que le ticket original est COMPLETED et de type SALE.
+   * - Vérifie que les quantités demandées ne dépassent pas ce qui n'a pas
+   *   encore été retourné (gestion des retours partiels successifs).
+   * - Crée le ticket RETURN, les lignes correspondantes, les mouvements
+   *   RETURN_IN en stock, et enregistre le remboursement.
+   * - Résultat immédiatement COMPLETED (pas de flow paiement séparé).
+   */
+  async retournerTicket(
+    tenantId: string,
+    userId: string,
+    ticketId: string,
+    dto: RetourTicketDto,
+  ): Promise<TicketResponseDto> {
+    // 1. Valider ticket original
+    const original = await this.ticketRepo.obtenirParId(tenantId, ticketId);
+    if (!original) throw new RessourceIntrouvableException("Ticket", ticketId);
+    if (original.status !== "COMPLETED") {
+      throw new BadRequestException("Seul un ticket complété peut faire l'objet d'un retour");
+    }
+    if ((original as any).ticketType === "RETURN") {
+      throw new BadRequestException("Un ticket de retour ne peut pas être retourné");
+    }
+
+    // 2. Lignes originales enrichies (nom produit, sku, unitPrice, variantId)
+    const lignesOrig = await this.ticketRepo.obtenirLignesAvecDetails(ticketId);
+
+    // 3. Quantités déjà retournées par variantId (Map<variantId, qty>)
+    const dejaRetournees = await this.ticketRepo.quantitesDejaRetournees(tenantId, ticketId);
+
+    // 4. Valider les lignes du DTO et calculer les totaux
+    const lignesRetour: Array<{
+      variantId: string; nomProduit: string; nomVariante: string | null;
+      sku: string; quantite: number; unitPrice: number;
+    }> = [];
+    let total = 0;
+
+    for (const lr of dto.lignes) {
+      const ligneOrig = lignesOrig.find((l) => l.id === lr.ligneId);
+      if (!ligneOrig) {
+        throw new BadRequestException(`Ligne ${lr.ligneId} introuvable dans le ticket original`);
+      }
+      const dejaRet = dejaRetournees.get(ligneOrig.variantId) ?? 0;
+      const disponible = Number(ligneOrig.quantity) - dejaRet;
+      if (lr.quantite > disponible) {
+        throw new BadRequestException(
+          `Quantité retournée (${lr.quantite}) supérieure au disponible (${disponible}) pour ${ligneOrig.nomProduit}`,
+        );
+      }
+      const unitPrice = Number(ligneOrig.unitPrice);
+      lignesRetour.push({
+        variantId: ligneOrig.variantId,
+        nomProduit: ligneOrig.nomProduit,
+        nomVariante: ligneOrig.nomVariante ?? null,
+        sku: ligneOrig.sku,
+        quantite: lr.quantite,
+        unitPrice,
+      });
+      total += lr.quantite * unitPrice;
+    }
+
+    // 5. Numéro du ticket de retour : RET-<original>-<suffix 2 chiffres>
+    const nbRetours = await this.ticketRepo.compterRetoursDuTicket(tenantId, ticketId);
+    const suffix = String(nbRetours + 1).padStart(2, "0");
+    const numeroRetour = `RET-${original.ticketNumber}-${suffix}`;
+
+    // 6. Créer le ticket de retour (COMPLETED immédiatement)
+    const ticketRetour = await this.ticketRepo.creerTicketRetour({
+      tenantId,
+      locationId: original.locationId,
+      userId,
+      ticketNumber: numeroRetour,
+      refTicketId: ticketId,
+      customerId: original.customerId ?? undefined,
+      customerName: original.customerName ?? undefined,
+      customerPhone: original.customerPhone ?? undefined,
+      subtotal: total.toFixed(2),
+      total: total.toFixed(2),
+      motif: dto.motif,
+    });
+
+    // 7. Créer les lignes de retour
+    for (const lr of lignesRetour) {
+      await this.ticketRepo.creerLigne({
+        ticketId: ticketRetour.id,
+        variantId: lr.variantId,
+        productName: lr.nomProduit,
+        variantName: lr.nomVariante,
+        sku: lr.sku,
+        quantity: lr.quantite.toString(),
+        unitPrice: lr.unitPrice.toFixed(2),
+        discount: "0",
+        taxRate: "0",
+        taxAmount: "0",
+        lineTotal: (lr.quantite * lr.unitPrice).toFixed(2),
+      });
+    }
+
+    // 8. Mouvements RETURN_IN : remet la marchandise en stock
+    for (const lr of lignesRetour) {
+      await this.stockService.retourStock(
+        tenantId, userId, lr.variantId, original.locationId,
+        lr.quantite, ticketRetour.id,
+      );
+    }
+
+    // 9. Enregistrer le remboursement
+    await this.ticketRepo.creerPaiement({
+      ticketId: ticketRetour.id,
+      method: dto.methodeRemboursement,
+      amount: total.toFixed(2),
+      reference: dto.reference,
+    });
+
+    // 10. Audit + realtime
+    await this.audit.log({
+      tenantId, userId, action: AUDIT_ACTIONS.TICKET_RETURNED,
+      entityType: "TICKET", entityId: ticketRetour.id,
+      after: {
+        numeroRetour,
+        refTicket: original.ticketNumber,
+        total: total.toFixed(2),
+        methode: dto.methodeRemboursement,
+        lignes: lignesRetour.length,
+      },
+    });
+    this.realtime.emitToTenant(tenantId, "ticket.returned", {
+      ticketId: ticketRetour.id, refTicketId: ticketId,
+    });
+    this.realtime.emitToTenant(tenantId, "stock.updated", { emplacementId: original.locationId });
+
+    // 11. Mapper la réponse
+    const lignesBD = await this.ticketRepo.obtenirLignes(ticketRetour.id);
+    const paiementsBD = await this.ticketRepo.obtenirPaiements(ticketRetour.id);
+    return this.mapTicket(ticketRetour, lignesBD.map(this.mapLigne), paiementsBD.map(this.mapPaiement));
+  }
+
   // --- Reporter a la prochaine session (uniquement PARKED) ---
   // Detache le ticket de sa session actuelle. Au prochain Reprendre par un
   // caissier dont la session est ouverte sur le meme emplacement, il sera
@@ -740,6 +880,8 @@ export class VenteService {
       creeLe: raw.createdAt?.toISOString?.() ?? raw.createdAt,
       lignes,
       paiements,
+      type: raw.ticketType ?? "SALE",
+      refTicketId: raw.refTicketId ?? null,
     };
   }
 

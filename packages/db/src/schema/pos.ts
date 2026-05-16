@@ -107,6 +107,18 @@ export const tickets = pgTable("tickets", {
    * Fix C4 du Module 2.
    */
   idempotencyKey: varchar("idempotency_key", { length: 64 }),
+  /**
+   * A3 — Retours/échanges POS.
+   * 'SALE' (défaut) = vente normale. 'RETURN' = ticket de retour.
+   * Varchar pour éviter une migration enum — les valeurs sont controlees
+   * cote service.
+   */
+  ticketType: varchar("ticket_type", { length: 10 }).notNull().default("SALE"),
+  /**
+   * Lien vers le ticket de vente d'origine pour un retour (nullable).
+   * Permet de tracer retour <-> vente originale.
+   */
+  refTicketId: uuid("ref_ticket_id"),
   completedAt: timestamp("completed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -120,6 +132,7 @@ export const tickets = pgTable("tickets", {
   index("idx_tickets_created").on(table.createdAt),
   index("idx_tickets_customer").on(table.customerId),
   index("idx_tickets_idempotency").on(table.tenantId, table.idempotencyKey),
+  index("idx_tickets_ref").on(table.refTicketId),
 ]);
 
 // ─── Ticket Lines ───

@@ -1,7 +1,7 @@
 import { httpClient } from "@/lib/http";
 import type { PaginatedResponse } from "@/types/api.type";
 import type {
-  ITicket, IRapportZ, IRapportVentesPeriode, IRapportMarges, IRapportTva,
+  ITicket, IRetourTicketPayload, IRapportZ, IRapportVentesPeriode, IRapportMarges, IRapportTva,
 } from "../types/vente.type";
 
 const BASE = "/vente";
@@ -51,6 +51,9 @@ export const venteAPI = {
 
   rapportZ: (token: string, emplacementId: string, date?: string) =>
     httpClient.get<IRapportZ>(`${BASE}/rapport-z/${emplacementId}${date ? `?date=${date}` : ""}`, { token }),
+
+  retournerTicket: (token: string, ticketId: string, data: IRetourTicketPayload) =>
+    httpClient.post<ITicket>(`${BASE}/tickets/${ticketId}/retourner`, data, { token }),
 
   rapportVentesPeriode: (
     token: string, debut: string, fin: string, emplacementId?: string,

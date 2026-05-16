@@ -1,6 +1,6 @@
 import {
   IsString, IsNotEmpty, IsOptional, IsEnum, IsNumber, IsArray,
-  ValidateNested, Min, IsInt,
+  ValidateNested, Min, IsInt, IsUUID,
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
@@ -219,6 +219,50 @@ export class TicketResponseDto {
   lignes!: LigneTicketResponseDto[];
   paiements!: PaiementResponseDto[];
   monnaie?: number;
+  /** A3 : 'SALE' (défaut) ou 'RETURN'. */
+  type?: string;
+  /** A3 : ID du ticket d'origine si c'est un retour. */
+  refTicketId?: string | null;
+}
+
+// ─── Retours POS (A3) ───
+
+export class LigneRetourDto {
+  @ApiProperty({ description: "ID de la ligne du ticket original à retourner" })
+  @IsUUID()
+  ligneId!: string;
+
+  @ApiProperty({ description: "Quantité à retourner (≤ quantité originale non encore retournée)" })
+  @IsNumber()
+  @Min(0.001)
+  quantite!: number;
+}
+
+export class RetourTicketDto {
+  @ApiProperty({ type: [LigneRetourDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LigneRetourDto)
+  lignes!: LigneRetourDto[];
+
+  @ApiProperty({
+    description: "Méthode de remboursement",
+    example: "CASH",
+    enum: ["CASH", "MOBILE_MONEY", "CARD", "BANK_TRANSFER", "CREDIT", "LOYALTY", "OTHER"],
+  })
+  @IsString()
+  @IsNotEmpty()
+  methodeRemboursement!: string;
+
+  @ApiPropertyOptional({ description: "Référence externe (numéro de transaction MM, etc.)" })
+  @IsOptional()
+  @IsString()
+  reference?: string;
+
+  @ApiPropertyOptional({ description: "Motif du retour (libre)" })
+  @IsOptional()
+  @IsString()
+  motif?: string;
 }
 
 export class RapportZResponseDto {

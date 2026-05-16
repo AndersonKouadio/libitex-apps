@@ -1,5 +1,5 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
   type Database, tickets, ticketLines, ticketPayments,
@@ -212,6 +212,122 @@ export class TicketRepository {
       .update(batches)
       .set({ quantityRemaining: sql`${batches.quantityRemaining} - ${entier}` })
       .where(eq(batches.id, batchId));
+  }
+
+  // --- Retours POS (A3) ---
+
+  /**
+   * Crée un ticket de retour (type='RETURN') directement en statut COMPLETED.
+   * Le ticket est rattaché au ticket d'origine via refTicketId.
+   */
+  async creerTicketRetour(data: {
+    tenantId: string; locationId: string; userId: string;
+    ticketNumber: string; refTicketId: string;
+    customerId?: string; customerName?: string; customerPhone?: string;
+    subtotal: string; total: string;
+    motif?: string;
+  }) {
+    const [ticket] = await this.db
+      .insert(tickets)
+      .values({
+        tenantId: data.tenantId,
+        locationId: data.locationId,
+        userId: data.userId,
+        ticketNumber: data.ticketNumber,
+        ticketType: "RETURN",
+        refTicketId: data.refTicketId,
+        customerId: data.customerId,
+        customerName: data.customerName,
+        customerPhone: data.customerPhone,
+        subtotal: data.subtotal,
+        taxAmount: "0",
+        discountAmount: "0",
+        total: data.total,
+        note: data.motif ?? null,
+        status: "COMPLETED",
+        completedAt: new Date(),
+      } as any)
+      .returning();
+    return ticket;
+  }
+
+  /**
+   * Lignes d'un ticket enrichies du nom produit, nom variante et SKU.
+   * Utilisé pour construire le ticket de retour (copier unitPrice, variantId, etc.)
+   */
+  async obtenirLignesAvecDetails(ticketId: string) {
+    return this.db
+      .select({
+        id: ticketLines.id,
+        variantId: ticketLines.variantId,
+        nomProduit: products.name,
+        nomVariante: variants.name,
+        sku: variants.sku,
+        quantity: ticketLines.quantity,
+        unitPrice: ticketLines.unitPrice,
+        lineTotal: ticketLines.lineTotal,
+        taxRate: ticketLines.taxRate,
+      })
+      .from(ticketLines)
+      .innerJoin(variants, eq(ticketLines.variantId, variants.id))
+      .innerJoin(products, eq(variants.productId, products.id))
+      .where(eq(ticketLines.ticketId, ticketId));
+  }
+
+  /**
+   * Pour chaque ligneId du ticket original, calcule la quantité déjà retournée
+   * (somme des quantités dans les tickets RETURN qui référencent le même ticket).
+   * Retourne une Map<ligneOrigId, quantiteDejaRetournee>.
+   *
+   * Stratégie : les lignes de retour contiennent la même variantId que les
+   * lignes originales. On les regroupe par variantId pour retrouver les totaux.
+   * Un champ refTicketId sur le ticket de retour permet de filtrer précisément.
+   */
+  async quantitesDejaRetournees(
+    tenantId: string, refTicketId: string,
+  ): Promise<Map<string, number>> {
+    // Trouver tous les tickets RETURN qui référencent ce ticket
+    const ticketsRetour = await this.db
+      .select({ id: tickets.id })
+      .from(tickets)
+      .where(and(
+        eq(tickets.tenantId, tenantId),
+        eq(tickets.refTicketId as any, refTicketId),
+        eq(tickets.status, "COMPLETED"),
+      ));
+    if (ticketsRetour.length === 0) return new Map();
+
+    const retourIds = ticketsRetour.map((t) => t.id);
+
+    // Sommer les quantités retournées par (ticketId_orig_ligne, variantId)
+    // On relie via variantId car les lignes de retour n'ont pas de ref vers
+    // la ligne originale (on évite la sur-ingénierie du schéma).
+    const lignesRetour = await this.db
+      .select({
+        variantId: ticketLines.variantId,
+        totalRetourne: sql<number>`COALESCE(SUM(CAST(${ticketLines.quantity} AS NUMERIC)), 0)`,
+      })
+      .from(ticketLines)
+      .where(inArray(ticketLines.ticketId, retourIds))
+      .groupBy(ticketLines.variantId);
+
+    // Map variantId → quantité retournée (pour comparer ligne par ligne)
+    return new Map(lignesRetour.map((r) => [r.variantId, Number(r.totalRetourne)]));
+  }
+
+  /**
+   * Compte les tickets de retour existants pour un ticket original.
+   * Utilisé pour générer un suffixe unique au numéro RET- (ex: RET-T001-01).
+   */
+  async compterRetoursDuTicket(tenantId: string, refTicketId: string): Promise<number> {
+    const [row] = await this.db
+      .select({ n: sql<number>`COUNT(*)` })
+      .from(tickets)
+      .where(and(
+        eq(tickets.tenantId, tenantId),
+        eq(tickets.refTicketId as any, refTicketId),
+      ));
+    return Number(row?.n ?? 0);
   }
 
   // --- Lister ---

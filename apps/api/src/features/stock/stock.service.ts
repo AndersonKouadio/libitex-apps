@@ -133,6 +133,23 @@ export class StockService {
     return this.mapMouvement(mvt);
   }
 
+  /**
+   * A3 — Retours POS : remet en stock une quantite retournee par un client.
+   * Cree un mouvement RETURN_IN (enum deja present dans stock_movement_type).
+   * Ne verifie pas de seuil minimum — on peut toujours remettre en stock.
+   */
+  async retourStock(
+    tenantId: string, userId: string, variantId: string, locationId: string,
+    quantite: number, ticketRetourId: string,
+  ): Promise<void> {
+    await this.stockRepo.enregistrerMouvement({
+      tenantId, variantId, locationId,
+      movementType: "RETURN_IN", quantity: quantite.toString(), userId,
+      referenceType: "TICKET_RETURN", referenceId: ticketRetourId,
+      note: "Retour client POS",
+    });
+  }
+
   async ajuster(tenantId: string, userId: string, dto: AjustementStockDto): Promise<MouvementResponseDto> {
     const stockAvant = await this.stockRepo.obtenirStockActuel(
       tenantId, dto.varianteId, dto.emplacementId,

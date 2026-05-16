@@ -5,7 +5,7 @@ import {
 import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiQuery } from "@nestjs/swagger";
 import { VenteService } from "./vente.service";
-import { CreerTicketDto, CompleterTicketDto, ListerTicketsQueryDto } from "./dto/vente.dto";
+import { CreerTicketDto, CompleterTicketDto, ListerTicketsQueryDto, RetourTicketDto } from "./dto/vente.dto";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
@@ -56,6 +56,17 @@ export class VenteController {
   @Roles("ADMIN", "MANAGER")
   annuler(@CurrentUser() user: CurrentUserData, @Param("id") id: string) {
     return this.venteService.annuler(user.tenantId, user.userId, id);
+  }
+
+  @Post("tickets/:id/retourner")
+  @ApiOperation({ summary: "A3 — Créer un ticket de retour lié au ticket original (remboursement + remise en stock)" })
+  @Roles("ADMIN", "MANAGER", "CASHIER")
+  retournerTicket(
+    @CurrentUser() user: CurrentUserData,
+    @Param("id") id: string,
+    @Body() dto: RetourTicketDto,
+  ) {
+    return this.venteService.retournerTicket(user.tenantId, user.userId, id, dto);
   }
 
   @Get("tickets/:id")
