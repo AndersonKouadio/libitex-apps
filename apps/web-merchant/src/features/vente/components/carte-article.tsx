@@ -5,6 +5,7 @@ import { Package, AlertTriangle, Scale } from "lucide-react";
 import type { IProduit, IVariante } from "@/features/catalogue/types/produit.type";
 import { formatMontant } from "../utils/format";
 import { UniteMesure, UNITE_LABELS, uniteAccepteDecimal } from "@/features/unite/types/unite.type";
+import { obtenirPrixUnitaire, type TarifActif } from "../hooks/usePanier";
 
 interface Props {
   produit: IProduit;
@@ -13,9 +14,11 @@ interface Props {
   /** Nb portions servables si MENU (calcule depuis stock ingredients). */
   portionsMenu?: number;
   onAjouter: () => void;
+  /** Tarif actif (defaut DETAIL). Determine quel prix afficher. */
+  tarifActif?: TarifActif;
 }
 
-export function CarteArticle({ produit, variante, stock, portionsMenu, onAjouter }: Props) {
+export function CarteArticle({ produit, variante, stock, portionsMenu, onAjouter, tarifActif = "DETAIL" }: Props) {
   // MENU : stock gere via les ingredients de la recette. On affiche le nb
   // de portions servables (calcule cote backend) si fourni.
   const estMenu = produit.typeProduit === "MENU";
@@ -112,10 +115,17 @@ export function CarteArticle({ produit, variante, stock, portionsMenu, onAjouter
         )}
         <p className="text-[11px] text-muted/70 mt-0.5 font-mono truncate">{variante.sku}</p>
         <p className="text-base font-semibold text-foreground mt-2 tabular-nums">
-          {formatMontant(variante.prixDetail)}
+          {formatMontant(obtenirPrixUnitaire(variante, tarifActif))}
           <span className="text-[11px] font-normal text-muted ml-1">
             F{variante.prixParUnite && <> / {UNITE_LABELS[unite]}</>}
           </span>
+          {tarifActif !== "DETAIL" && (
+            <span className={`ml-1.5 text-[10px] font-semibold uppercase tracking-wider ${
+              tarifActif === "VIP" ? "text-warning" : "text-accent"
+            }`}>
+              {tarifActif === "VIP" ? "VIP" : "Gros"}
+            </span>
+          )}
         </p>
       </div>
     </button>
