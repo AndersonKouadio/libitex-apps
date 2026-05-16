@@ -11,6 +11,7 @@ import { CashSessionRepository } from "../session-caisse/repositories/cash-sessi
 import { FideliteService } from "../fidelite/fidelite.service";
 import { PromotionService } from "../promotion/promotion.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { ComptabiliteService } from "../comptabilite/comptabilite.service";
 import {
   RessourceIntrouvableException,
   PaiementInsuffisantException,
@@ -42,6 +43,7 @@ export class VenteService {
     private readonly fidelite: FideliteService,
     private readonly promotion: PromotionService,
     private readonly notifications: NotificationsService,
+    private readonly comptabilite: ComptabiliteService,
   ) {}
 
   /**
@@ -376,6 +378,19 @@ export class VenteService {
         totalPaye,
         methodes: dto.paiements.map((p) => p.methode),
       },
+    });
+
+    // Module B2 OHADA — generation de l'ecriture comptable de vente.
+    // Fire-and-forget : une erreur compta ne doit JAMAIS bloquer une vente.
+    // Le service capture ses propres erreurs et log sans rethrow.
+    void this.comptabilite.enregistrerVente(tenantId, {
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      completedAt: complete.completedAt ?? new Date(),
+      totalTtc: totalTicket,
+      totalTva: Number(ticket.taxAmount ?? 0),
+      totalRemise: Number(ticket.discountAmount ?? 0),
+      paiements: dto.paiements.map((p) => ({ methode: p.methode, montant: Number(p.montant) })),
     });
 
     // Broadcast aux autres clients du tenant : stock + disponibilites

@@ -25,6 +25,9 @@ import { RealtimeModule } from "./features/realtime/realtime.module";
 import { HealthModule } from "./features/health/health.module";
 import { NotificationsModule } from "./features/notifications/notifications.module";
 import { LocationSettingsModule } from "./features/location-settings/location-settings.module";
+import { ComptabiliteModule } from "./features/comptabilite/comptabilite.module";
+import { AbonnementModule } from "./features/abonnement/abonnement.module";
+import { SuperAdminModule } from "./features/super-admin/super-admin.module";
 
 @Module({
   imports: [
@@ -69,6 +72,9 @@ import { LocationSettingsModule } from "./features/location-settings/location-se
     HealthModule,
     NotificationsModule,
     LocationSettingsModule,
+    ComptabiliteModule,
+    AbonnementModule,
+    SuperAdminModule,
   ],
   providers: [
     // Active le ThrottlerGuard globalement. Les routes peuvent override

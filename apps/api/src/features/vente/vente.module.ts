@@ -7,6 +7,7 @@ import { RealtimeModule } from "../realtime/realtime.module";
 import { FideliteModule } from "../fidelite/fidelite.module";
 import { PromotionModule } from "../promotion/promotion.module";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { ComptabiliteModule } from "../comptabilite/comptabilite.module";
 import { VenteController } from "./vente.controller";
 import { VenteService } from "./vente.service";
 import { TicketRepository } from "./repositories/ticket.repository";
@@ -20,6 +21,7 @@ import { TicketRepository } from "./repositories/ticket.repository";
     FideliteModule,
     PromotionModule,
     NotificationsModule,
+    ComptabiliteModule,
     forwardRef(() => SessionCaisseModule),
   ],
   controllers: [VenteController],
