@@ -42,6 +42,40 @@ export class AchatService {
     return rows.map((r) => this.mapFournisseur(r));
   }
 
+  /**
+   * Import en lot : capture les erreurs par ligne sans interrompre.
+   * Retourne {total, succes, erreurs[]} pour affichage UI.
+   */
+  async importerFournisseurs(
+    tenantId: string,
+    items: CreerFournisseurDto[],
+  ): Promise<{ total: number; succes: number; erreurs: { ligne: number; message: string }[] }> {
+    const erreurs: { ligne: number; message: string }[] = [];
+    let succes = 0;
+    for (let i = 0; i < items.length; i++) {
+      const dto = items[i]!;
+      try {
+        await this.achatRepo.creerFournisseur({
+          tenantId,
+          name: dto.nom,
+          contactName: dto.nomContact,
+          phone: dto.telephone,
+          email: dto.email,
+          address: dto.adresse,
+          paymentTerms: dto.conditionsPaiement,
+          notes: dto.notes,
+        });
+        succes += 1;
+      } catch (err) {
+        erreurs.push({
+          ligne: i + 1,
+          message: err instanceof Error ? err.message : "Erreur inconnue",
+        });
+      }
+    }
+    return { total: items.length, succes, erreurs };
+  }
+
   async obtenirFournisseur(tenantId: string, id: string): Promise<FournisseurResponseDto> {
     const row = await this.achatRepo.trouverFournisseur(tenantId, id);
     if (!row) throw new NotFoundException("Fournisseur introuvable");

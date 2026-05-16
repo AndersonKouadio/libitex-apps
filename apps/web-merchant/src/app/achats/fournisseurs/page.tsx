@@ -4,7 +4,8 @@ import { useState } from "react";
 import {
   Button, SearchField, Card, Skeleton,
 } from "@heroui/react";
-import { Plus, Pencil, Trash2, Phone, Mail, Building2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Phone, Mail, Building2, Upload } from "lucide-react";
+import Link from "next/link";
 import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
@@ -49,10 +50,18 @@ export default function PageFournisseurs() {
         titre={`${fournisseurs?.length ?? 0} fournisseur${(fournisseurs?.length ?? 0) > 1 ? "s" : ""}`}
         description="Repertoire des fournisseurs reguliers — utilises a la creation des bons de commande."
         actions={
-          <Button variant="primary" className="gap-2" onPress={ouvrirCreation}>
-            <Plus size={16} />
-            Nouveau fournisseur
-          </Button>
+          <>
+            <Link href="/achats/fournisseurs/import">
+              <Button variant="secondary" className="gap-1.5">
+                <Upload size={14} />
+                Importer CSV
+              </Button>
+            </Link>
+            <Button variant="primary" className="gap-2" onPress={ouvrirCreation}>
+              <Plus size={16} />
+              Nouveau fournisseur
+            </Button>
+          </>
         }
       />
 

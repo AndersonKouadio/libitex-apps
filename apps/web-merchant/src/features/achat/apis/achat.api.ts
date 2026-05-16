@@ -23,6 +23,11 @@ export const achatAPI = {
   creerFournisseur: (token: string, data: FournisseurDTO) =>
     httpClient.post<IFournisseur>(`${BASE}/fournisseurs`, data, { token }),
 
+  importerFournisseurs: (token: string, fournisseurs: FournisseurDTO[]) =>
+    httpClient.post<{ total: number; succes: number; erreurs: { ligne: number; message: string }[] }>(
+      `${BASE}/fournisseurs/import`, { fournisseurs }, { token },
+    ),
+
   modifierFournisseur: (token: string, id: string, data: Partial<FournisseurDTO> & { actif?: boolean }) =>
     httpClient.patch<IFournisseur>(`${BASE}/fournisseurs/${id}`, data, { token }),
 

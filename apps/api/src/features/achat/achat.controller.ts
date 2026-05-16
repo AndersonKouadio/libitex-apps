@@ -4,6 +4,8 @@ import {
 } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags, ApiOperation } from "@nestjs/swagger";
+import { Type } from "class-transformer";
+import { ValidateNested, IsArray } from "class-validator";
 import { AchatService } from "./achat.service";
 import {
   CreerFournisseurDto, ModifierFournisseurDto,
@@ -12,6 +14,13 @@ import {
 } from "./dto/achat.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
+
+class ImporterFournisseursDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreerFournisseurDto)
+  fournisseurs!: CreerFournisseurDto[];
+}
 
 @ApiTags("Achats")
 @ApiBearerAuth()
@@ -30,6 +39,16 @@ export class AchatController {
     @Body() dto: CreerFournisseurDto,
   ) {
     return this.achatService.creerFournisseur(user.tenantId, dto);
+  }
+
+  @Post("fournisseurs/import")
+  @ApiOperation({ summary: "Import en lot de fournisseurs — {total, succes, erreurs[]}" })
+  @Roles("ADMIN", "MANAGER", "WAREHOUSE")
+  importerFournisseurs(
+    @CurrentUser() user: CurrentUserData,
+    @Body() dto: ImporterFournisseursDto,
+  ) {
+    return this.achatService.importerFournisseurs(user.tenantId, dto.fournisseurs);
   }
 
   @Get("fournisseurs")
