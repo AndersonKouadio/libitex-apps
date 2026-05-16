@@ -191,7 +191,7 @@ export class StockRepository {
     return this.db
       .select({
         variantId: stockMovements.variantId,
-        quantite: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+        quantite: sql<number>`SUM(${stockMovements.quantity})`,
         typeProduit: products.productType,
       })
       .from(stockMovements)
@@ -214,7 +214,7 @@ export class StockRepository {
         nomProduit: products.name,
         nomVariante: variants.name,
         typeProduit: products.productType,
-        quantite: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+        quantite: sql<number>`SUM(${stockMovements.quantity})`,
       })
       .from(stockMovements)
       .innerJoin(variants, eq(stockMovements.variantId, variants.id))
