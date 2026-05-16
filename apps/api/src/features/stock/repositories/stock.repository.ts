@@ -197,10 +197,7 @@ export class StockRepository {
       .from(stockMovements)
       .innerJoin(variants, eq(stockMovements.variantId, variants.id))
       .innerJoin(products, eq(variants.productId, products.id))
-      .where(and(
-        eq(stockMovements.tenantId, tenantId),
-        eq(products.isActive, true),
-      ))
+      .where(eq(stockMovements.tenantId, tenantId))
       .groupBy(stockMovements.variantId, products.productType);
   }
 
@@ -222,10 +219,7 @@ export class StockRepository {
       .from(stockMovements)
       .innerJoin(variants, eq(stockMovements.variantId, variants.id))
       .innerJoin(products, eq(variants.productId, products.id))
-      .where(and(
-        eq(stockMovements.tenantId, tenantId),
-        eq(products.isActive, true),
-      ))
+      .where(eq(stockMovements.tenantId, tenantId))
       .groupBy(
         stockMovements.variantId, variants.sku, products.name,
         variants.name, products.productType,
