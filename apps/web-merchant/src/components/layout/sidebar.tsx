@@ -92,10 +92,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
   const { deconnecter, utilisateur, boutiqueActive } = useAuth();
   const [replie, setReplie] = useState(false);
   const { data: alertes } = useAlertesResumeQuery();
-  // Total = ruptures + alertes. Si > 0, on affiche le badge sur l'entree
-  // Stock. Permet au gestionnaire de voir d'un coup d'œil qu'il y a a
-  // faire sans devoir naviguer.
-  const nbAlertesStock = (alertes?.nbAlertes ?? 0) + (alertes?.nbRuptures ?? 0);
+  // Total = ruptures + alertes seuil bas + lots expires + lots bientot perimes.
+  // Permet au gestionnaire de voir d'un coup d'œil qu'il y a a faire sans
+  // devoir naviguer.
+  const nbAlertesStock =
+    (alertes?.nbAlertes ?? 0) +
+    (alertes?.nbRuptures ?? 0) +
+    (alertes?.nbExpires ?? 0) +
+    (alertes?.nbBientotPerimes ?? 0);
 
   const modePOS = pathname === "/pos" || pathname.startsWith("/pos/");
 
