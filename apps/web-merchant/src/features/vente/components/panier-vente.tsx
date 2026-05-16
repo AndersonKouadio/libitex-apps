@@ -4,7 +4,7 @@ import { Button } from "@heroui/react";
 import {
   ShoppingCart, PauseCircle, Receipt, Tag, X, User, StickyNote, Eye, Trash2,
 } from "lucide-react";
-import type { ArticlePanier, Remise, ClientPanier } from "../hooks/usePanier";
+import type { ArticlePanier, Remise, ClientPanier, TarifActif } from "../hooks/usePanier";
 import { formatMontant } from "../utils/format";
 import { LignePanier } from "./ligne-panier";
 import { BoutonPOS } from "./bouton-pos";
@@ -49,6 +49,10 @@ interface Props {
   onChoisirClient?: () => void;
   /** Optionnel : ouvre l'apercu du ticket. */
   onApercu?: () => void;
+  /** Tarif actif applique aux articles (defaut DETAIL). */
+  tarifActif?: TarifActif;
+  /** Bascule le tarif actif (recalcule les prix des lignes existantes). */
+  onChangerTarif?: (tarif: TarifActif) => void;
 }
 
 export function PanierVente({
@@ -57,6 +61,7 @@ export function PanierVente({
   onSaisirQuantite, onPersonnaliser, onAppliquerRemiseLigne,
   onAppliquerRemiseGlobale, onRetirerRemiseGlobale, onAppliquerCodePromo,
   onModifierNote, onChoisirClient, onApercu, mode = "lateral",
+  tarifActif = "DETAIL", onChangerTarif,
 }: Props) {
   const vide = articles.length === 0;
   const aRemise = !!remiseGlobale && remiseGlobale.montant > 0;
@@ -145,6 +150,9 @@ export function PanierVente({
                 maxLength={120}
               />
             </div>
+          )}
+          {onChangerTarif && (
+            <ToggleTarif tarifActif={tarifActif} onChanger={onChangerTarif} />
           )}
         </div>
       )}
@@ -290,6 +298,55 @@ export function PanierVente({
           </BoutonPOS>
         </div>
       </footer>
+    </div>
+  );
+}
+
+const LIBELLES_TARIF: Record<TarifActif, string> = {
+  DETAIL: "Détail",
+  GROS: "Gros",
+  VIP: "VIP",
+};
+
+/**
+ * Toggle segmente Détail / Gros / VIP. Recalcule automatiquement les prix
+ * des lignes existantes du panier via le callback. Le style accentue l'option
+ * active et affiche un fond doré pour VIP (clin d'œil au statut premium).
+ */
+function ToggleTarif({
+  tarifActif, onChanger,
+}: { tarifActif: TarifActif; onChanger: (t: TarifActif) => void }) {
+  const options: TarifActif[] = ["DETAIL", "GROS", "VIP"];
+  return (
+    <div
+      className="flex items-center gap-0 rounded-md border border-border bg-surface p-0.5"
+      role="radiogroup"
+      aria-label="Tarif applique"
+    >
+      <Tag size={13} className="text-muted ml-1.5 mr-1 shrink-0" />
+      {options.map((t) => {
+        const actif = t === tarifActif;
+        return (
+          <button
+            key={t}
+            type="button"
+            role="radio"
+            aria-checked={actif}
+            onClick={() => onChanger(t)}
+            className={`flex-1 px-2 py-1 text-xs font-medium rounded transition-colors ${
+              actif
+                ? t === "VIP"
+                  ? "bg-warning/15 text-warning"
+                  : t === "GROS"
+                  ? "bg-accent/15 text-accent"
+                  : "bg-foreground/10 text-foreground"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            {LIBELLES_TARIF[t]}
+          </button>
+        );
+      })}
     </div>
   );
 }

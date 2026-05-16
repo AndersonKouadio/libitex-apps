@@ -293,6 +293,7 @@ export default function PagePOS() {
             stocks={stocks}
             disponibilites={dispos}
             onAjouter={saisieQuantite.ajouterDepuisGrille}
+            tarifActif={panier.tarifActif}
           />
         </div>
       </div>
@@ -325,6 +326,8 @@ export default function PagePOS() {
           onModifierNote={panier.definirNote}
           onChoisirClient={() => setModalClientOuvert(true)}
           onApercu={() => setApercuOuvert(true)}
+          tarifActif={panier.tarifActif}
+          onChangerTarif={panier.definirTarifActif}
         />
       </div>
 
@@ -393,6 +396,8 @@ export default function PagePOS() {
               onModifierNote={panier.definirNote}
               onChoisirClient={() => setModalClientOuvert(true)}
               onApercu={() => setApercuOuvert(true)}
+              tarifActif={panier.tarifActif}
+              onChangerTarif={panier.definirTarifActif}
             />
           </Drawer.Dialog>
         </Drawer.Content>
@@ -488,7 +493,14 @@ export default function PagePOS() {
       <ModalClientPanier
         ouvert={modalClientOuvert}
         clientCourant={panier.client}
-        onConfirmer={panier.definirClient}
+        onConfirmer={(client) => {
+          panier.definirClient(client);
+          // Si client VIP selectionne ET tarif actuel = DETAIL, propose
+          // automatiquement le tarif VIP. L'utilisateur peut toujours rebasculer.
+          if (client?.segment === "VIP" && panier.tarifActif === "DETAIL") {
+            panier.definirTarifActif("VIP");
+          }
+        }}
         onFermer={() => setModalClientOuvert(false)}
       />
 

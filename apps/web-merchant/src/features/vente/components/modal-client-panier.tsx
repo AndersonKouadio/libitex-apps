@@ -32,11 +32,12 @@ export function ModalClientPanier({ ouvert, clientCourant, onConfirmer, onFermer
   const { data, isLoading } = useClientListQuery(1, recherche.length >= 2 ? recherche : undefined);
   const clients = data?.data ?? [];
 
-  function selectionner(c: { id: string; prenom: string; nomFamille: string | null; telephone: string | null }) {
+  function selectionner(c: { id: string; prenom: string; nomFamille: string | null; telephone: string | null; segment?: string }) {
     onConfirmer({
       id: c.id,
       nom: [c.prenom, c.nomFamille].filter(Boolean).join(" "),
       telephone: c.telephone ?? undefined,
+      segment: c.segment as any,
     });
     onFermer();
     reset();

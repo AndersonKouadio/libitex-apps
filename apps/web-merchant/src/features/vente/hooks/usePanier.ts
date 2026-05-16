@@ -25,6 +25,27 @@ export interface Remise {
   raison?: string;
 }
 
+export type TarifActif = "DETAIL" | "GROS" | "VIP";
+
+/**
+ * Selectionne le prix unitaire effectif selon le tarif actif, avec fallback
+ * intelligent vers le prix de detail si le tarif gros ou VIP n'est pas defini
+ * sur la variante. Permet d'activer le tarif gros globalement sans casser les
+ * produits qui n'ont que le prix de detail renseigne.
+ */
+export function obtenirPrixUnitaire(
+  variante: { prixDetail: number; prixGros?: number | null; prixVip?: number | null },
+  tarif: TarifActif,
+): number {
+  if (tarif === "GROS" && variante.prixGros != null && variante.prixGros > 0) {
+    return variante.prixGros;
+  }
+  if (tarif === "VIP" && variante.prixVip != null && variante.prixVip > 0) {
+    return variante.prixVip;
+  }
+  return variante.prixDetail;
+}
+
 export interface ArticlePanier {
   varianteId: string;
   nomProduit: string;
@@ -39,6 +60,14 @@ export interface ArticlePanier {
   prixParUnite: boolean;
   supplements: SupplementChoisi[];
   remise: Remise | null;
+  /** Tarif applique au moment de l'ajout (DETAIL/GROS/VIP). Permet de tracer
+   *  quel prix a ete utilise et de recalculer si le tarif global change. */
+  tarifApplique: TarifActif;
+  /** Prix de detail original (snapshot a l'ajout) pour pouvoir basculer entre
+   *  tarifs sans re-requeter le catalogue. */
+  prixDetail: number;
+  prixGros: number | null;
+  prixVip: number | null;
 }
 
 /**
@@ -84,6 +113,9 @@ export interface ClientPanier {
   id?: string;
   nom?: string;
   telephone?: string;
+  /** Segment client (VIP/REGULIER/...). Permet l'auto-application du tarif VIP
+   *  quand un client VIP est selectionne dans le POS. */
+  segment?: "VIP" | "REGULIER" | "OCCASIONNEL" | "INACTIF" | "NOUVEAU";
 }
 
 /**
@@ -101,6 +133,7 @@ interface PanierPersiste {
   remiseGlobale: Remise | null;
   note: string;
   client: ClientPanier | null;
+  tarifActif?: TarifActif;
 }
 
 function lirePanierPersiste(): PanierPersiste | null {
@@ -138,6 +171,9 @@ export function usePanier() {
   const [client, setClient] = useState<ClientPanier | null>(
     () => persistInitial?.client ?? null,
   );
+  const [tarifActif, setTarifActif] = useState<TarifActif>(
+    () => persistInitial?.tarifActif ?? "DETAIL",
+  );
 
   // Persiste a chaque change. Le 1er render persiste a vide, donc skip
   // via une ref pour ne pas ecrire inutilement au mount.
@@ -147,8 +183,8 @@ export function usePanier() {
       skipFirstWrite.current = false;
       return;
     }
-    ecrirePanierPersiste({ articles, remiseGlobale, note, client });
-  }, [articles, remiseGlobale, note, client]);
+    ecrirePanierPersiste({ articles, remiseGlobale, note, client, tarifActif });
+  }, [articles, remiseGlobale, note, client, tarifActif]);
 
   const ajouter = useCallback(
     (
@@ -188,18 +224,41 @@ export function usePanier() {
           sku: variante.sku,
           image: produit.images?.[0] ?? null,
           quantite: arrondirAuPas(qInit, variante.pasMin),
-          prixUnitaire: variante.prixDetail,
+          prixUnitaire: obtenirPrixUnitaire(variante, tarifActif),
           uniteVente: unite,
           pasMin: variante.pasMin,
           prixParUnite: variante.prixParUnite,
           supplements: supplements ?? [],
           remise: null,
+          tarifApplique: tarifActif,
+          prixDetail: variante.prixDetail,
+          prixGros: variante.prixGros ?? null,
+          prixVip: variante.prixVip ?? null,
         };
         return [...prev, { ...nouveau, totalLigne: recalculerTotalLigne(nouveau) }];
       });
     },
-    [],
+    [tarifActif],
   );
+
+  /**
+   * Bascule le tarif actif et recalcule les prix unitaires de toutes les
+   * lignes existantes selon le nouveau tarif. Le total de chaque ligne est
+   * regenere (utilise les snapshots prixDetail/prixGros/prixVip stockes).
+   */
+  const definirTarifActif = useCallback((nouveau: TarifActif) => {
+    setTarifActif(nouveau);
+    setArticles((prev) =>
+      prev.map((a) => {
+        const nouveauPrix = obtenirPrixUnitaire(
+          { prixDetail: a.prixDetail, prixGros: a.prixGros, prixVip: a.prixVip },
+          nouveau,
+        );
+        const recalcule = { ...a, prixUnitaire: nouveauPrix, tarifApplique: nouveau };
+        return { ...recalcule, totalLigne: recalculerTotalLigne(recalcule) };
+      }),
+    );
+  }, []);
 
   const modifierQuantite = useCallback((varianteId: string, deltaSigned: number) => {
     setArticles((prev) =>
@@ -302,6 +361,9 @@ export function usePanier() {
     setRemiseGlobale(null);
     setNote("");
     setClient(null);
+    // Le tarif revient a DETAIL apres chaque ticket pour eviter de garder
+    // par inadvertance un tarif Gros/VIP pour le client suivant.
+    setTarifActif("DETAIL");
   }, []);
 
   const chargerDepuisTicket = useCallback((
@@ -334,6 +396,12 @@ export function usePanier() {
         prixParUnite: l.prixParUnite ?? false,
         supplements: l.supplements ?? [],
         remise: null,
+        // Pour un ticket charge en attente, on conserve le prix figé tel quel
+        // — pas de re-calcul. Le tarif applique est inconnu (defaut DETAIL).
+        tarifApplique: "DETAIL" as TarifActif,
+        prixDetail: l.prixUnitaire,
+        prixGros: null,
+        prixVip: null,
       })),
     );
   }, []);
@@ -349,11 +417,12 @@ export function usePanier() {
   const nombreArticles = articles.reduce((s, a) => s + a.quantite, 0);
 
   return {
-    articles, sousTotal, total, nombreArticles, note, client,
+    articles, sousTotal, total, nombreArticles, note, client, tarifActif,
     remiseGlobale: remiseGlobale ? { ...remiseGlobale, montant: montantRemiseGlobale } : null,
     ajouter, modifierQuantite, definirQuantite, definirSupplementsLigne,
     definirRemiseLigne, definirRemiseGlobale,
     definirNote: setNote, definirClient: setClient,
+    definirTarifActif,
     retirer, vider, chargerDepuisTicket,
   };
 }

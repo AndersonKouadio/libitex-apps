@@ -11,6 +11,7 @@ import type { IProduit, IVariante } from "@/features/catalogue/types/produit.typ
 import type { IStockEmplacement } from "@/features/stock/types/stock.type";
 import { useCategorieListQuery } from "@/features/catalogue/queries/categorie-list.query";
 import { CarteArticle } from "./carte-article";
+import type { TarifActif } from "../hooks/usePanier";
 
 interface Props {
   produits: IProduit[];
@@ -21,6 +22,8 @@ interface Props {
     portionsMenu: Record<string, number>;
   };
   onAjouter: (produit: IProduit, variante: IVariante) => void;
+  /** Tarif actif (defaut DETAIL) — affecte le prix affiche sur les cartes. */
+  tarifActif?: TarifActif;
 }
 
 const TOUTES = "__TOUTES__";
@@ -34,7 +37,7 @@ interface OngletDef {
   icone: LucideIcon;
 }
 
-export function GrilleProduits({ produits, stocks, disponibilites, onAjouter }: Props) {
+export function GrilleProduits({ produits, stocks, disponibilites, onAjouter, tarifActif = "DETAIL" }: Props) {
   const [recherche, setRecherche] = useState("");
   const [categorieActive, setCategorieActive] = useState<string>(TOUTES);
   const { data: categories } = useCategorieListQuery();
@@ -208,6 +211,7 @@ export function GrilleProduits({ produits, stocks, disponibilites, onAjouter }: 
                     stock={stockFinal}
                     portionsMenu={produit.typeProduit === "MENU" ? portionsMap[variante.id] : undefined}
                     onAjouter={() => onAjouter(produit, variante)}
+                    tarifActif={tarifActif}
                   />
                 );
               }),
