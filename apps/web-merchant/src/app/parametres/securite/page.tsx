@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Card, Button, TextField, Input, Label, Skeleton, toast,
 } from "@heroui/react";
-import { Shield, ShieldCheck, Copy, AlertTriangle, KeyRound, Smartphone, Check } from "lucide-react";
+import { Shield, ShieldCheck, Copy, AlertTriangle, KeyRound, Smartphone, Check, QrCode } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { authAPI, type IMfaSetupResponse } from "@/features/auth/apis/auth.api";
+import { genererQrCodeSvg } from "@/lib/qrcode";
 
 type Etape = "etat" | "setup" | "verification" | "desactivation";
 
@@ -21,6 +22,17 @@ export default function PageSecurite() {
   const [enCours, setEnCours] = useState(false);
 
   const mfaActif = utilisateur?.mfaEnabled ?? false;
+
+  // Genere le QR Code SVG une seule fois quand setupData arrive.
+  // Niveau MEDIUM (15%) : compromis lisibilite / taille pour scan ecran.
+  const qrCodeSvg = useMemo(() => {
+    if (!setupData) return "";
+    return genererQrCodeSvg(setupData.urlProvisionning, {
+      niveauCorrection: "MEDIUM",
+      taille: 200,
+      marge: 3,
+    });
+  }, [setupData]);
 
   async function lancerSetup() {
     if (!token) return;
@@ -161,51 +173,65 @@ export default function PageSecurite() {
             </Card.Title>
           </Card.Header>
           <Card.Content className="p-5 space-y-5">
-            <div>
-              <p className="text-sm text-foreground mb-2">
-                Dans ton app authenticator, choisis <strong>« Saisie manuelle »</strong> et entre :
-              </p>
-              <ul className="text-sm space-y-1.5 mb-3">
-                <li>
-                  <span className="text-muted">Compte :</span>{" "}
-                  <span className="font-mono text-foreground">{utilisateur.email}</span>
-                </li>
-                <li>
-                  <span className="text-muted">Émetteur :</span>{" "}
-                  <span className="font-mono text-foreground">LIBITEX</span>
-                </li>
-                <li>
-                  <span className="text-muted">Type :</span>{" "}
-                  <span className="text-foreground">Basé sur le temps (TOTP)</span>
-                </li>
-              </ul>
-              <div className="rounded-lg border border-border bg-muted/5 p-3">
-                <p className="text-xs text-muted uppercase tracking-wider mb-1.5">Clé secrète</p>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 font-mono text-sm text-foreground break-all select-all">
-                    {setupData.secret}
-                  </code>
-                  <Button
-                    variant="ghost"
-                    className="gap-1 text-xs shrink-0"
-                    onPress={copierSecret}
-                    aria-label="Copier le secret"
-                  >
-                    <Copy size={12} />
-                    Copier
-                  </Button>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-5 items-start">
+              {/* QR Code — chemin principal, scan avec l'app authenticator */}
+              <div className="flex flex-col items-center gap-2">
+                <div
+                  className="rounded-lg border border-border bg-white p-2"
+                  dangerouslySetInnerHTML={{ __html: qrCodeSvg }}
+                  aria-label="QR Code pour configuration de la double authentification"
+                />
+                <p className="text-[11px] text-muted flex items-center gap-1">
+                  <QrCode size={11} />
+                  Scanne avec ton app authenticator
+                </p>
+              </div>
+
+              {/* Saisie manuelle — fallback si l'utilisateur ne peut pas scanner */}
+              <div className="min-w-0">
+                <p className="text-sm text-foreground mb-2">
+                  <strong>Méthode 1 :</strong> scanne le QR code à gauche avec Google Authenticator,
+                  Authy, 1Password ou Microsoft Authenticator.
+                </p>
+                <details className="text-sm">
+                  <summary className="cursor-pointer text-muted hover:text-foreground py-1">
+                    <strong className="text-foreground">Méthode 2 :</strong>{" "}
+                    saisie manuelle si tu ne peux pas scanner
+                  </summary>
+                  <ul className="text-sm space-y-1.5 mt-2 mb-3">
+                    <li>
+                      <span className="text-muted">Compte :</span>{" "}
+                      <span className="font-mono text-foreground">{utilisateur.email}</span>
+                    </li>
+                    <li>
+                      <span className="text-muted">Émetteur :</span>{" "}
+                      <span className="font-mono text-foreground">LIBITEX</span>
+                    </li>
+                    <li>
+                      <span className="text-muted">Type :</span>{" "}
+                      <span className="text-foreground">Basé sur le temps (TOTP)</span>
+                    </li>
+                  </ul>
+                  <div className="rounded-lg border border-border bg-muted/5 p-3">
+                    <p className="text-xs text-muted uppercase tracking-wider mb-1.5">Clé secrète</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 font-mono text-sm text-foreground break-all select-all">
+                        {setupData.secret}
+                      </code>
+                      <Button
+                        variant="ghost"
+                        className="gap-1 text-xs shrink-0"
+                        onPress={copierSecret}
+                        aria-label="Copier le secret"
+                      >
+                        <Copy size={12} />
+                        Copier
+                      </Button>
+                    </div>
+                  </div>
+                </details>
               </div>
             </div>
-
-            <details className="text-xs">
-              <summary className="cursor-pointer text-muted hover:text-foreground">
-                URL otpauth (pour génération de QR code manuelle)
-              </summary>
-              <div className="mt-2 rounded-lg border border-border bg-muted/5 p-3 break-all font-mono text-[11px]">
-                {setupData.urlProvisionning}
-              </div>
-            </details>
 
             <div className="border-t border-border pt-4">
               <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
