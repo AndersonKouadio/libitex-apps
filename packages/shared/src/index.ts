@@ -275,3 +275,98 @@ export const CURRENCY_LABELS: Record<Currency, string> = {
   GBP: "Livre sterling (GBP)",
   CNY: "Yuan chinois (CNY)",
 };
+
+// ─── Plans SaaS ───
+
+export enum SubscriptionPlan {
+  TRIAL = "TRIAL",
+  STARTER = "STARTER",
+  PRO = "PRO",
+  BUSINESS = "BUSINESS",
+  ENTERPRISE = "ENTERPRISE",
+}
+
+export enum SubscriptionStatus {
+  ACTIVE = "ACTIVE",
+  TRIAL = "TRIAL",
+  PAST_DUE = "PAST_DUE",
+  SUSPENDED = "SUSPENDED",
+  CANCELLED = "CANCELLED",
+}
+
+/**
+ * Limites par plan. `null` signifie illimite. Les chiffres sont indicatifs
+ * (a aligner avec le pricing reel). Le plan TRIAL = STARTER pendant 14j.
+ */
+export interface PlanLimits {
+  maxBoutiques: number | null;
+  maxUtilisateurs: number | null;
+  maxProduits: number | null;
+  maxEmplacements: number | null;
+  /** Acces aux features avancees (rapports avances, multi-tarifs, API). */
+  features: {
+    b2b: boolean;
+    multiDevise: boolean;
+    apiAccess: boolean;
+    customDomain: boolean;
+    marketplace: boolean;
+  };
+}
+
+export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
+  [SubscriptionPlan.TRIAL]: {
+    maxBoutiques: 1,
+    maxUtilisateurs: 3,
+    maxProduits: 50,
+    maxEmplacements: 2,
+    features: { b2b: false, multiDevise: false, apiAccess: false, customDomain: false, marketplace: false },
+  },
+  [SubscriptionPlan.STARTER]: {
+    maxBoutiques: 1,
+    maxUtilisateurs: 3,
+    maxProduits: 200,
+    maxEmplacements: 2,
+    features: { b2b: false, multiDevise: false, apiAccess: false, customDomain: false, marketplace: false },
+  },
+  [SubscriptionPlan.PRO]: {
+    maxBoutiques: 3,
+    maxUtilisateurs: 10,
+    maxProduits: 2000,
+    maxEmplacements: 5,
+    features: { b2b: true, multiDevise: true, apiAccess: false, customDomain: false, marketplace: false },
+  },
+  [SubscriptionPlan.BUSINESS]: {
+    maxBoutiques: 10,
+    maxUtilisateurs: 50,
+    maxProduits: 20000,
+    maxEmplacements: 20,
+    features: { b2b: true, multiDevise: true, apiAccess: true, customDomain: true, marketplace: true },
+  },
+  [SubscriptionPlan.ENTERPRISE]: {
+    maxBoutiques: null,
+    maxUtilisateurs: null,
+    maxProduits: null,
+    maxEmplacements: null,
+    features: { b2b: true, multiDevise: true, apiAccess: true, customDomain: true, marketplace: true },
+  },
+};
+
+export const PLAN_LABELS: Record<SubscriptionPlan, string> = {
+  [SubscriptionPlan.TRIAL]: "Essai gratuit",
+  [SubscriptionPlan.STARTER]: "Starter",
+  [SubscriptionPlan.PRO]: "Pro",
+  [SubscriptionPlan.BUSINESS]: "Business",
+  [SubscriptionPlan.ENTERPRISE]: "Enterprise",
+};
+
+/** Prix mensuel en FCFA (a aligner avec le pricing reel — indicatif). */
+export const PLAN_PRICES_FCFA: Record<SubscriptionPlan, number> = {
+  [SubscriptionPlan.TRIAL]: 0,
+  [SubscriptionPlan.STARTER]: 15_000,
+  [SubscriptionPlan.PRO]: 45_000,
+  [SubscriptionPlan.BUSINESS]: 120_000,
+  [SubscriptionPlan.ENTERPRISE]: 0, // sur devis
+};
+
+/** Duree du trial offert a l'inscription (jours). */
+export const TRIAL_DURATION_DAYS = 14;

@@ -14,3 +14,5 @@ export * from "./promotions";
 export * from "./reservations";
 export * from "./notifications";
 export * from "./location-settings";
+export * from "./accounting";
+export * from "./devis";

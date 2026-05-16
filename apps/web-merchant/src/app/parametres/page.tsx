@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Card } from "@heroui/react";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
-import { Store, Users, ChevronRight, Building2, User, MapPin, Wallet, Printer, Sparkles, Tag, MessageCircle, Shield } from "lucide-react";
+import { Store, Users, ChevronRight, Building2, User, MapPin, Wallet, Printer, Sparkles, Tag, MessageCircle, Shield, Crown } from "lucide-react";
 
 interface SectionConfig {
   href: string;
@@ -91,6 +91,13 @@ const SECTIONS: SectionConfig[] = [
     titre: "Sécurité (MFA)",
     description: "Active la double authentification (Google Authenticator, Authy) sur ton compte.",
     classes: "bg-danger/10 text-danger",
+  },
+  {
+    href: "/parametres/abonnement",
+    icone: Crown,
+    titre: "Abonnement",
+    description: "Plan souscrit, utilisation et limites. Passez à un plan supérieur pour débloquer plus de fonctionnalités.",
+    classes: "bg-warning/10 text-warning",
   },
 ];
 

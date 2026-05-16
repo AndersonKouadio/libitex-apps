@@ -13,6 +13,22 @@ export const activitySectorEnum = pgEnum("activity_sector", [
   "AUTRE",
 ]);
 
+export const subscriptionPlanEnum = pgEnum("subscription_plan", [
+  "TRIAL",
+  "STARTER",
+  "PRO",
+  "BUSINESS",
+  "ENTERPRISE",
+]);
+
+export const subscriptionStatusEnum = pgEnum("subscription_status", [
+  "ACTIVE",
+  "TRIAL",
+  "PAST_DUE",
+  "SUSPENDED",
+  "CANCELLED",
+]);
+
 export const tenants = pgTable("tenants", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -32,6 +48,14 @@ export const tenants = pgTable("tenants", {
     .default(["CASH", "CARD", "MOBILE_MONEY", "BANK_TRANSFER"]),
   isActive: boolean("is_active").notNull().default(true),
   customDomain: varchar("custom_domain", { length: 255 }),
+  /** Plan SaaS souscrit. TRIAL par defaut, 14 jours offerts a l'inscription. */
+  subscriptionPlan: subscriptionPlanEnum("subscription_plan").notNull().default("TRIAL"),
+  /** Etat de la souscription. SUSPENDED = bloque acces, PAST_DUE = grace period. */
+  subscriptionStatus: subscriptionStatusEnum("subscription_status").notNull().default("TRIAL"),
+  /** Fin du trial (~14j apres inscription). NULL si plan payant souscrit. */
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
+  /** Date de prochaine facturation (renouvellement automatique). */
+  subscriptionRenewsAt: timestamp("subscription_renews_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),

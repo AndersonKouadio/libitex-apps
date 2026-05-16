@@ -7,7 +7,7 @@ import { Button } from "@heroui/react";
 import {
   LayoutDashboard, ShoppingCart, Package, Warehouse,
   Users, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight,
-  Monitor, History, Truck, CalendarCheck,
+  Monitor, History, Truck, CalendarCheck, BookOpen, Shield,
 } from "lucide-react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { SwitcherBoutique } from "@/features/boutique/components/switcher-boutique";
@@ -48,8 +48,13 @@ const NAV_ERP: ItemNav[] = [
     visibleSi: (secteur) => secteur === "RESTAURATION",
   },
   { href: "/rapports", libelle: "Rapports", icone: BarChart3 },
+  { href: "/comptabilite", libelle: "Comptabilité", icone: BookOpen },
   { href: "/sessions-caisse", libelle: "Sessions caisse", icone: History },
   { href: "/parametres", libelle: "Paramètres", icone: Settings },
+];
+
+const NAV_SUPER_ADMIN: ItemNav[] = [
+  { href: "/super-admin", libelle: "Super Admin", icone: Shield },
 ];
 
 function ModeSwitch({ modePOS, onSwitch, replie }: {
@@ -167,6 +172,34 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void } = {}) {
               </Link>
             );
           })}
+
+          {/* Section super-admin : visible uniquement pour le role SUPER_ADMIN.
+              Separateur visuel pour bien distinguer de la nav metier. */}
+          {utilisateur?.role === "SUPER_ADMIN" && (
+            <>
+              <div className="my-2 border-t border-white/5" />
+              {NAV_SUPER_ADMIN.map((item) => {
+                const actif = pathname === item.href || pathname.startsWith(item.href + "/");
+                const Icone = item.icone;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={`relative flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors ${
+                      actif ? "bg-danger/15 text-danger" : "text-white/55 hover:text-white/85 hover:bg-white/5"
+                    }`}
+                  >
+                    {actif && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-danger" />
+                    )}
+                    <Icone size={18} strokeWidth={actif ? 1.8 : 1.5} />
+                    {!replie && <span className="flex-1">{item.libelle}</span>}
+                  </Link>
+                );
+              })}
+            </>
+          )}
         </nav>
       )}
 
