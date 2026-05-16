@@ -28,6 +28,7 @@ import { LocationSettingsModule } from "./features/location-settings/location-se
 import { ComptabiliteModule } from "./features/comptabilite/comptabilite.module";
 import { AbonnementModule } from "./features/abonnement/abonnement.module";
 import { SuperAdminModule } from "./features/super-admin/super-admin.module";
+import { DevisModule } from "./features/devis/devis.module";
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { SuperAdminModule } from "./features/super-admin/super-admin.module";
     ComptabiliteModule,
     AbonnementModule,
     SuperAdminModule,
+    DevisModule,
   ],
   providers: [
     // Active le ThrottlerGuard globalement. Les routes peuvent override
