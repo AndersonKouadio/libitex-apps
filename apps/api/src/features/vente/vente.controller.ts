@@ -5,7 +5,7 @@ import {
 import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiQuery } from "@nestjs/swagger";
 import { VenteService } from "./vente.service";
-import { CreerTicketDto, CompleterTicketDto, ListerTicketsQueryDto, RetourTicketDto } from "./dto/vente.dto";
+import { CreerTicketDto, CompleterTicketDto, ListerTicketsQueryDto, ListerJournalQueryDto, RetourTicketDto } from "./dto/vente.dto";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
 import { RolesGuard, Roles } from "../../common/guards/roles.guard";
@@ -84,6 +84,22 @@ export class VenteController {
     return this.venteService.listerTickets(
       user.tenantId, query.page, query.limit, query.emplacementId, query.statut,
     );
+  }
+
+  @Get("journal")
+  @ApiOperation({ summary: "Journal des ventes — liste plate avec client + emplacement (sans N+1)" })
+  @Roles("ADMIN", "MANAGER", "CASHIER")
+  listerJournal(
+    @CurrentUser() user: CurrentUserData,
+    @Query() query: ListerJournalQueryDto,
+  ) {
+    return this.venteService.listerJournal(user.tenantId, query.page, query.limit, {
+      emplacementId: query.emplacementId,
+      statut: query.statut,
+      dateDebut: query.dateDebut,
+      dateFin: query.dateFin,
+      customerId: query.customerId,
+    });
   }
 
   @Get("sessions/:sessionId/rapport-z")

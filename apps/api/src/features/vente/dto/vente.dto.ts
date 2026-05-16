@@ -18,6 +18,33 @@ export class ListerTicketsQueryDto extends PaginationDto {
   statut?: string;
 }
 
+export class ListerJournalQueryDto extends PaginationDto {
+  @ApiPropertyOptional({ description: "Filtrer par emplacement" })
+  @IsOptional()
+  @IsString()
+  emplacementId?: string;
+
+  @ApiPropertyOptional({ description: "Statut : COMPLETED, CANCELLED" })
+  @IsOptional()
+  @IsString()
+  statut?: string;
+
+  @ApiPropertyOptional({ description: "Date debut (YYYY-MM-DD)" })
+  @IsOptional()
+  @IsString()
+  dateDebut?: string;
+
+  @ApiPropertyOptional({ description: "Date fin (YYYY-MM-DD)" })
+  @IsOptional()
+  @IsString()
+  dateFin?: string;
+
+  @ApiPropertyOptional({ description: "Filtrer par client (UUID)" })
+  @IsOptional()
+  @IsString()
+  customerId?: string;
+}
+
 // --- Enums ---
 
 export enum MethodePaiement {
@@ -387,4 +414,22 @@ export class RapportZJourResponseDto {
     recettes: number;
     nombre: number;
   }[];
+}
+
+/**
+ * Ligne du journal des ventes — en-tete de ticket avec client + emplacement resolus.
+ * Pas de lignes ni de paiements detailles (affichage tabulaire uniquement).
+ */
+export class LigneJournalDto {
+  id!: string;
+  ticketNumber!: string;
+  status!: string;
+  total!: number;
+  discountAmount!: number;
+  createdAt!: Date | null;
+  completedAt!: Date | null;
+  locationId!: string;
+  nomEmplacement!: string | null;
+  customerId!: string | null;
+  nomClient!: string | null;
 }

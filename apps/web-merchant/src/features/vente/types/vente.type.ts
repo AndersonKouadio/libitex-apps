@@ -176,3 +176,20 @@ export enum MethodePaiement {
   BANK_TRANSFER = "BANK_TRANSFER",
   CREDIT = "CREDIT",
 }
+
+/**
+ * Ligne du journal des ventes — en-tete de ticket sans detail lignes/paiements.
+ */
+export interface ILigneJournal {
+  id: string;
+  ticketNumber: string;
+  status: string;
+  total: number;
+  discountAmount: number;
+  createdAt: string | null;
+  completedAt: string | null;
+  locationId: string;
+  nomEmplacement: string | null;
+  customerId: string | null;
+  nomClient: string | null;
+}

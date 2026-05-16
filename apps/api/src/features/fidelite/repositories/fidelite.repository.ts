@@ -90,7 +90,7 @@ export class FideliteRepository {
 
   async solde(tenantId: string, customerId: string): Promise<number> {
     const [row] = await this.db
-      .select({ total: sql<number>`COALESCE(SUM(${loyaltyTransactions.points}), 0)::int` })
+      .select({ total: sql<number>`SUM(${loyaltyTransactions.points})::int` })
       .from(loyaltyTransactions)
       .where(and(
         eq(loyaltyTransactions.tenantId, tenantId),

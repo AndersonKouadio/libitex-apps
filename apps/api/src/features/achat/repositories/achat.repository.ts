@@ -111,7 +111,7 @@ export class AchatRepository {
     const rows = await this.db
       .select({
         variantId: stockMovements.variantId,
-        total: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+        total: sql<number>`SUM(${stockMovements.quantity})`,
       })
       .from(stockMovements)
       .where(and(
@@ -655,7 +655,7 @@ export class AchatRepository {
     // event-sourcing. Voir stockTotalParVariante().
     const [stockRow] = await this.db
       .select({
-        stock: sql<string>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+        stock: sql<string>`SUM(${stockMovements.quantity})`,
       })
       .from(stockMovements)
       .where(and(

@@ -2,6 +2,7 @@ import { httpClient } from "@/lib/http";
 import type { PaginatedResponse } from "@/types/api.type";
 import type {
   ITicket, IRetourTicketPayload, IRapportZ, IRapportVentesPeriode, IRapportMarges, IRapportTva,
+  ILigneJournal,
 } from "../types/vente.type";
 
 const BASE = "/vente";
@@ -47,6 +48,22 @@ export const venteAPI = {
     if (params?.statut) qs.set("statut", params.statut);
     if (params?.page) qs.set("page", String(params.page));
     return httpClient.get<PaginatedResponse<ITicket>>(`${BASE}/tickets?${qs}`, { token });
+  },
+
+  listerJournal: (token: string, params: {
+    page?: number; limit?: number;
+    emplacementId?: string; statut?: string;
+    dateDebut?: string; dateFin?: string; customerId?: string;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set("page", String(params.page));
+    if (params.limit) qs.set("limit", String(params.limit));
+    if (params.emplacementId) qs.set("emplacementId", params.emplacementId);
+    if (params.statut) qs.set("statut", params.statut);
+    if (params.dateDebut) qs.set("dateDebut", params.dateDebut);
+    if (params.dateFin) qs.set("dateFin", params.dateFin);
+    if (params.customerId) qs.set("customerId", params.customerId);
+    return httpClient.get<PaginatedResponse<ILigneJournal>>(`${BASE}/journal?${qs}`, { token });
   },
 
   rapportZ: (token: string, emplacementId: string, date?: string) =>

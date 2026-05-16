@@ -1,9 +1,9 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { eq, and, sql, desc, inArray } from "drizzle-orm";
+import { eq, and, sql, desc, inArray, gte, lte } from "drizzle-orm";
 import { DATABASE_TOKEN } from "../../../database/database.module";
 import {
   type Database, tickets, ticketLines, ticketPayments,
-  variants, products, serials, batches, customers, tenants,
+  variants, products, serials, batches, customers, tenants, locations,
 } from "@libitex/db";
 
 @Injectable()
@@ -562,5 +562,64 @@ export class TicketRepository {
       .groupBy(ticketPayments.method);
 
     return { summary, paymentBreakdown };
+  }
+
+  /**
+   * Journal des ventes : liste paginee avec joins client + emplacement.
+   * Concu pour l'affichage tabulaire — pas de chargement N+1 des lignes.
+   */
+  async listerJournal(
+    tenantId: string,
+    opts: {
+      limit: number;
+      offset: number;
+      emplacementId?: string;
+      statut?: string;
+      dateDebut?: string;
+      dateFin?: string;
+      customerId?: string;
+    },
+  ) {
+    const conditions: any[] = [eq(tickets.tenantId, tenantId)];
+    if (opts.emplacementId) conditions.push(eq(tickets.locationId, opts.emplacementId));
+    if (opts.statut) conditions.push(eq(tickets.status, opts.statut as any));
+    if (opts.customerId) conditions.push(eq(tickets.customerId, opts.customerId));
+    if (opts.dateDebut) {
+      conditions.push(gte(tickets.createdAt, new Date(opts.dateDebut + "T00:00:00.000Z")));
+    }
+    if (opts.dateFin) {
+      conditions.push(lte(tickets.createdAt, new Date(opts.dateFin + "T23:59:59.999Z")));
+    }
+    const where = and(...conditions);
+
+    const [countRow] = await this.db
+      .select({ total: sql<number>`COUNT(*)::int` })
+      .from(tickets)
+      .where(where);
+
+    const rows = await this.db
+      .select({
+        id: tickets.id,
+        ticketNumber: tickets.ticketNumber,
+        status: tickets.status,
+        total: tickets.total,
+        discountAmount: tickets.discountAmount,
+        createdAt: tickets.createdAt,
+        completedAt: tickets.completedAt,
+        locationId: tickets.locationId,
+        nomEmplacement: locations.name,
+        customerId: tickets.customerId,
+        prenomClient: customers.firstName,
+        nomClient: customers.lastName,
+      })
+      .from(tickets)
+      .leftJoin(locations, eq(tickets.locationId, locations.id))
+      .leftJoin(customers, eq(tickets.customerId, customers.id))
+      .where(where)
+      .orderBy(desc(tickets.createdAt))
+      .limit(opts.limit)
+      .offset(opts.offset);
+
+    return { rows, total: Number(countRow?.total ?? 0) };
   }
 }
