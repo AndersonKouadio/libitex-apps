@@ -23,6 +23,11 @@ export const clientAPI = {
   creer: (token: string, data: CreerClientDTO) =>
     httpClient.post<IClient>(BASE, data, { token }),
 
+  importer: (token: string, clients: CreerClientDTO[]) =>
+    httpClient.post<{ total: number; succes: number; erreurs: { ligne: number; message: string }[] }>(
+      `${BASE}/import`, { clients }, { token },
+    ),
+
   modifier: (token: string, id: string, data: Partial<CreerClientDTO>) =>
     httpClient.patch<IClient>(`${BASE}/${id}`, data, { token }),
 

@@ -184,3 +184,81 @@ export function autoMapper(headers: string[]): Record<ChampProduit, number | nul
   }
   return map;
 }
+
+// ─── Import generique (clients, fournisseurs, etc.) ───
+
+/**
+ * Definition d'un champ pour le mapping CSV generique :
+ * - cle = nom interne du champ
+ * - synonymes = headers CSV acceptes (insensible casse/espaces/tirets)
+ * - obligatoire = bloque l'import si non mappe ou ligne vide
+ */
+export interface ChampDef {
+  cle: string;
+  libelle: string;
+  synonymes: string[];
+  obligatoire: boolean;
+}
+
+/**
+ * Auto-mapping generique : pour chaque champ defini, cherche un header
+ * compatible (normalise minuscules + sans espaces/tirets/underscores).
+ * Retourne le mapping cle -> index header (ou null si pas trouve).
+ */
+export function autoMapperGeneric(
+  headers: string[],
+  champs: ChampDef[],
+): Record<string, number | null> {
+  const normaliser = (s: string) => s.toLowerCase().replace(/[\s_-]+/g, "");
+  const map: Record<string, number | null> = {};
+  for (const champ of champs) {
+    const synos = champ.synonymes.map(normaliser);
+    const idx = headers.findIndex((h) => synos.includes(normaliser(h)));
+    map[champ.cle] = idx === -1 ? null : idx;
+  }
+  return map;
+}
+
+/**
+ * Convertit une ligne CSV en payload typed selon les champs definis.
+ * Les valeurs vides sont omises (undefined). Aucune coercion auto :
+ * tout reste string. Le consommateur cast cote application.
+ */
+export function ligneVersObjet(
+  ligne: string[],
+  mapping: Record<string, number | null>,
+): Record<string, string | undefined> {
+  const out: Record<string, string | undefined> = {};
+  for (const cle of Object.keys(mapping)) {
+    const idx = mapping[cle];
+    if (idx === null) { out[cle] = undefined; continue; }
+    const v = ligne[idx]?.trim();
+    out[cle] = v && v.length > 0 ? v : undefined;
+  }
+  return out;
+}
+
+/**
+ * Champs reconnus pour les imports clients (synonymes FR/EN courants).
+ */
+export const CHAMPS_CLIENT: ChampDef[] = [
+  { cle: "prenom",     libelle: "Prénom",     synonymes: ["prenom", "prénom", "firstname", "first name", "first_name"], obligatoire: true },
+  { cle: "nomFamille", libelle: "Nom",        synonymes: ["nom", "nomfamille", "nom famille", "lastname", "last name", "last_name", "surname"], obligatoire: false },
+  { cle: "telephone",  libelle: "Téléphone",  synonymes: ["telephone", "téléphone", "tel", "phone", "mobile", "gsm", "portable"], obligatoire: false },
+  { cle: "email",      libelle: "Email",      synonymes: ["email", "e-mail", "mail", "courriel"], obligatoire: false },
+  { cle: "adresse",    libelle: "Adresse",    synonymes: ["adresse", "address", "addr"], obligatoire: false },
+  { cle: "notes",      libelle: "Notes",      synonymes: ["notes", "note", "commentaire", "comments", "remarque"], obligatoire: false },
+];
+
+/**
+ * Champs reconnus pour les imports fournisseurs (synonymes FR/EN courants).
+ */
+export const CHAMPS_FOURNISSEUR: ChampDef[] = [
+  { cle: "nom",                libelle: "Nom",                synonymes: ["nom", "name", "raison sociale", "societe", "société", "company"], obligatoire: true },
+  { cle: "nomContact",         libelle: "Contact",            synonymes: ["contact", "nomcontact", "nom contact", "interlocuteur", "responsable"], obligatoire: false },
+  { cle: "telephone",          libelle: "Téléphone",          synonymes: ["telephone", "téléphone", "tel", "phone", "mobile"], obligatoire: false },
+  { cle: "email",              libelle: "Email",              synonymes: ["email", "e-mail", "mail", "courriel"], obligatoire: false },
+  { cle: "adresse",            libelle: "Adresse",            synonymes: ["adresse", "address", "addr"], obligatoire: false },
+  { cle: "conditionsPaiement", libelle: "Conditions paiement", synonymes: ["conditionspaiement", "conditions paiement", "conditions", "paiement", "terms"], obligatoire: false },
+  { cle: "notes",              libelle: "Notes",              synonymes: ["notes", "note", "commentaire", "comments"], obligatoire: false },
+];

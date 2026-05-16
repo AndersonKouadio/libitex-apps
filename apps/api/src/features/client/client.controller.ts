@@ -3,9 +3,18 @@ import {
 } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags, ApiOperation } from "@nestjs/swagger";
+import { Type } from "class-transformer";
+import { ValidateNested, IsArray } from "class-validator";
 import { ClientService } from "./client.service";
 import { CreerClientDto, ModifierClientDto } from "./dto/client.dto";
 import { CurrentUser, CurrentUserData } from "../../common/decorators/current-user.decorator";
+
+class ImporterClientsDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreerClientDto)
+  clients!: CreerClientDto[];
+}
 
 @ApiTags("Clients")
 @ApiBearerAuth()
@@ -53,6 +62,12 @@ export class ClientController {
   @ApiOperation({ summary: "Créer un client" })
   creer(@CurrentUser() user: CurrentUserData, @Body() dto: CreerClientDto) {
     return this.clientService.creer(user.tenantId, dto);
+  }
+
+  @Post("import")
+  @ApiOperation({ summary: "Import en lot — retourne {total, succes, erreurs[]}" })
+  importer(@CurrentUser() user: CurrentUserData, @Body() dto: ImporterClientsDto) {
+    return this.clientService.importer(user.tenantId, dto.clients);
   }
 
   @Patch(":id")

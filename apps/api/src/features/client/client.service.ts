@@ -49,6 +49,40 @@ export class ClientService {
     return this.toResponse(client);
   }
 
+  /**
+   * Import en lot : tente de creer chaque client, capture les erreurs par
+   * ligne (validation, doublon, etc.) sans interrompre les autres. Retourne
+   * un resume {total, succes, erreurs[]} pour affichage UI.
+   */
+  async importer(tenantId: string, items: CreerClientDto[]): Promise<{
+    total: number; succes: number; erreurs: { ligne: number; message: string }[];
+  }> {
+    const erreurs: { ligne: number; message: string }[] = [];
+    let succes = 0;
+    for (let i = 0; i < items.length; i++) {
+      const dto = items[i]!;
+      try {
+        await this.clientRepo.creer({
+          tenantId,
+          firstName: dto.prenom,
+          lastName: dto.nomFamille,
+          phone: dto.telephone,
+          email: dto.email,
+          address: dto.adresse,
+          notes: dto.notes,
+          whatsappOptIn: dto.whatsappOptIn ?? true,
+        });
+        succes += 1;
+      } catch (err) {
+        erreurs.push({
+          ligne: i + 1,
+          message: err instanceof Error ? err.message : "Erreur inconnue",
+        });
+      }
+    }
+    return { total: items.length, succes, erreurs };
+  }
+
   async lister(
     tenantId: string,
     page = 1,

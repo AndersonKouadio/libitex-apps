@@ -8,7 +8,7 @@ import {
   Button, TextField, Label, Input, FieldError, Table, Skeleton,
   Select, ListBox,
 } from "@heroui/react";
-import { Users, UserPlus, Phone, Mail, MapPin, Trash2, Pencil } from "lucide-react";
+import { Users, UserPlus, Phone, Mail, MapPin, Trash2, Pencil, Upload } from "lucide-react";
 import { EmptyState } from "@/components/empty-states/empty-state";
 import { useClientListQuery, useSupprimerClientMutation } from "@/features/client/queries/client.query";
 import { ModalClient } from "@/features/client/components/modal-client";
@@ -55,10 +55,18 @@ export default function PageClients() {
         titre={`${data?.meta.total ?? 0} client${(data?.meta.total ?? 0) > 1 ? "s" : ""}`}
         description="Coordonnées et historique des clients réguliers de votre boutique."
         actions={
-          <Button variant="primary" className="gap-2" onPress={ouvrirCreation}>
-            <UserPlus size={16} />
-            Nouveau client
-          </Button>
+          <>
+            <Link href="/clients/import">
+              <Button variant="secondary" className="gap-1.5">
+                <Upload size={14} />
+                Importer CSV
+              </Button>
+            </Link>
+            <Button variant="primary" className="gap-2" onPress={ouvrirCreation}>
+              <UserPlus size={16} />
+              Nouveau client
+            </Button>
+          </>
         }
       />
 
