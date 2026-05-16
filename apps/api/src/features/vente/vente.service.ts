@@ -23,6 +23,7 @@ import {
   CreerTicketDto, CompleterTicketDto, RetourTicketDto,
   TicketResponseDto, LigneTicketResponseDto, PaiementResponseDto, RapportZResponseDto,
   RapportZJourResponseDto, RapportVentesPeriodeDto, RapportMargesDto, RapportTvaDto,
+  LigneJournalDto,
 } from "./dto/vente.dto";
 import { PaginatedResponseDto } from "../../common/dto/api-response.dto";
 
@@ -683,6 +684,35 @@ export class VenteService {
       const lignes = await this.ticketRepo.obtenirLignes(t.id);
       const paiements = await this.ticketRepo.obtenirPaiements(t.id);
       return this.mapTicket(t, lignes.map(this.mapLigne), paiements.map(this.mapPaiement));
+    }));
+    return PaginatedResponseDto.create(items, total, page, limit);
+  }
+
+  /**
+   * Journal des ventes — liste plate sans N+1.
+   * Retourne les en-tetes de tickets avec noms client + emplacement resolus.
+   */
+  async listerJournal(
+    tenantId: string,
+    page: number,
+    limit: number,
+    opts: { emplacementId?: string; statut?: string; dateDebut?: string; dateFin?: string; customerId?: string },
+  ): Promise<PaginatedResponseDto<LigneJournalDto>> {
+    const { rows, total } = await this.ticketRepo.listerJournal(tenantId, {
+      limit, offset: (page - 1) * limit, ...opts,
+    });
+    const items: LigneJournalDto[] = rows.map((r) => ({
+      id: r.id,
+      ticketNumber: r.ticketNumber,
+      status: r.status,
+      total: Number(r.total ?? 0),
+      discountAmount: Number(r.discountAmount ?? 0),
+      createdAt: r.createdAt,
+      completedAt: r.completedAt,
+      locationId: r.locationId,
+      nomEmplacement: r.nomEmplacement ?? null,
+      customerId: r.customerId ?? null,
+      nomClient: [r.prenomClient, r.nomClient].filter(Boolean).join(" ") || null,
     }));
     return PaginatedResponseDto.create(items, total, page, limit);
   }

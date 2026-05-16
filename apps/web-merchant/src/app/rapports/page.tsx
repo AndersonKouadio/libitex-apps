@@ -5,7 +5,7 @@ import {
   Select, ListBox, Label, Button, Spinner, Skeleton, Tabs, Card,
 } from "@heroui/react";
 import {
-  Printer, Download, BarChart3, FileText, TrendingUp, Calculator, ClipboardList,
+  Printer, Download, BarChart3, FileText, TrendingUp, Calculator, ClipboardList, List,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-states/empty-state";
 import { PageContainer } from "@/components/layout/page-container";
@@ -18,6 +18,7 @@ import { useRapportZQuery } from "@/features/vente/queries/rapport-z.query";
 import {
   useRapportVentesPeriodeQuery, useRapportMargesQuery, useRapportTvaQuery,
 } from "@/features/vente/queries/rapports-periode.query";
+import { JournalVentes } from "@/features/vente/components/journal-ventes";
 import { RapportZResume } from "@/features/vente/components/rapport-z-resume";
 import { RapportZVentilation } from "@/features/vente/components/rapport-z-ventilation";
 import { RapportZTopProduits } from "@/features/vente/components/rapport-z-top-produits";
@@ -29,7 +30,7 @@ import {
   exporterRapportZCsv, exporterVentesPeriodeCsv, exporterMargesCsv, exporterTvaCsv,
 } from "@/features/vente/utils/export-rapport";
 
-type Onglet = "z-jour" | "ventes-periode" | "marges" | "tva";
+type Onglet = "z-jour" | "ventes-periode" | "marges" | "tva" | "journal";
 
 function aujourdhui(): string {
   return new Date().toISOString().split("T")[0]!;
@@ -123,6 +124,12 @@ export default function PageRapports() {
             <span className="inline-flex items-center gap-1.5">
               <ClipboardList size={14} />
               TVA
+            </span>
+          </Tabs.Tab>
+          <Tabs.Tab id="journal" className="px-4 whitespace-nowrap">
+            <span className="inline-flex items-center gap-1.5">
+              <List size={14} />
+              Journal des ventes
             </span>
           </Tabs.Tab>
         </Tabs.List>
@@ -278,6 +285,12 @@ export default function PageRapports() {
               <RapportTva rapport={rapportTva} />
             ) : null
           )}
+        </div>
+      )}
+
+      {onglet === "journal" && (
+        <div className="mt-4">
+          <JournalVentes />
         </div>
       )}
     </PageContainer>
