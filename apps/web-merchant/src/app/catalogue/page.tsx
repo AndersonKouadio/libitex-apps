@@ -14,7 +14,7 @@ import type { IProduit } from "@/features/catalogue/types/produit.type";
 import {
   Table, Chip, Button, Skeleton, SearchField, Input, Select, ListBox, toast,
 } from "@heroui/react";
-import { Package, Plus, Pencil, AlertTriangle, Copy, Trash2, Folder, Upload, ChevronUp, ChevronDown, Download } from "lucide-react";
+import { Package, Plus, Pencil, AlertTriangle, Copy, Trash2, Folder, Upload, ChevronUp, ChevronDown, Download, Tag } from "lucide-react";
 import { EmptyState } from "@/components/empty-states/empty-state";
 import { useSupprimerProduitMutation } from "@/features/catalogue/queries/produit-delete.mutation";
 import { useConfirmation } from "@/providers/confirmation-provider";
@@ -282,6 +282,12 @@ export default function PageCatalogue() {
             <Button variant="ghost" className="gap-1.5">
               <Upload size={16} />
               Importer CSV
+            </Button>
+          </Link>
+          <Link href="/catalogue/etiquettes">
+            <Button variant="ghost" className="gap-1.5">
+              <Tag size={16} />
+              Étiquettes
             </Button>
           </Link>
           <Link href="/catalogue/nouveau">
