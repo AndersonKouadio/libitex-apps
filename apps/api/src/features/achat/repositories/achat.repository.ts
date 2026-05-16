@@ -210,10 +210,11 @@ export class AchatRepository {
     const e = err as Record<string, unknown>;
 
     // Format 1 : NeonDbError direct avec .code et .constraint
-    const code = String(e["code"] ?? e["sourceError"]?.["code"] ?? "");
+    const sourceErr = (e["sourceError"] ?? {}) as Record<string, unknown>;
+    const code = String(e["code"] ?? sourceErr["code"] ?? "");
     if (code === "23505") {
       const constraint = String(
-        e["constraint"] ?? e["sourceError"]?.["constraint"] ?? e["message"] ?? "",
+        e["constraint"] ?? sourceErr["constraint"] ?? e["message"] ?? "",
       );
       return constraint.includes("purchase_orders_number") || constraint.includes("order_number");
     }
