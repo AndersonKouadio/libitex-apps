@@ -34,6 +34,14 @@ export const stockAPI = {
   supprimerEmplacement: (token: string, id: string) =>
     httpClient.delete<void>(`${BASE}/emplacements/${id}`, { token }),
 
+  importerStock: (token: string, lignes: {
+    sku: string; nomEmplacement: string; quantite: number;
+    numeroLot?: string; dateExpiration?: string; note?: string;
+  }[]) =>
+    httpClient.post<{ total: number; succes: number; erreurs: { ligne: number; message: string }[] }>(
+      `${BASE}/import`, { lignes }, { token },
+    ),
+
   entreeStock: (token: string, data: {
     varianteId: string; emplacementId: string; quantite: number; note?: string;
   }) =>

@@ -251,6 +251,19 @@ export const CHAMPS_CLIENT: ChampDef[] = [
 ];
 
 /**
+ * Champs reconnus pour les imports stock initial (sku + emplacement + quantite,
+ * + optionnellement lot/DLC pour produits perissables).
+ */
+export const CHAMPS_STOCK_INITIAL: ChampDef[] = [
+  { cle: "sku",             libelle: "SKU",              synonymes: ["sku", "reference", "ref", "code", "code produit"], obligatoire: true },
+  { cle: "nomEmplacement",  libelle: "Emplacement",      synonymes: ["emplacement", "nomemplacement", "nom emplacement", "depot", "dépôt", "magasin", "store", "warehouse"], obligatoire: true },
+  { cle: "quantite",        libelle: "Quantité",         synonymes: ["quantite", "quantité", "qty", "quantity", "qte", "qté", "stock"], obligatoire: true },
+  { cle: "numeroLot",       libelle: "Numéro de lot",    synonymes: ["numerolot", "numero lot", "lot", "batch", "numero batch"], obligatoire: false },
+  { cle: "dateExpiration",  libelle: "Date d'expiration", synonymes: ["dateexpiration", "date expiration", "dlc", "ddm", "expiry", "expirydate", "peremption", "péremption"], obligatoire: false },
+  { cle: "note",            libelle: "Note",             synonymes: ["note", "notes", "commentaire", "comments"], obligatoire: false },
+];
+
+/**
  * Champs reconnus pour les imports fournisseurs (synonymes FR/EN courants).
  */
 export const CHAMPS_FOURNISSEUR: ChampDef[] = [

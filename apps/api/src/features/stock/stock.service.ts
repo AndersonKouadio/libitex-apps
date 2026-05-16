@@ -116,6 +116,97 @@ export class StockService {
     return this.mapMouvement(mvt);
   }
 
+  /**
+   * Import en lot de stock initial : pour chaque ligne, resout sku ->
+   * variantId, nomEmplacement -> locationId, valide PERISHABLE (lot +
+   * date), puis cree un STOCK_IN. Capture les erreurs par ligne sans
+   * interrompre les autres. Retourne {total, succes, erreurs}.
+   */
+  async importerStockInitial(
+    tenantId: string,
+    userId: string,
+    items: {
+      sku: string;
+      nomEmplacement: string;
+      quantite: number;
+      numeroLot?: string;
+      dateExpiration?: string;
+      note?: string;
+    }[],
+  ): Promise<{ total: number; succes: number; erreurs: { ligne: number; message: string }[] }> {
+    const erreurs: { ligne: number; message: string }[] = [];
+    let succes = 0;
+
+    // Cache d'emplacements pour ne pas requeter N fois si meme nom
+    const cacheEmplacements = new Map<string, string>();
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]!;
+      try {
+        if (!item.sku) throw new Error("SKU manquant");
+        if (!item.nomEmplacement) throw new Error("Emplacement manquant");
+        if (!Number.isFinite(item.quantite) || item.quantite <= 0) {
+          throw new Error("Quantité invalide (doit être > 0)");
+        }
+
+        const variante = await this.stockRepo.trouverVarianteParSku(tenantId, item.sku);
+        if (!variante) throw new Error(`SKU "${item.sku}" introuvable`);
+
+        let locationId = cacheEmplacements.get(item.nomEmplacement.toLowerCase());
+        if (!locationId) {
+          const emp = await this.stockRepo.trouverEmplacementParNom(tenantId, item.nomEmplacement);
+          if (!emp) throw new Error(`Emplacement "${item.nomEmplacement}" introuvable`);
+          locationId = emp.id;
+          cacheEmplacements.set(item.nomEmplacement.toLowerCase(), locationId);
+        }
+
+        let batchId: string | undefined;
+        if (variante.productType === "PERISHABLE") {
+          if (!item.numeroLot || !item.dateExpiration) {
+            throw new Error("Produit périssable : numeroLot et dateExpiration requis");
+          }
+          const lot = await this.stockRepo.creerLot({
+            variantId: variante.variantId,
+            batchNumber: item.numeroLot,
+            expiryDate: item.dateExpiration,
+            quantityRemaining: item.quantite,
+          });
+          batchId = lot.id;
+        }
+
+        const mvt = await this.stockRepo.enregistrerMouvement({
+          tenantId,
+          variantId: variante.variantId,
+          locationId,
+          movementType: "STOCK_IN",
+          quantity: item.quantite.toString(),
+          userId,
+          note: item.note ?? "Import stock initial",
+          referenceType: "IMPORT",
+          batchId,
+        });
+        await this.audit.log({
+          tenantId, userId, action: AUDIT_ACTIONS.STOCK_IN,
+          entityType: "STOCK", entityId: mvt.id,
+          after: { import: true, sku: item.sku, quantite: item.quantite, emplacement: item.nomEmplacement },
+        });
+        succes += 1;
+      } catch (err) {
+        erreurs.push({
+          ligne: i + 1,
+          message: err instanceof Error ? err.message : "Erreur inconnue",
+        });
+      }
+    }
+
+    // Notification realtime unique en fin d'import (et pas N fois)
+    for (const locationId of cacheEmplacements.values()) {
+      this.notifierChangementStock(tenantId, locationId);
+    }
+
+    return { total: items.length, succes, erreurs };
+  }
+
   async sortieStock(
     tenantId: string, userId: string, variantId: string, locationId: string,
     quantity: number, refType?: string, refId?: string, serialId?: string, batchId?: string,

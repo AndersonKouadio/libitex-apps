@@ -26,7 +26,7 @@ import {
 import { useBoutiqueActiveQuery } from "@/features/boutique/queries/boutique-active.query";
 import { Card, Button, Skeleton, Tabs } from "@heroui/react";
 import {
-  MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus,
+  MapPin, ArrowDownToLine, ArrowRightLeft, Package, PackagePlus, Upload,
   Settings, Wheat, Scale, History, ClipboardCheck,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-states/empty-state";
@@ -104,6 +104,12 @@ export default function PageStock() {
               <Button variant="ghost" className="gap-1.5 text-xs">
                 <Settings size={14} />
                 Emplacements
+              </Button>
+            </Link>
+            <Link href="/stock/import">
+              <Button variant="ghost" className="gap-1.5 text-xs">
+                <Upload size={14} />
+                Importer CSV
               </Button>
             </Link>
             {onglet === "variantes" && (
